@@ -1,4 +1,20 @@
-# Split release acceptance — 2026-10-02
+# Release acceptance — 2026-10-02
+
+## LG 2.0.1: setup and HTTPS certificate handling
+
+**161 LG tests pass on both HA 2025.3.4 / Python 3.13 and HA 2026.9.4 / Python 3.14.** Coverage includes the initial settings step, option validation, automatic SHA-256 enrollment, preserved saved passwords/pins, explicit verification opt-out, sanitized discovery errors and no insecure retry after a certificate mismatch.
+
+The HA **2026.9.4 Docker instance** was exercised through its actual config/options flow API with an LG TCP simulator and a temporary self-signed TLS endpoint:
+
+- Connection details lead to the complete settings form before an entry is created or area assignment can start.
+- Invalid preview settings keep the settings form open.
+- An empty fingerprint is read over TLS and stored in entry options with verification enabled; the password is not returned as a form default.
+- Explicitly disabling verification accepts an empty fingerprint and preserves a saved password.
+- The new entry loads successfully. The user's existing display options and UniFi entry are preserved; the disposable test entry is removed afterward.
+
+A read-only enrollment against the physical LG returned the same fingerprint as the previously checked device certificate. No display command or web password was sent during that check. The container showed no new errors or blocking-call warnings. The updated integration is installed in the shared container.
+
+## Split release: LG 2.0.0 / AV Companion 1.0.0
 
 Versions: **LG Professional Display 2.0.0**, **AV Companion 1.0.0**. Fresh configuration; no migration. The shared Docker test installation was updated from HA 2026.8.1 to **2026.9.4** after backing up its stopped configuration, components and Compose file. Existing UniFi Air Quality remained loaded and its data was preserved.
 

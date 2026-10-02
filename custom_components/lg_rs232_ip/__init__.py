@@ -49,8 +49,9 @@ async def async_setup_entry(hass, entry):
         web = data["web_manager"] = LGWebManager(
             entry.data["host"],
             entry.options["native_web_password"],
-            entry.options["native_web_fingerprint"],
+            entry.options.get("native_web_fingerprint", ""),
             url_store=Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.url_restore"),
+            verify_certificate=entry.options.get("native_web_verify_certificate", True),
         )
         try:
             await web.async_recover_url_settings()

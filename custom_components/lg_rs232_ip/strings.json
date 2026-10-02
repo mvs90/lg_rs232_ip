@@ -3,16 +3,54 @@
     "step": {
       "user": {
         "title": "LG Professional Display",
-        "description": "Enter the IP address and port of your LG Display",
+        "description": "Enter the LG display address and port. Display settings, including the preview camera, follow in the next step.",
         "data": {
           "host": "IP Address",
           "port": "Port",
           "name": "Device Name"
         }
+      },
+      "settings": {
+        "title": "Configure LG display",
+        "data": {
+          "polling_interval": "Polling Interval (seconds)",
+          "power_transition_mode": "Power Transition Mode",
+          "power_transition_timeout": "Power Transition Timeout (seconds)",
+          "show_input_hdmi1": "Show HDMI 1 in Source List",
+          "show_input_hdmi2": "Show HDMI 2 in Source List",
+          "show_input_hdmi3": "Show HDMI 3 in Source List",
+          "input_name_hdmi1": "Media Player HDMI 1 Name",
+          "input_name_hdmi2": "Media Player HDMI 2 Name",
+          "input_name_hdmi3": "Media Player HDMI 3 Name",
+          "display_wake_timeout": "Display startup timeout (seconds)",
+          "notification_wake_display": "Allow notifications/content to wake the display",
+          "quiet_hours_enabled": "Enable notification quiet hours",
+          "quiet_hours_start": "Quiet hours start (HH:MM)",
+          "quiet_hours_end": "Quiet hours end (HH:MM)",
+          "native_web_enabled": "Enable native LG web access (tested on UH5F-H)",
+          "native_web_password": "LG Mobile URL password (blank keeps saved password)",
+          "native_web_fingerprint": "SHA-256 fingerprint (blank = detect automatically)",
+          "suppress_osd_during_switch": "Suppress OSD during input/fullscreen switching",
+          "preview_enabled": "Enable display preview through screenshots",
+          "preview_interval": "Screenshot interval (10–3600 seconds)",
+          "preview_height": "Screenshot height (pixels)",
+          "native_web_verify_certificate": "Verify LG HTTPS certificate"
+        },
+        "data_description": {
+          "native_web_fingerprint": "Read from the display on save and stored for subsequent connections. An existing fingerprint is not replaced automatically.",
+          "native_web_verify_certificate": "Enabled by default. Disabling verification keeps HTTPS encryption but does not verify the identity of the display."
+        },
+        "description": "Confirm the display settings before finishing setup. For the preview camera, enable native LG web access and screenshot preview and enter the Mobile URL password. Leave the fingerprint blank for automatic detection. All settings can be changed later through Configure."
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to the display. Please check the IP address and port."
+      "cannot_connect": "Failed to connect to the display. Please check the IP address and port.",
+      "invalid_option_range": "Value outside the permitted range.",
+      "invalid_time": "Enter a time as HH:MM.",
+      "invalid_native_web_settings": "Provide the Mobile URL password and, if entered, a valid SHA-256 fingerprint; leave the fingerprint blank for automatic detection.",
+      "preview_requires_web": "Enable native LG web access before enabling preview.",
+      "invalid_preview_interval": "Screenshot interval must be between 10 and 3600 seconds.",
+      "cannot_read_certificate": "Cannot read the LG HTTPS certificate. Check web access on port 3777, enter a fingerprint, or explicitly disable certificate verification."
     },
     "abort": {
       "already_configured": "Already configured."
@@ -39,20 +77,26 @@
           "quiet_hours_end": "Quiet hours end (HH:MM)",
           "native_web_enabled": "Enable native LG web access (tested on UH5F-H)",
           "native_web_password": "LG Mobile URL password (blank keeps saved password)",
-          "native_web_fingerprint": "LG HTTPS certificate SHA-256 fingerprint",
+          "native_web_fingerprint": "SHA-256 fingerprint (blank = detect automatically)",
           "suppress_osd_during_switch": "Suppress OSD during input/fullscreen switching",
           "preview_enabled": "Enable display preview through screenshots",
           "preview_interval": "Screenshot interval (10–3600 seconds)",
-          "preview_height": "Screenshot height (pixels)"
+          "preview_height": "Screenshot height (pixels)",
+          "native_web_verify_certificate": "Verify LG HTTPS certificate"
         },
-        "data_description": {}
+        "data_description": {
+          "native_web_fingerprint": "Read from the display on save and stored for subsequent connections. An existing fingerprint is not replaced automatically.",
+          "native_web_verify_certificate": "Enabled by default. Disabling verification keeps HTTPS encryption but does not verify the identity of the display."
+        }
       }
     },
     "error": {
       "invalid_option_range": "Value outside the permitted range.",
       "invalid_time": "Enter a time as HH:MM.",
-      "invalid_native_web_settings": "Provide the web password and a valid 64-hex-character SHA-256 certificate fingerprint.",
-      "preview_requires_web": "Enable native LG web access before enabling preview."
+      "invalid_native_web_settings": "Provide the Mobile URL password and, if entered, a valid SHA-256 fingerprint; leave the fingerprint blank for automatic detection.",
+      "preview_requires_web": "Enable native LG web access before enabling preview.",
+      "invalid_preview_interval": "Screenshot interval must be between 10 and 3600 seconds.",
+      "cannot_read_certificate": "Cannot read the LG HTTPS certificate. Check web access on port 3777, enter a fingerprint, or explicitly disable certificate verification."
     }
   },
   "title": "LG Professional Display"

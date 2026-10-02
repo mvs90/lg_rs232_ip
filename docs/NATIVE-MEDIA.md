@@ -1,6 +1,6 @@
 # Native LG videos, streams and websites
 
-Available from **1.6.0** with **native LG web access** enabled in the integration options (Mobile URL password and pinned SHA-256 certificate). These actions run on the LG itself and do not need Apple TV as a renderer. From LG 2.0, external-player `media_player.play_media` and `show_content` routing belongs to the separate [AV Companion](https://github.com/mvs90/av_companion) entity. On the LG entity, `play_media` uses native LG playback.
+Available from **1.6.0** with **native LG web access** enabled in the integration options (Mobile URL password; SHA-256 certificate verification is enabled by default, with automatic enrollment from 2.0.1). These actions run on the LG itself and do not need Apple TV as a renderer. From LG 2.0, external-player `media_player.play_media` and `show_content` routing belongs to the separate [AV Companion](https://github.com/mvs90/av_companion) entity. On the LG entity, `play_media` uses native LG playback.
 
 | Action | Source | Method |
 | --- | --- | --- |

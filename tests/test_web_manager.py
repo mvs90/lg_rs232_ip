@@ -307,3 +307,91 @@ async def test_failed_recovery_keeps_persistent_record(web):
     with pytest.raises(LGWebError):
         await web.async_recover_url_settings()
     web._url_store.async_remove.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_certificate_discovery_hashes_peer_certificate_and_closes_connection():
+    import hashlib
+    import ssl
+    from unittest.mock import patch
+    from custom_components.lg_rs232_ip.web_manager import (
+        async_read_certificate_fingerprint,
+    )
+
+    peer = Mock()
+    peer.getpeercert.return_value = b"test DER certificate"
+    writer = Mock(wait_closed=AsyncMock())
+    writer.get_extra_info.return_value = peer
+    with patch(
+        "custom_components.lg_rs232_ip.web_manager.asyncio.open_connection",
+        new_callable=AsyncMock,
+        return_value=(Mock(), writer),
+    ) as connect:
+        value = await async_read_certificate_fingerprint("display.test")
+    assert value == hashlib.sha256(b"test DER certificate").hexdigest()
+    assert connect.await_args.args == ("display.test", 3777)
+    assert connect.await_args.kwargs["ssl"].verify_mode == ssl.CERT_NONE
+    peer.getpeercert.assert_called_once_with(binary_form=True)
+    writer.close.assert_called_once()
+    writer.wait_closed.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_certificate_discovery_failure_is_sanitized():
+    from unittest.mock import patch
+    from custom_components.lg_rs232_ip.web_manager import (
+        async_read_certificate_fingerprint,
+    )
+
+    with patch(
+        "custom_components.lg_rs232_ip.web_manager.asyncio.open_connection",
+        new_callable=AsyncMock,
+        side_effect=OSError("private-hostname"),
+    ):
+        with pytest.raises(LGWebError) as err:
+            await async_read_certificate_fingerprint("display.test")
+    assert "private-hostname" not in str(err.value)
+
+
+def test_verification_is_default_and_only_explicit_opt_out_allows_empty_pin():
+    with pytest.raises(ValueError):
+        LGWebManager("display.test", "password")
+    verified = LGWebManager("display.test", "password", "ab" * 32)
+    assert isinstance(verified._ssl, aiohttp.Fingerprint)
+    unverified = LGWebManager("display.test", "password", verify_certificate=False)
+    assert unverified._ssl is False
+    assert unverified._url(3777, "/login/checkLoginStatus").scheme == "https"
+
+
+@pytest.mark.asyncio
+async def test_wrong_pin_never_falls_back_to_unverified_request(web):
+    web._session = Mock()
+    web._session.request.side_effect = aiohttp.ServerFingerprintMismatch(
+        b"a" * 32, b"b" * 32, "private-host", 3777
+    )
+    with pytest.raises(LGWebError):
+        await web._json("GET", "/login/checkLoginStatus")
+    assert web._session.request.call_count == 1
+    assert isinstance(web._session.request.call_args.kwargs["ssl"], aiohttp.Fingerprint)
+
+
+@pytest.mark.asyncio
+async def test_opt_out_is_used_on_http_and_screenshot_requests():
+    web = LGWebManager("display.test", "test-password", verify_certificate=False)
+    response = Mock(status=200)
+    response.content.iter_chunked = lambda _: async_chunks(
+        [b'{"status":200,"data":true}']
+    )
+    context = AsyncMock()
+    context.__aenter__.return_value = response
+    web._session = Mock()
+    web._session.request.return_value = context
+    assert await web._json("GET", "/login/checkLoginStatus") is True
+    assert web._session.request.call_args.kwargs["ssl"] is False
+    response.content.iter_chunked = lambda _: async_chunks(
+        [b"\xff\xd8\xffjpeg\xff\xd9"]
+    )
+    web._session.get.return_value = context
+    web._api = AsyncMock(return_value="/tmp/capture123.jpg")
+    await web.async_capture()
+    assert web._session.get.call_args.kwargs["ssl"] is False

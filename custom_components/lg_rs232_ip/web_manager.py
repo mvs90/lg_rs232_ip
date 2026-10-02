@@ -1,4 +1,4 @@
-"""Optional, certificate-pinned LG Signage web manager (verified on UH5F-H).
+"""Optional LG Signage web manager with certificate verification by default (verified on UH5F-H).
 
 This is an internal vendor interface, not the consumer webOS/SSAP API. No
 credential, cookie, message or media URL is included in errors or diagnostics.
@@ -7,8 +7,10 @@ credential, cookie, message or media URL is included in errors or diagnostics.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import re
+import ssl
 import uuid
 
 import aiohttp
@@ -26,6 +28,30 @@ def normalize_fingerprint(value: str) -> str:
     return value
 
 
+async def async_read_certificate_fingerprint(host: str) -> str:
+    """Enroll the certificate presented at setup, without sending credentials."""
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    try:
+        async with asyncio.timeout(10):
+            _, writer = await asyncio.open_connection(
+                host, 3777, ssl=context, server_hostname=host, ssl_handshake_timeout=5
+            )
+            try:
+                certificate = writer.get_extra_info("ssl_object").getpeercert(
+                    binary_form=True
+                )
+                if not certificate:
+                    raise LGWebError("LG did not provide an HTTPS certificate")
+                return hashlib.sha256(certificate).hexdigest()
+            finally:
+                writer.close()
+                await writer.wait_closed()
+    except (OSError, TimeoutError, AttributeError):
+        raise LGWebError("Cannot read the LG HTTPS certificate") from None
+
+
 async def _read_limited(response, limit=262144):
     """Read complete, possibly fragmented responses with a hard memory limit."""
     chunks = bytearray()
@@ -39,12 +65,22 @@ async def _read_limited(response, limit=262144):
 class LGWebManager:
     """One private cookie jar, serialized requests and no replay of mutations."""
 
-    def __init__(self, host: str, password: str, fingerprint: str, url_store=None):
+    def __init__(
+        self,
+        host: str,
+        password: str,
+        fingerprint: str = "",
+        url_store=None,
+        *,
+        verify_certificate: bool = True,
+    ):
         self._url_store = url_store
         self._host = host
         self._password = password
-        self._ssl = aiohttp.Fingerprint(
-            bytes.fromhex(normalize_fingerprint(fingerprint))
+        self._ssl = (
+            aiohttp.Fingerprint(bytes.fromhex(normalize_fingerprint(fingerprint)))
+            if verify_certificate
+            else False
         )
         self._session = None
         self._lock = asyncio.Lock()

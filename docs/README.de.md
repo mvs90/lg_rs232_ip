@@ -8,6 +8,7 @@ Diese Integration steuert ausschließlich das LG-Display. Für Apple TV, Sonos, 
 2. Herunterladen und Home Assistant neu starten.
 3. **Einstellungen → Geräte & Dienste → Integration hinzufügen → LG Professional Display**.
 4. Display-Adresse und Port eingeben; Standardport ist **9761**.
+5. Die anschließend angezeigten Display-Einstellungen bestätigen. Für die Vorschaukamera **nativen Webzugriff** und **Screenshot-Vorschau** aktivieren sowie das Mobile-URL-Passwort eintragen. Das Fingerabdruckfeld kann zur automatischen Ermittlung leer bleiben. Erst danach folgt die Raumzuordnung.
 
 Ab HA 2025.3; geprüft unter 2025.3.4 und 2026.9.4. Die Integration ist noch nicht im allgemeinen HACS-Katalog enthalten.
 
@@ -15,7 +16,7 @@ Ab HA 2025.3; geprüft unter 2025.3.4 und 2026.9.4. Die Integration ist noch nic
 
 Ein/Aus, HDMI-Eingänge, Displaylautstärke, Stummschaltung, Navigation, unterstützte Bild-/Energieeinstellungen und Statussensoren bleiben vollständig eigenständig. Erweiterte Einstellungen sind modellabhängig und teilweise standardmäßig deaktiviert. Kein Zuspieler und keine Steckdose werden von dieser Integration geschaltet.
 
-In **Konfigurieren** den nativen Webzugriff aktivieren, wenn Inhalte oder Screenshots benötigt werden. Das separate Passwort steht am LG unter **Home → Mobile URL**. Zusätzlich ist der SHA-256-Fingerabdruck des HTTPS-Zertifikats erforderlich. `tools/read_web_certificate.py` liest ihn aus; vor Übernahme mit dem Zertifikat des eigenen Displays vergleichen. Ein leeres Passwortfeld behält das gespeicherte Passwort bei.
+In **Konfigurieren** den nativen Webzugriff aktivieren, wenn Inhalte oder Screenshots benötigt werden. Das separate Passwort steht am LG unter **Home → Mobile URL**. Der SHA-256-Fingerabdruck wird beim Speichern automatisch ermittelt und gespeichert, wenn das Feld leer ist. Er wird bei späteren Verbindungen weiter geprüft und niemals wegen eines Fehlers automatisch ersetzt. Optional kann ein eigener Abdruck eingetragen oder **LG-HTTPS-Zertifikat prüfen** ausdrücklich ausgeschaltet werden. Ohne Prüfung bleibt HTTPS verschlüsselt, die Identität des Displays wird jedoch nicht geprüft. Die automatische Ermittlung vertraut dem bei der Einrichtung gelieferten Zertifikat; `tools/read_web_certificate.py` bleibt für einen unabhängigen Vergleich verfügbar. Ein leeres Passwortfeld behält das gespeicherte Passwort bei.
 
 | Aktion | Funktion |
 | --- | --- |

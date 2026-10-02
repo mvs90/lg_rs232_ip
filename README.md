@@ -1,6 +1,6 @@
 # LG Professional Display
 
-Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.0.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
+Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.0.1 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
 
 [Deutsche Anleitung](docs/README.de.md) · [Features and actions](docs/FEATURES.md) · [Device reference](docs/devices/LG-UH5F-H.md) · [MIT license](LICENSE)
 
@@ -10,6 +10,7 @@ Local Home Assistant integration for LG professional signage displays using RS23
 2. Download, then restart Home Assistant.
 3. Settings → Devices & services → Add integration → **LG Professional Display**.
 4. Enter the display host and TCP port (normally **9761**).
+5. Confirm the full display settings form, including optional native web access and screenshot preview. Home Assistant asks for an area only after this step.
 
 Requires Home Assistant 2025.3 or later; tested on 2025.3.4 and 2026.9.4. Available as a HACS custom repository, not in its default catalogue. Manual install: copy `custom_components/lg_rs232_ip` into HA's `custom_components` directory and restart. This release is designed for a fresh setup; no migration from the earlier combined prototype is included.
 
@@ -22,7 +23,7 @@ Requires Home Assistant 2025.3 or later; tested on 2025.3.4 and 2026.9.4. Availa
 - Boot-logo on/off and preparation of a custom boot image for **USB import**.
 - A screenshot camera with configurable 10–3600 second refresh interval and 360/720/1080p resolution. This is a periodic preview, not a live video endpoint.
 
-LG device control works without any Apple TV, soundbar or socket. Native web features require the separate Mobile URL password and pinned certificate fingerprint; basic RS232/IP control does not. [Setup, limits and examples](docs/FEATURES.md), [videos/streams/websites](docs/NATIVE-MEDIA.md).
+LG device control works without any Apple TV, soundbar or socket. Native web features require the separate Mobile URL password. An empty SHA-256 field is filled automatically on save and used for subsequent certificate checks. Verification is enabled by default and can be explicitly disabled; basic RS232/IP control requires no web login. [Setup, limits and examples](docs/FEATURES.md), [videos/streams/websites](docs/NATIVE-MEDIA.md).
 
 ```yaml
 action: lg_rs232_ip.show_toast

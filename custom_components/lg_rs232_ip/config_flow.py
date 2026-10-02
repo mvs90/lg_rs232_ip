@@ -10,7 +10,11 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import DEFAULT_PORT, DOMAIN
-from .web_manager import normalize_fingerprint
+from .web_manager import (
+    LGWebError,
+    async_read_certificate_fingerprint,
+    normalize_fingerprint,
+)
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,10 +55,8 @@ class LGDisplayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
                 self._abort_if_unique_id_configured()
 
-                return self.async_create_entry(
-                    title=user_input[CONF_NAME],
-                    data=user_input,
-                )
+                self._connection_data = dict(user_input)
+                return await self.async_step_settings()
 
         return self.async_show_form(
             step_id="user",
@@ -66,6 +68,26 @@ class LGDisplayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+        )
+
+    async def async_step_settings(self, user_input=None):
+        """Confirm display options before HA creates the device and asks for an area."""
+        if not getattr(self, "_connection_data", None):
+            return await self.async_step_user()
+        schema, errors, values = _display_options_form(user_input, {})
+        if user_input is not None:
+            await _async_prepare_web_options(
+                self._connection_data[CONF_HOST], values, errors
+            )
+        if user_input is not None and not errors:
+            self._abort_if_unique_id_configured()
+            return self.async_create_entry(
+                title=self._connection_data[CONF_NAME],
+                data=self._connection_data,
+                options=values,
+            )
+        return self.async_show_form(
+            step_id="settings", data_schema=schema, errors=errors
         )
 
     @staticmethod
@@ -84,81 +106,109 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
         self._config_entry = entry
 
     async def async_step_init(self, user_input=None):
-        errors = {}
-        values = dict(self._config_entry.options if user_input is None else user_input)
-        ranges = {
-            "polling_interval": (1, 3600, 30),
-            "preview_interval": (10, 3600, 30),
-            "display_wake_timeout": (5, 300, 60),
-            "power_transition_timeout": (0, 300, 20),
-        }
-        booleans = {
-            "power_transition_mode": True,
-            "show_input_hdmi1": True,
-            "show_input_hdmi2": True,
-            "show_input_hdmi3": True,
-            "notification_wake_display": False,
-            "quiet_hours_enabled": False,
-            "native_web_enabled": False,
-            "preview_enabled": False,
-            "suppress_osd_during_switch": False,
-        }
+        schema, errors, values = _display_options_form(
+            user_input, self._config_entry.options
+        )
         if user_input is not None:
-            for key, (low, high, default) in ranges.items():
-                value = values.get(key, default)
-                if type(value) is not int or not low <= value <= high:
-                    errors[key] = (
-                        "invalid_preview_interval"
-                        if key == "preview_interval"
-                        else "invalid_option_range"
-                    )
-            if not values.get("native_web_password") and self._config_entry.options.get(
-                "native_web_password"
+            await _async_prepare_web_options(
+                self._config_entry.data[CONF_HOST], values, errors
+            )
+        if user_input is not None and not errors:
+            return self.async_create_entry(title="", data=values)
+        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)
+
+
+async def _async_prepare_web_options(host, values, errors):
+    """Auto-enroll only an empty pin; never replace a stored pin on failure."""
+    if (
+        not errors
+        and values.get("native_web_enabled")
+        and values.get("native_web_verify_certificate", True)
+        and not values.get("native_web_fingerprint")
+    ):
+        try:
+            values["native_web_fingerprint"] = await async_read_certificate_fingerprint(
+                host
+            )
+        except LGWebError:
+            errors["native_web_fingerprint"] = "cannot_read_certificate"
+
+
+def _display_options_form(user_input, saved_options):
+    """Share fields, defaults and validation between onboarding and later options."""
+    errors = {}
+    values = dict(saved_options if user_input is None else user_input)
+    ranges = {
+        "polling_interval": (1, 3600, 30),
+        "preview_interval": (10, 3600, 30),
+        "display_wake_timeout": (5, 300, 60),
+        "power_transition_timeout": (0, 300, 20),
+    }
+    booleans = {
+        "power_transition_mode": True,
+        "show_input_hdmi1": True,
+        "show_input_hdmi2": True,
+        "show_input_hdmi3": True,
+        "notification_wake_display": False,
+        "quiet_hours_enabled": False,
+        "native_web_enabled": False,
+        "native_web_verify_certificate": True,
+        "preview_enabled": False,
+        "suppress_osd_during_switch": False,
+    }
+    if user_input is not None:
+        for key, (low, high, default) in ranges.items():
+            value = values.get(key, default)
+            if type(value) is not int or not low <= value <= high:
+                errors[key] = (
+                    "invalid_preview_interval"
+                    if key == "preview_interval"
+                    else "invalid_option_range"
+                )
+        if not values.get("native_web_password") and saved_options.get(
+            "native_web_password"
+        ):
+            values["native_web_password"] = saved_options["native_web_password"]
+        if values.get("preview_enabled") and not values.get("native_web_enabled"):
+            errors["preview_enabled"] = "preview_requires_web"
+        if values.get("native_web_enabled"):
+            if not values.get("native_web_password"):
+                errors["native_web_password"] = "invalid_native_web_settings"
+            if values.get("native_web_verify_certificate", True) and values.get(
+                "native_web_fingerprint"
             ):
-                values["native_web_password"] = self._config_entry.options[
-                    "native_web_password"
-                ]
-            if values.get("preview_enabled") and not values.get("native_web_enabled"):
-                errors["preview_enabled"] = "preview_requires_web"
-            if values.get("native_web_enabled"):
-                if not values.get("native_web_password"):
-                    errors["native_web_password"] = "invalid_native_web_settings"
                 try:
                     values["native_web_fingerprint"] = normalize_fingerprint(
-                        values.get("native_web_fingerprint", "")
+                        values["native_web_fingerprint"]
                     )
                 except ValueError:
                     errors["native_web_fingerprint"] = "invalid_native_web_settings"
-            from homeassistant.util import dt as dt_util
+        from homeassistant.util import dt as dt_util
 
-            for key in ("quiet_hours_start", "quiet_hours_end"):
-                if dt_util.parse_time(values.get(key, "00:00")) is None:
-                    errors[key] = "invalid_time"
-            if not errors:
-                return self.async_create_entry(title="", data=values)
-        schema = {
-            vol.Optional(key, default=values.get(key, default)): int
-            for key, (_, _, default) in ranges.items()
+        for key in ("quiet_hours_start", "quiet_hours_end"):
+            if dt_util.parse_time(values.get(key, "00:00")) is None:
+                errors[key] = "invalid_time"
+    schema = {
+        vol.Optional(key, default=values.get(key, default)): int
+        for key, (_, _, default) in ranges.items()
+    }
+    schema.update(
+        {
+            vol.Optional(key, default=values.get(key, default)): bool
+            for key, default in booleans.items()
         }
-        schema.update(
-            {
-                vol.Optional(key, default=values.get(key, default)): bool
-                for key, default in booleans.items()
-            }
-        )
-        for key, default in {
-            "quiet_hours_start": "22:00",
-            "quiet_hours_end": "07:00",
-            "native_web_fingerprint": "",
-            **{f"input_name_hdmi{i}": f"HDMI {i}" for i in range(1, 4)},
-        }.items():
-            schema[vol.Optional(key, default=values.get(key, default))] = str
-        schema[vol.Optional("native_web_password")] = selector.TextSelector(
-            selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
-        )
-        schema[
-            vol.Optional("preview_height", default=values.get("preview_height", "720"))
-        ] = vol.In(["360", "720", "1080"])
-        return self.async_show_form(
-            step_id="init", data_schema=vol.Schema(schema), errors=errors
-        )
+    )
+    for key, default in {
+        "quiet_hours_start": "22:00",
+        "quiet_hours_end": "07:00",
+        "native_web_fingerprint": "",
+        **{f"input_name_hdmi{i}": f"HDMI {i}" for i in range(1, 4)},
+    }.items():
+        schema[vol.Optional(key, default=values.get(key, default))] = str
+    schema[vol.Optional("native_web_password")] = selector.TextSelector(
+        selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+    )
+    schema[
+        vol.Optional("preview_height", default=values.get("preview_height", "720"))
+    ] = vol.In(["360", "720", "1080"])
+    return vol.Schema(schema), errors, values

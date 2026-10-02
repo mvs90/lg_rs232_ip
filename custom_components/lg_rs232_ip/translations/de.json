@@ -3,16 +3,54 @@
     "step": {
       "user": {
         "title": "LG Professional Display",
-        "description": "Geben Sie die IP-Adresse und den Port Ihres LG-Displays ein",
+        "description": "Adresse und Port des LG-Displays eingeben. Im nächsten Schritt folgen die Display-Einstellungen einschließlich Vorschaukamera.",
         "data": {
           "host": "IP-Adresse",
           "port": "Port",
           "name": "Gerätename"
         }
+      },
+      "settings": {
+        "title": "LG-Display einstellen",
+        "data": {
+          "polling_interval": "Abfrageintervall (Sekunden)",
+          "power_transition_mode": "Power-Transition-Modus",
+          "power_transition_timeout": "Power-Transition-Timeout (Sekunden)",
+          "show_input_hdmi1": "HDMI 1 in Quellenliste anzeigen",
+          "show_input_hdmi2": "HDMI 2 in Quellenliste anzeigen",
+          "show_input_hdmi3": "HDMI 3 in Quellenliste anzeigen",
+          "input_name_hdmi1": "Media-Player HDMI-1-Name",
+          "input_name_hdmi2": "Media-Player HDMI-2-Name",
+          "input_name_hdmi3": "Media-Player HDMI-3-Name",
+          "display_wake_timeout": "Zeitlimit für Displaystart (Sekunden)",
+          "notification_wake_display": "Display für Meldungen/Inhalte einschalten erlauben",
+          "quiet_hours_enabled": "Ruhezeiten für Benachrichtigungen aktivieren",
+          "quiet_hours_start": "Beginn der Ruhezeit (HH:MM)",
+          "quiet_hours_end": "Ende der Ruhezeit (HH:MM)",
+          "native_web_enabled": "Nativen LG-Webzugriff aktivieren (UH5F-H getestet)",
+          "native_web_password": "LG-Mobile-URL-Passwort (leer = gespeichertes behalten)",
+          "native_web_fingerprint": "SHA-256-Fingerabdruck (leer = automatisch ermitteln)",
+          "suppress_osd_during_switch": "OSD während Quellen-/Vollbildumschaltung unterdrücken",
+          "preview_enabled": "Display-Vorschau durch Screenshots aktivieren",
+          "preview_interval": "Screenshot-Intervall (10–3600 Sekunden)",
+          "preview_height": "Screenshot-Höhe (Pixel)",
+          "native_web_verify_certificate": "LG-HTTPS-Zertifikat prüfen"
+        },
+        "data_description": {
+          "native_web_fingerprint": "Wird beim Speichern vom Display gelesen und für spätere Verbindungen gespeichert. Ein vorhandener Abdruck wird nicht automatisch ersetzt.",
+          "native_web_verify_certificate": "Standardmäßig aktiv. Ohne Prüfung bleibt HTTPS verschlüsselt, die Identität des Displays wird jedoch nicht geprüft."
+        },
+        "description": "Hier die Display-Einstellungen bestätigen. Für die Vorschaukamera den nativen LG-Webzugriff und die Screenshot-Vorschau aktivieren sowie das Mobile-URL-Passwort eintragen. Der Zertifikat-Fingerabdruck wird automatisch ermittelt, wenn das Feld leer bleibt. Alle Einstellungen lassen sich später über Konfigurieren ändern."
       }
     },
     "error": {
-      "cannot_connect": "Verbindung zum Display fehlgeschlagen. Bitte prüfen Sie IP-Adresse und Port."
+      "cannot_connect": "Verbindung zum Display fehlgeschlagen. Bitte prüfen Sie IP-Adresse und Port.",
+      "invalid_option_range": "Wert außerhalb des erlaubten Bereichs.",
+      "invalid_time": "Uhrzeit als HH:MM eingeben.",
+      "invalid_native_web_settings": "Mobile-URL-Passwort bzw. gültigen SHA-256-Abdruck eingeben; das Abdruckfeld darf zur automatischen Ermittlung leer bleiben.",
+      "preview_requires_web": "Für die Vorschau muss der native LG-Webzugriff aktiviert sein.",
+      "invalid_preview_interval": "Das Screenshot-Intervall muss zwischen 10 und 3600 Sekunden liegen.",
+      "cannot_read_certificate": "Das LG-HTTPS-Zertifikat konnte nicht gelesen werden. Webzugriff auf Port 3777 prüfen, einen Abdruck eintragen oder die Zertifikatsprüfung ausdrücklich ausschalten."
     },
     "abort": {
       "already_configured": "Bereits eingerichtet."
@@ -39,20 +77,26 @@
           "quiet_hours_end": "Ende der Ruhezeit (HH:MM)",
           "native_web_enabled": "Nativen LG-Webzugriff aktivieren (UH5F-H getestet)",
           "native_web_password": "LG-Mobile-URL-Passwort (leer = gespeichertes behalten)",
-          "native_web_fingerprint": "SHA-256-Fingerabdruck des LG-HTTPS-Zertifikats",
+          "native_web_fingerprint": "SHA-256-Fingerabdruck (leer = automatisch ermitteln)",
           "suppress_osd_during_switch": "OSD während Quellen-/Vollbildumschaltung unterdrücken",
           "preview_enabled": "Display-Vorschau durch Screenshots aktivieren",
           "preview_interval": "Screenshot-Intervall (10–3600 Sekunden)",
-          "preview_height": "Screenshot-Höhe (Pixel)"
+          "preview_height": "Screenshot-Höhe (Pixel)",
+          "native_web_verify_certificate": "LG-HTTPS-Zertifikat prüfen"
         },
-        "data_description": {}
+        "data_description": {
+          "native_web_fingerprint": "Wird beim Speichern vom Display gelesen und für spätere Verbindungen gespeichert. Ein vorhandener Abdruck wird nicht automatisch ersetzt.",
+          "native_web_verify_certificate": "Standardmäßig aktiv. Ohne Prüfung bleibt HTTPS verschlüsselt, die Identität des Displays wird jedoch nicht geprüft."
+        }
       }
     },
     "error": {
       "invalid_option_range": "Wert außerhalb des erlaubten Bereichs.",
       "invalid_time": "Uhrzeit als HH:MM eingeben.",
-      "invalid_native_web_settings": "Web-Passwort und gültigen SHA-256-Zertifikat-Fingerabdruck mit 64 Hex-Zeichen angeben.",
-      "preview_requires_web": "Für die Vorschau muss der native LG-Webzugriff aktiviert sein."
+      "invalid_native_web_settings": "Mobile-URL-Passwort bzw. gültigen SHA-256-Abdruck eingeben; das Abdruckfeld darf zur automatischen Ermittlung leer bleiben.",
+      "preview_requires_web": "Für die Vorschau muss der native LG-Webzugriff aktiviert sein.",
+      "invalid_preview_interval": "Das Screenshot-Intervall muss zwischen 10 und 3600 Sekunden liegen.",
+      "cannot_read_certificate": "Das LG-HTTPS-Zertifikat konnte nicht gelesen werden. Webzugriff auf Port 3777 prüfen, einen Abdruck eintragen oder die Zertifikatsprüfung ausdrücklich ausschalten."
     }
   },
   "title": "LG Professional Display"

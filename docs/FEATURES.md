@@ -6,9 +6,13 @@ All actions here belong to the standalone LG integration. Configure these under 
 
 Verified on **75UH5F-HJ, software 04.13.50, webOS 4.0.1-136**. These optional actions use the display's internal Content/Control Manager interface. Other Signage models or firmware versions need their own acceptance test; consumer webOS TV integrations are a different protocol.
 
-In integration options, enable **native LG web access**, enter the **Mobile URL web password** (LG remote → Home → Mobile URL), and the **SHA-256 fingerprint of the LG HTTPS certificate**. This is separate from the settings administrator PIN. Leaving the password field empty preserves the saved password. HA stores the credential in its private config entry; it is not included in entity attributes or integration diagnostics. The web interfaces on ports 3737 and 3777 must be reachable and use the same certificate, as on the tested display.
+In integration options, enable **native LG web access**, enter the **Mobile URL web password** (LG remote → Home → Mobile URL), and leave the **SHA-256 fingerprint** field empty to detect and store the certificate automatically (from 2.0.1). An explicit fingerprint can still be entered. This is separate from the settings administrator PIN. Leaving the password field empty preserves the saved password. HA stores the credential in its private config entry; it is not included in entity attributes or integration diagnostics. The web interfaces on ports 3737 and 3777 must be reachable and use the same certificate, as on the tested display.
 
-Obtain the fingerprint from the browser's certificate details, or run `python3 tools/read_web_certificate.py DISPLAY_IP` on the trusted device network and compare it with the browser certificate. The helper only reads the certificate; it sends no credentials or display commands. The integration pins that certificate for every web request, including WebSocket control. A changed certificate requires deliberate reconfiguration. No router port forwarding is required.
+Automatic detection trusts the certificate presented by the configured display during setup; it does not independently establish its identity. A saved fingerprint is never silently replaced after a mismatch. To enroll a replacement certificate deliberately, clear the fingerprint field and save again.
+
+**Verify LG HTTPS certificate** is enabled by default. Disabling it explicitly retains HTTPS encryption but disables certificate identity verification for LG login, controls, uploads and screenshots. No automatic fallback disables this check.
+
+For independent comparison, obtain the fingerprint from the browser's certificate details, or run `python3 tools/read_web_certificate.py DISPLAY_IP` on the trusted device network and compare it with the browser certificate. The helper only reads the certificate; it sends no credentials or display commands. With certificate verification enabled, the integration pins that certificate for every web request, including WebSocket control. A changed certificate requires deliberate reconfiguration. No router port forwarding is required.
 
 Native text over the current HDMI picture:
 

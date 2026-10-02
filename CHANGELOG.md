@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.1
+
+- Show the full LG settings form during initial setup, after connection details and before device/area assignment. Save selected settings as config-entry options.
+- Share fields and validation with the later Configure dialog, including web credentials and preview requirements. Restore the screenshot-interval validation translation.
+- Automatically enroll and store an empty SHA-256 certificate fingerprint during setup/configuration; existing pins stay unchanged. Add explicit certificate-verification opt-out, with verification enabled by default.
+- Existing entries and options are unchanged.
+
 ## 2.0.0
 
 - Standalone LG controller, pure display entity and display-only configuration.
