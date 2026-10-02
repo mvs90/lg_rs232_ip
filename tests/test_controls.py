@@ -9,6 +9,28 @@ from custom_components.lg_rs232_ip.controls import in_quiet_hours
 from homeassistant.util import dt as dt_util
 
 
+@pytest.mark.parametrize("condition", ["missing", "restored", "unavailable"])
+def test_unavailable_volume_target_clears_cached_values(player, condition):
+    entity_id = "media_player.sonos"
+    player._config_entry.options["linked_volume_media_player_entity_id"] = entity_id
+    player._test_states[entity_id] = State(
+        entity_id, "playing", {"volume_level": 0.4, "is_volume_muted": False}
+    )
+    player._update_volume_cache_from_state()
+    assert player.volume_level == 0.4
+    if condition == "missing":
+        del player._test_states[entity_id]
+    else:
+        player._test_states[entity_id] = State(
+            entity_id,
+            "unavailable" if condition == "unavailable" else "idle",
+            {"restored": condition == "restored"},
+        )
+    player._update_volume_cache_from_state()
+    assert player.volume_level is None
+    assert player.is_volume_muted is None
+
+
 @pytest.mark.asyncio
 async def test_turn_off_cancels_pending_wake(player):
     started = asyncio.Event()

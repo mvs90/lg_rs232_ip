@@ -771,6 +771,8 @@ class LGDisplayMediaPlayer(ExtendedControls, MediaPlayerEntity):
                     self._source = resolved_source
 
     def _update_volume_cache_from_state(self) -> None:
+        self._linked_volume_level = None
+        self._linked_is_muted = None
         volume_entity_id = self._volume_entity_id
         if not volume_entity_id:
             return
