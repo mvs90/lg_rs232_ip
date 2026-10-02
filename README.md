@@ -1,8 +1,8 @@
 # LG Professional Display
 
-Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.0.1 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
+Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.1.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
 
-[Deutsche Anleitung](docs/README.de.md) · [Features and actions](docs/FEATURES.md) · [Device reference](docs/devices/LG-UH5F-H.md) · [MIT license](LICENSE)
+[Deutsche Anleitung](docs/README.de.md) · [Dashboard remote](docs/DASHBOARD-CARD.md) · [Features and actions](docs/FEATURES.md) · [Device reference](docs/devices/LG-UH5F-H.md) · [MIT license](LICENSE)
 
 ## Install with HACS
 
@@ -11,6 +11,7 @@ Local Home Assistant integration for LG professional signage displays using RS23
 3. Settings → Devices & services → Add integration → **LG Professional Display**.
 4. Enter the display host and TCP port (normally **9761**).
 5. Confirm the full display settings form, including optional native web access and screenshot preview. Home Assistant asks for an area only after this step.
+6. Reload the frontend, edit a dashboard and add **LG Display Remote**. Its visual editor lets you select the display and optional preview camera; the card is bundled and registered automatically.
 
 Requires Home Assistant 2025.3 or later; tested on 2025.3.4 and 2026.9.4. Available as a HACS custom repository, not in its default catalogue. Manual install: copy `custom_components/lg_rs232_ip` into HA's `custom_components` directory and restart. This release is designed for a fresh setup; no migration from the earlier combined prototype is included.
 

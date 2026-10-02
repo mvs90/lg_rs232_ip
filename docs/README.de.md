@@ -12,6 +12,8 @@ Diese Integration steuert ausschließlich das LG-Display. Für Apple TV, Sonos, 
 
 Ab HA 2025.3; geprüft unter 2025.3.4 und 2026.9.4. Die Integration ist noch nicht im allgemeinen HACS-Katalog enthalten.
 
+Ab **2.1.0** wird eine Fernbedienungskarte automatisch mitgeliefert: Nach HA-Neustart die Browserseite neu laden, Dashboard bearbeiten → Karte hinzufügen → **LG Display Remote**. Display und optionale Kamera im visuellen Editor wählen. [Bedienung und YAML-Beispiel](DASHBOARD-CARD.md).
+
 ## Displayfunktionen
 
 Ein/Aus, HDMI-Eingänge, Displaylautstärke, Stummschaltung, Navigation, unterstützte Bild-/Energieeinstellungen und Statussensoren bleiben vollständig eigenständig. Erweiterte Einstellungen sind modellabhängig und teilweise standardmäßig deaktiviert. Kein Zuspieler und keine Steckdose werden von dieser Integration geschaltet.

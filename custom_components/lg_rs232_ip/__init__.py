@@ -20,6 +20,13 @@ PLATFORMS = [
 ]
 
 
+async def async_setup(hass, config):
+    from .frontend import async_register_card
+
+    await async_register_card(hass)
+    return True
+
+
 async def _async_update_listener(hass, entry):
     await hass.config_entries.async_reload(entry.entry_id)
 

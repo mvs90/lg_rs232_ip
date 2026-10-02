@@ -33,6 +33,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                         "home",
                         "information",
                         "back",
+                        "exit",
                     ]
                 )
             },
@@ -194,6 +195,8 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
     @property
     def extra_state_attributes(self):
         return {
+            "integration_domain": DOMAIN,
+            "native_web_enabled": self.entry.options.get("native_web_enabled", False),
             "presentation_active": self.controller.presentation_active,
             "presentation_queue_size": len(self.controller._presentation_queue),
             "presentation_error": self.controller._presentation_error,
@@ -272,8 +275,9 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             "right": 0x06,
             "select": 0x44,
             "back": 0x28,
-            "menu": 0x28,
-            "home": 0x43,
+            "menu": 0x43,
+            "home": 0x7C,
+            "exit": 0x5B,
             "information": 0xAA,
         }
         if command not in keys:

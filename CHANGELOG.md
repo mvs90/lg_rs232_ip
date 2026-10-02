@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.0
+
+- Bundle the LG Display Remote dashboard card and load it automatically with the integration. Include a visual editor, card picker entry, German/English labels, theme support and mobile layout.
+- Control display power, HDMI source, navigation, volume/mute and presentation return. Optionally show existing screenshot captures and send native text overlays.
+- Guard commands during standby, unavailable/unknown states and in-flight requests; show failures without assuming a successful state change. Preserve typed messages during HA updates.
+- Correct LG Home/Menu key codes to the webOS 4 guide and add Exit. Align the action selector with supported LG commands.
+- Add browser regression tests and frontend CI. Document setup and YAML configuration.
+
 ## 2.0.1
 
 - Show the full LG settings form during initial setup, after connection details and before device/area assignment. Save selected settings as config-entry options.

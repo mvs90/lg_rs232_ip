@@ -1,5 +1,13 @@
 # Release acceptance — 2026-10-02
 
+## LG 2.1.0: bundled dashboard remote
+
+**168 Python tests pass on both supported HA/Python combinations; ten Chromium tests pass.** Browser coverage includes entity-scoped service calls, power/state guards, custom input labels, volume/mute, presentation return, native text, preserved editor/input state, duplicate-submit suppression, errors, preview invalidation, keyboard controls and a 320-pixel-wide mobile layout.
+
+In the shared **HA 2026.9.4 Docker instance**, the bundled module loaded automatically without a Lovelace resource entry. The card appeared in the card picker and opened its visual editor; title and visibility edits updated the preview. Actual browser clicks sent LG `mc` navigation/Home/Menu/Exit, `xb` source, `kf` volume, `ke` mute and `ka` power commands through registered HA services to the TCP simulator. Standby disabled navigation and volume; explicit wake restored controls.
+
+After the simulator test, the separate **LG Fernbedienung** dashboard was configured with the existing physical LG and its already-enabled preview camera. The disposable simulator entry was removed. Existing dashboard contents and integration options were not changed. Real display captures appeared in the editor preview; no new physical power/source/navigation acceptance is claimed for this card release. The corrected Home/Menu and new Exit key codes are verified against LG's webOS 4.0 manual, pages 67–68, and tested against the simulator.
+
 ## LG 2.0.1: setup and HTTPS certificate handling
 
 **161 LG tests pass on both HA 2025.3.4 / Python 3.13 and HA 2026.9.4 / Python 3.14.** Coverage includes the initial settings step, option validation, automatic SHA-256 enrollment, preserved saved passwords/pins, explicit verification opt-out, sanitized discovery errors and no insecure retry after a certificate mismatch.

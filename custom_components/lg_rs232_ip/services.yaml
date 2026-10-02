@@ -9,8 +9,7 @@ clear_content:
   fields: {}
 send_remote_command:
   name: Send remote command
-  description: Route navigation to the linked remote on its HDMI input; otherwise
-    use LG remote keys.
+  description: Send a navigation key to the LG display itself.
   target:
     entity:
       domain: media_player
@@ -29,10 +28,8 @@ send_remote_command:
           - menu
           - home
           - information
-          - skip_forward
-          - skip_backward
-          - next
-          - previous
+          - back
+          - exit
       required: true
 show_toast:
   name: Show native LG text overlay
