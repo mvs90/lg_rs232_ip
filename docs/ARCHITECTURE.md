@@ -24,3 +24,7 @@ Explicit LG power/input commands cancel native content before acting. Explicit A
 LG unload closes its own presentation/session and emits invalidation. AV becomes unavailable and cannot cut power. LG reload is resolved through the same adapter. AV unload cancels its tasks and forgets the external supply hint; standalone LG operation continues. Optional foreign entity renames update AV options; circular AV/LG targets are rejected.
 
 Two repositories intentionally contain one `custom_components` domain each, following [HACS requirements](https://www.hacs.dev/docs/publish/integration/). HA [manifest dependencies](https://developers.home-assistant.io/docs/creating_integration_manifest/#dependencies) do not install another HACS repository or guarantee a configured LG entry; AV explicitly retries until its selected LG is ready. No prototype migration is supplied.
+
+## Optional hosted display app
+
+`display_app.py` owns per-entry token/assets/status and the persistent SI recovery journal. `NativePresentations` launches it through the same queue and transition lock as native media. SI provisioning and HDMI restoration are read back through `LGWebManager`; only the fixed SI launcher and HDMI app IDs are allowed. `show_display_app` is also available through the existing `async_present` adapter. The app receives only the currently authorized presentation and selected sensor values. See [Display app](DISPLAY-APP.md).

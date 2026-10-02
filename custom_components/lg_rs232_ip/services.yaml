@@ -175,3 +175,53 @@ show_stream:
       selector:
         boolean: {}
     priority: *id001
+
+show_display_app:
+  name: Show display app
+  description: Show a paired Home Assistant notification or selected sensor overview, then return to HDMI. Requires enabled display app and native web access.
+  target:
+    entity:
+      integration: lg_rs232_ip
+      domain: media_player
+  fields:
+    title:
+      name: Title
+      default: Home Assistant
+      selector:
+        text:
+    message:
+      name: Message
+      selector:
+        text:
+          multiline: true
+    duration:
+      name: Duration
+      default: 30
+      selector:
+        number:
+          min: 1
+          max: 3600
+          unit_of_measurement: s
+    dashboard:
+      name: Include selected sensors
+      default: false
+      selector:
+        boolean:
+    priority:
+      name: Priority
+      default: normal
+      selector:
+        select:
+          options:
+            - normal
+            - urgent
+    layout:
+      name: Layout
+      description: HDMI overlay and picture-in-picture require SI mode and compatible firmware. The initial app launch can briefly interrupt the picture.
+      default: fullscreen
+      selector:
+        select:
+          options:
+            - fullscreen
+            - overlay
+            - pip

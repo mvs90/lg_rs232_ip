@@ -1,0 +1,416 @@
+"""Optional, narrowly paired display app and reversible SI provisioning."""
+
+from __future__ import annotations
+
+import asyncio
+import hmac
+import ipaddress
+import json
+from pathlib import Path
+import secrets
+import time
+
+from aiohttp import web
+from homeassistant.components.http import HomeAssistantView
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.network import get_url
+from homeassistant.helpers.storage import Store
+from yarl import URL
+
+from .const import DOMAIN
+from .web_manager import LGWebError
+
+APP_VERSION = "1.0.0"
+SI_APP_ID = "commercial.signage.signageapplauncher"
+ASSETS = Path(__file__).parent / "www" / "display-app"
+
+
+def validate_base_url(value):
+    """The display needs a LAN-reachable address, never HA's localhost URL."""
+    try:
+        url = URL(value)
+        if (
+            url.scheme not in {"http", "https"}
+            or not url.host
+            or url.user is not None
+            or url.query_string
+            or url.fragment
+            or url.path not in {"", "/"}
+            or len(value) > 1024
+            or any(ord(c) < 32 for c in value)
+            or url.host.lower() in {"localhost", "localhost.localdomain"}
+        ):
+            raise ValueError
+        try:
+            address = ipaddress.ip_address(url.host)
+        except ValueError:
+            address = None
+        if address and (
+            address.is_loopback or address.is_unspecified or address.is_multicast
+        ):
+            raise ValueError
+        return str(url).rstrip("/")
+    except (ValueError, TypeError):
+        raise ValueError(
+            "Use the Home Assistant HTTP(S) address reachable from the display"
+        ) from None
+
+
+class DisplayAppManager:
+    """No HA login on the panel: its token permits only its own presentation."""
+
+    def __init__(self, hass, entry, controller, web_manager):
+        self.hass, self.entry = hass, entry
+        self.controller, self.web = controller, web_manager
+        self.enabled = entry.options.get("display_app_enabled", False)
+        self.mode = entry.options.get("display_app_mode", "si")
+        self.store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.display_app")
+        self.saved = {}
+        self.token = None
+        self.assets = {}
+        self.content = None
+        self.last_seen = 0.0
+        self.client_version = None
+        self.client_has_bridge = False
+        self.last_error = None
+        self._rendered = asyncio.Event()
+        self.closed = False
+
+    async def async_start(self):
+        self.saved = await self.store.async_load() or {}
+        self.token = self.saved.get("token")
+        if not self.token:
+            self.token = secrets.token_urlsafe(32)
+            self.saved["token"] = self.token
+            await self.store.async_save(self.saved)
+        if self.enabled:
+            self.assets = await self.hass.async_add_executor_job(
+                lambda: {
+                    name: (ASSETS / name).read_bytes()
+                    for name in ("index.html", "app.js", "app.css")
+                }
+            )
+
+    async def async_close(self):
+        self.closed = True
+        self.content = None
+        self._rendered.set()
+
+    @property
+    def status(self):
+        if not self.enabled:
+            return "disabled"
+        if self.last_error:
+            return "error"
+        if self.last_seen and time.monotonic() - self.last_seen < 20:
+            return "connected"
+        return "configured" if self.saved.get("installed") else "ready"
+
+    @property
+    def attributes(self):
+        return {
+            "launch_mode": self.mode,
+            "app_version": APP_VERSION,
+            "client_version": self.client_version,
+            "platform_bridge_present": self.client_has_bridge,
+            "si_configured": bool(self.saved.get("installed")),
+            "si_restore_pending": "previous" in self.saved,
+            "last_error": self.last_error,
+        }
+
+    def url(self):
+        if not self.enabled or self.closed:
+            raise HomeAssistantError(
+                "Enable the display app in LG integration options first"
+            )
+        try:
+            base = validate_base_url(
+                self.entry.options.get("display_app_base_url")
+                or get_url(self.hass, prefer_external=False)
+            )
+        except Exception:
+            raise HomeAssistantError(
+                "Set an LG-accessible Home Assistant URL in the display app options"
+            ) from None
+        return f"{base}/api/{DOMAIN}/display_app/{self.entry.entry_id}/{self.token}/index.html"
+
+    def _notify(self):
+        self.controller.async_write_ha_state()
+
+    def _require_idle_awake(self):
+        if self.controller.presentation_active or self.controller.external_owner:
+            raise HomeAssistantError(
+                "Stop the current presentation before changing SI settings"
+            )
+
+    async def async_prepare_si(self, original_app, original_power):
+        """Called under the controller lock. SI changes last for one presentation."""
+        if "previous" in self.saved:
+            await self.async_recover_si()
+        previous = await self.web.async_get_si_settings()
+        if previous["appLaunchMode"] != "none":
+            raise HomeAssistantError(
+                "An existing SI application is configured; it will not be replaced"
+            )
+        address = self.url()
+        desired = {
+            **previous,
+            "appLaunchMode": "remote",
+            "appType": "zip",
+            "fqdnMode": "on",
+            "fqdnAddr": address,
+            "secureConnection": "on" if address.startswith("https:") else "off",
+        }
+        self.saved.update(
+            previous=previous,
+            attempted=desired,
+            original_app=original_app,
+            original_power=original_power,
+        )
+        await self.store.async_save(self.saved)
+        try:
+            await self.web.async_set_si_settings(desired)
+            self.saved["installed"] = desired
+            await self.store.async_save(self.saved)
+            self.last_error = None
+        except LGWebError:
+            self.last_error = "si_setup_unconfirmed"
+            raise HomeAssistantError(
+                "SI setup was not confirmed; original settings are saved for restoration"
+            ) from None
+        finally:
+            self._notify()
+
+    async def async_owns_si(self):
+        current = await self.web.async_get_si_settings()
+        return current == self.saved.get("installed") or current == self.saved.get(
+            "attempted"
+        )
+
+    async def async_recover_si(self):
+        """Called under the controller lock, including after an interrupted HA run."""
+        previous = self.saved.get("previous")
+        if previous is None:
+            return
+        if (
+            await self.controller._lg_display.async_get_power_status(use_cache=False)
+            is not True
+        ):
+            raise HomeAssistantError(
+                "SI restoration pending until the display is awake"
+            )
+        current = await self.web.async_get_si_settings()
+        if current != previous:
+            if current not in [
+                self.saved.get("installed"),
+                self.saved.get("attempted"),
+            ]:
+                self.last_error = "si_settings_changed_externally"
+                raise HomeAssistantError(
+                    "SI settings changed outside Home Assistant; restoration stopped"
+                )
+            if await self.web.async_foreground_app() == SI_APP_ID:
+                original = self.saved.get("original_app")
+                if original not in {f"com.webos.app.hdmi{i}" for i in range(1, 5)}:
+                    raise HomeAssistantError("Original HDMI input is unknown")
+                async with self.controller._lg_display.async_suppress_osd_for_switch():
+                    await self.web.async_launch_app(original)
+            await self.web.async_set_si_settings(previous)
+        for key in (
+            "previous",
+            "installed",
+            "attempted",
+            "original_app",
+            "original_power",
+        ):
+            self.saved.pop(key, None)
+        await self.store.async_save(self.saved)
+        if self.last_error and self.last_error.startswith("si_"):
+            self.last_error = None
+        self._notify()
+
+    async def async_restore_si(self):
+        from .native_presentations import settle_mutation
+
+        async with self.controller._control_lock:
+            self._require_idle_awake()
+            _, cancelled = await settle_mutation(self.async_recover_si())
+            if cancelled:
+                raise asyncio.CancelledError
+
+    async def async_maybe_recover(self):
+        """Retry after a sleeping/disconnected display returns, without waking it."""
+        if (
+            "previous" not in self.saved
+            or self.controller._control_lock.locked()
+            or self.controller.presentation_active
+            or self.controller.external_owner
+            or self.last_error == "si_settings_changed_externally"
+        ):
+            return
+        try:
+            await self.async_restore_si()
+        except (HomeAssistantError, LGWebError):
+            if self.last_error != "si_settings_changed_externally":
+                self.last_error = "si_recovery_pending"
+            self._notify()
+
+    def begin(self, title, message, duration, dashboard=False, layout="fullscreen"):
+        if self.content is not None:
+            raise HomeAssistantError("A display app presentation is already active")
+        if layout not in {"fullscreen", "overlay", "pip"} or (
+            layout != "fullscreen" and self.mode != "si"
+        ):
+            raise HomeAssistantError(
+                "HDMI overlay and picture-in-picture require SI mode"
+            )
+        self.url()  # Check configuration before allocating presentation state.
+        self._rendered.clear()
+        self.last_error = None
+        self.content = {
+            "id": secrets.token_hex(16),
+            "title": title,
+            "message": message,
+            "duration": duration,
+            "dashboard": dashboard,
+            "layout": layout,
+            "hdmi": None,
+            "expires": time.monotonic() + duration + 360,
+        }
+        return self.content["id"]
+
+    def end(self, identifier):
+        if self.content and self.content["id"] == identifier:
+            self.content = None
+            self._rendered.set()
+
+    async def wait_rendered(self, identifier):
+        try:
+            await asyncio.wait_for(self._rendered.wait(), 15)
+        except TimeoutError:
+            self.last_error = "render_timeout"
+            self._notify()
+            raise HomeAssistantError(
+                "Display app did not confirm rendering; check its Home Assistant URL"
+            ) from None
+        if (
+            self.closed
+            or not self.content
+            or self.content["id"] != identifier
+            or self.last_error
+        ):
+            raise HomeAssistantError("Display app presentation failed or was cancelled")
+
+    def state(self):
+        content = self.content
+        if not content or content["expires"] <= time.monotonic():
+            return {"version": APP_VERSION, "content": None}
+        payload = {
+            key: content[key]
+            for key in ("id", "title", "message", "duration", "layout", "hdmi")
+        }
+        payload["rendered"] = bool(content.get("rendered"))
+        payload["remaining"] = max(0, int(content["expires"] - time.monotonic()))
+        payload["cards"] = []
+        if content["dashboard"]:
+            for entity_id in self.entry.options.get("display_app_entities", [])[:12]:
+                if entity_id.split(".")[0] not in {"sensor", "binary_sensor"}:
+                    continue
+                if state := self.hass.states.get(entity_id):
+                    payload["cards"].append(
+                        {
+                            "name": str(
+                                state.attributes.get("friendly_name", entity_id)
+                            )[:100],
+                            "value": state.state[:100],
+                            "unit": str(
+                                state.attributes.get("unit_of_measurement", "")
+                            )[:30],
+                        }
+                    )
+        return {"version": APP_VERSION, "content": payload}
+
+    def event(self, value):
+        if not isinstance(value, dict) or value.get("type") not in {
+            "hello",
+            "heartbeat",
+            "rendered",
+            "error",
+        }:
+            raise ValueError
+        if value["type"] == "hello":
+            version = value.get("version")
+            if not isinstance(version, str) or len(version) > 24:
+                raise ValueError
+            self.client_version = version
+            self.client_has_bridge = value.get("bridge") is True
+        self.last_seen = time.monotonic()
+        content = self.content
+        if content and value.get("id") == content["id"]:
+            if value["type"] == "error":
+                self.last_error = "render_failed"
+                self._rendered.set()
+            elif value["type"] == "rendered":
+                # The display's timer starts after actual rendering, not during launch.
+                if not content.get("rendered"):
+                    content["rendered"] = True
+                    content["expires"] = time.monotonic() + content["duration"]
+                self._rendered.set()
+        self._notify()
+
+
+class DisplayAppView(HomeAssistantView):
+    url = "/api/lg_rs232_ip/display_app/{entry_id}/{token}/{resource}"
+    name = "api:lg_rs232_ip:display_app"
+    requires_auth = False
+
+    def __init__(self, hass):
+        self.hass = hass
+
+    def _manager(self, request, entry_id, token):
+        manager = self.hass.data.get(DOMAIN, {}).get(entry_id, {}).get("display_app")
+        if (
+            not manager
+            or not manager.enabled
+            or manager.closed
+            or not manager.token
+            or not hmac.compare_digest(token.encode(), manager.token.encode())
+        ):
+            raise web.HTTPNotFound()
+        return manager
+
+    async def get(self, request, entry_id, token, resource):
+        manager = self._manager(request, entry_id, token)
+        headers = {
+            "Cache-Control": "no-store",
+            "Referrer-Policy": "no-referrer",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src ext:; frame-ancestors 'none'",
+        }
+        if resource == "state":
+            return web.json_response(manager.state(), headers=headers)
+        mime = {
+            "index.html": "text/html",
+            "app.js": "application/javascript",
+            "app.css": "text/css",
+        }
+        if resource not in mime:
+            raise web.HTTPNotFound()
+        return web.Response(
+            body=manager.assets[resource], content_type=mime[resource], headers=headers
+        )
+
+    async def post(self, request, entry_id, token, resource):
+        manager = self._manager(request, entry_id, token)
+        if resource != "event":
+            raise web.HTTPNotFound()
+        raw = bytearray()
+        async for chunk in request.content.iter_chunked(4097):
+            raw.extend(chunk)
+            if len(raw) > 4096:
+                raise web.HTTPRequestEntityTooLarge(max_size=4096, actual_size=len(raw))
+        try:
+            manager.event(json.loads(raw))
+        except (ValueError, TypeError):
+            raise web.HTTPBadRequest() from None
+        return web.json_response({"ok": True}, headers={"Cache-Control": "no-store"})

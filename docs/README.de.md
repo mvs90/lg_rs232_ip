@@ -50,3 +50,7 @@ Der ältere LG-Browser unterstützt nicht jede moderne Webseite. DRM, RTSP/RTMP 
 Die vollständigen Beispiele und Grenzen stehen in [FEATURES](FEATURES.md), [NATIVE-MEDIA](NATIVE-MEDIA.md) und der [Gerätereferenz 75UH5F-HJ](devices/LG-UH5F-H.md). [Prüfbericht](RELEASE-TESTS.md).
 
 Ab **2.2.0** beschleunigt sich die Vorschau automatisch, solange die Fernbedienung sichtbar oder die Kamera-Großansicht geöffnet ist. Standard: **1 Sekunde**, anschließend wieder das normale Intervall (standardmäßig 30 Sekunden). Unter **Konfigurieren** sind beide Intervalle einstellbar; **0** beim Intervall für die geöffnete Vorschau deaktiviert die Beschleunigung. Ein Klick auf das Vorschaubild öffnet die Großansicht. Mehrere Ansichten teilen sich dieselbe Aufnahme. Das LG liefert einzelne Screenshots, deshalb entsteht kein flüssiges Video mit 25/30 Bildern pro Sekunde.
+
+## Optionale Display-App (2.3)
+
+Die [Display-App](DISPLAY-APP.md) wird direkt von Home Assistant bereitgestellt und automatisch für eine Anzeige als SI-App eingerichtet. Sie unterstützt Vollbildmeldungen, ausgewählte Sensoren, Einblendungen über HDMI und HDMI als Bild-in-Bild. Die Startmethode, HA-Adresse und Sensorfreigaben befinden sich in den Integrationseinstellungen. Die Fernbedienung bietet die Ansichten zur Auswahl. OSD-Unterdrückung, Warteschlange und Rückkehr zum vorherigen Eingang bleiben wirksam; vorhandene SI-Apps werden nicht überschrieben. Dauerbetrieb als HDMI-Ersatz ist noch nicht aktiviert.

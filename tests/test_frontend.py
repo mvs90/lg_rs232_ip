@@ -17,7 +17,7 @@ from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
 @pytest.mark.asyncio
 async def test_bundled_module_registered_without_dashboard_mutation():
     hass = SimpleNamespace(
-        http=SimpleNamespace(async_register_static_paths=AsyncMock()),
+        http=SimpleNamespace(async_register_static_paths=AsyncMock(), register_view=Mock()),
         data={DATA_EXTRA_MODULE_URL: set()},
     )
     assert await async_setup(hass, {})

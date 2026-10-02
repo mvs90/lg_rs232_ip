@@ -102,6 +102,13 @@ class DisplayController(NativeControls):
         async with self._refresh_lock:
             self.power = await self._lg_display.async_get_power_status(use_cache=False)
             if self.power is True:
+                app = (
+                    self.hass.data.get(DOMAIN, {})
+                    .get(self._config_entry.entry_id, {})
+                    .get("display_app")
+                )
+                if app:
+                    await app.async_maybe_recover()
                 self._current_input_id = await self._lg_display.async_get_input()
                 self._source = self._resolve_source_name(self._current_input_id)
                 self.volume = await self._lg_display.async_get_volume()

@@ -4,7 +4,7 @@ import logging
 from datetime import timedelta
 from typing import Optional
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
@@ -140,6 +140,8 @@ async def async_setup_entry(
         ),
     ]
 
+    if manager := data.get("display_app"):
+        entities.append(LGDisplayAppSensor(manager, config_entry))
     async_add_entities(entities)
 
 
@@ -645,3 +647,29 @@ class LGDisplayStatusSensor(LGDisplayBaseSensor):
             self._command, self._parameter
         )
         self._attr_native_value = self._values.get(value)
+
+
+class LGDisplayAppSensor(LGDisplayBaseSensor):
+    """Connection and restoration status without paired URLs or sensor contents."""
+
+    _attr_entity_registry_enabled_default = True
+    _attr_translation_key = "display_app"
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = ["disabled", "error", "connected", "configured", "ready"]
+    _attr_icon = "mdi:monitor-dashboard"
+
+    def __init__(self, manager, entry):
+        self.manager = manager
+        self._attr_unique_id = f"{entry.entry_id}_display_app"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, entry.entry_id)})
+
+    @property
+    def native_value(self):
+        return self.manager.status
+
+    @property
+    def extra_state_attributes(self):
+        return self.manager.attributes
+
+    async def async_added_to_hass(self):
+        self.async_on_remove(self.manager.controller.subscribe(self.async_write_ha_state))

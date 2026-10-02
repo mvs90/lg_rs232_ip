@@ -99,6 +99,34 @@ class NativePresentations:
             )
         )
 
+    async def async_show_display_app(
+        self,
+        title="Home Assistant",
+        message="",
+        duration=30,
+        dashboard=False,
+        priority="normal",
+        layout="fullscreen",
+    ):
+        self._require_web_manager()
+        manager = self.hass.data[DOMAIN][self._config_entry.entry_id].get("display_app")
+        if manager is None:
+            raise HomeAssistantError(
+                "Enable the display app in integration options first"
+            )
+        manager.url()
+        await self._enqueue_presentation(
+            dict(
+                kind="display_app",
+                title=title,
+                message=message,
+                duration=duration,
+                dashboard=dashboard,
+                priority=priority,
+                layout=layout,
+            )
+        )
+
     async def async_show_stream(
         self, media_id, duration=300, priority="normal", muted=True
     ):
@@ -157,9 +185,20 @@ class NativePresentations:
 
     async def _async_present_native(self, request):
         web = self._require_web_manager()
+        manager = None
+        content_id = None
+        if request["kind"] == "display_app":
+            manager = self.hass.data[DOMAIN][self._config_entry.entry_id]["display_app"]
+        si = manager is not None and manager.mode == "si"
         video = request["kind"] == "native_video"
-        website = request["kind"] in {"native_website", "native_stream"}
+        website = request["kind"] in {"native_website", "native_stream"} or (
+            manager is not None and not si
+        )
         owned_app = "com.webos.app.browser" if website else NATIVE_APP
+        if si:
+            from .display_app import SI_APP_ID
+
+            owned_app = SI_APP_ID
         old_url = new_url = None
         remove_page = None
         asset = None
@@ -171,8 +210,16 @@ class NativePresentations:
         self._presentation_error = None
         try:
             self._check_presentation_policy(request["priority"])
+            if manager:
+                content_id = manager.begin(
+                    request["title"],
+                    request["message"],
+                    request["duration"],
+                    request["dashboard"],
+                    request.get("layout", "fullscreen"),
+                )
             if website:
-                source = request["media_id"]
+                source = manager.url() if manager else request["media_id"]
                 if request["kind"] == "native_stream":
                     from .stream_page import create_stream_page
 
@@ -192,7 +239,7 @@ class NativePresentations:
                     "playViaUrlMode": "on",
                     "playViaUrl": web.validate_url(source),
                 }
-            else:
+            elif not si:
                 image = await (
                     self._async_download_native_video(request["media_id"])
                     if video
@@ -238,8 +285,14 @@ class NativePresentations:
                     raise HomeAssistantError(
                         "Native media require an external input; cannot restore an existing LG app session"
                     )
+                if manager:
+                    manager.content["hdmi"] = "ext://hdmi:" + initial_app[-1]
                 # Shield bounded upload/launch writes from half-completed cancellation.
-                if website:
+                if si:
+                    _, cancelled = await settle_mutation(
+                        manager.async_prepare_si(initial_app, snapshot[0])
+                    )
+                elif website:
                     await web.async_recover_url_settings()
                     old_url = await web.async_get_url_settings()
                     await web.async_save_url_restore(old_url, new_url)
@@ -260,7 +313,12 @@ class NativePresentations:
                         "Display app changed during upload; presentation cancelled"
                     )
                 launch_attempted = True
-                if website:
+                if si:
+                    async with self._lg_display.async_suppress_osd_for_switch():
+                        _, cancelled = await settle_mutation(
+                            web.async_launch_app(owned_app)
+                        )
+                elif website:
                     # async_set_input already owns the OSD transition lock.
                     _, cancelled = await settle_mutation(
                         self._async_launch_website(web)
@@ -276,6 +334,8 @@ class NativePresentations:
                 if cancelled:
                     raise asyncio.CancelledError
                 self.async_write_ha_state()
+            if manager:
+                await manager.wait_rendered(content_id)
             await asyncio.sleep(request["duration"])
         finally:
             async with self._control_lock:
@@ -305,6 +365,8 @@ class NativePresentations:
                         owns_screen = launch_attempted and app == owned_app
                         if website and owns_screen:
                             owns_screen = await web.async_get_url_settings() == new_url
+                        if si and owns_screen:
+                            owns_screen = await manager.async_owns_si()
                         can_delete = current_power is False or (
                             launch_confirmed and app is not None and app != owned_app
                         )
@@ -312,7 +374,12 @@ class NativePresentations:
                             woke and app == initial_app and initial_app in EXTERNAL_APPS
                         ):
                             if snapshot[0]:
-                                if not await self._lg_display.async_set_input(
+                                if si:
+                                    async with (
+                                        self._lg_display.async_suppress_osd_for_switch()
+                                    ):
+                                        await web.async_launch_app(initial_app)
+                                elif not await self._lg_display.async_set_input(
                                     snapshot[1]
                                 ):
                                     raise HomeAssistantError(
@@ -333,7 +400,14 @@ class NativePresentations:
                             else:
                                 # Leave DSMP before standby so a pending OSD unlock
                                 # can succeed while the external input is active.
-                                if not await self._lg_display.async_set_input(
+                                if si:
+                                    async with (
+                                        self._lg_display.async_suppress_osd_for_switch()
+                                    ):
+                                        await web.async_launch_app(initial_app)
+                                    # Restore settings while awake, before standby.
+                                    await manager.async_recover_si()
+                                elif not await self._lg_display.async_set_input(
                                     snapshot[1]
                                 ):
                                     raise HomeAssistantError(
@@ -379,6 +453,13 @@ class NativePresentations:
                         self._presentation_error = "Could not restore LG URL loader settings; check Play via URL on the display"
                     if remove_page:
                         remove_page()
+                    if manager:
+                        manager.end(content_id)
+                    if si:
+                        try:
+                            await manager.async_recover_si()
+                        except Exception:
+                            self._presentation_error = "SI restoration pending; use Restore SI settings on the LG device page"
                     await self._lg_display.async_restore_pending_osd()
                     self._presentation_active = False
                     self.async_write_ha_state()

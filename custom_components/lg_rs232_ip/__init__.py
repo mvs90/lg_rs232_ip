@@ -19,6 +19,7 @@ PLATFORMS = [
     Platform.NUMBER,
     Platform.SENSOR,
     Platform.CAMERA,
+    Platform.BUTTON,
 ]
 
 
@@ -26,6 +27,9 @@ async def async_setup(hass, config):
     from .frontend import async_register_card
 
     await async_register_card(hass)
+    from .display_app import DisplayAppView
+
+    hass.http.register_view(DisplayAppView(hass))
     return True
 
 
@@ -66,6 +70,14 @@ async def async_setup_entry(hass, entry):
             await web.async_recover_url_settings()
         except Exception:
             _LOGGER.warning("LG URL recovery pending")
+        from .display_app import DisplayAppManager
+
+        app = data["display_app"] = DisplayAppManager(hass, entry, controller, web)
+        await app.async_start()
+        try:
+            await app.async_restore_si()
+        except Exception:
+            _LOGGER.warning("LG SI recovery pending; use Restore SI settings when awake")
     if await display.async_connect() and await display.async_get_power_status() is True:
         await display.async_get_model_name()
         await display.async_get_software_version()
@@ -78,6 +90,8 @@ async def async_unload_entry(hass, entry):
     data = hass.data[DOMAIN][entry.entry_id]
     if await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         await data["controller"].async_close()
+        if app := data.get("display_app"):
+            await app.async_close()
         if web := data.get("web_manager"):
             await web.async_close()
         await data["lg_display"].async_disconnect()

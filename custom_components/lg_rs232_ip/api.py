@@ -137,6 +137,7 @@ class DisplayAPI:
     async def async_present(self, action, **kwargs):
         if action not in {
             "show_toast",
+            "show_display_app",
             "show_native_image",
             "show_native_video",
             "show_website",

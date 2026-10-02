@@ -20,6 +20,27 @@ async def async_setup_entry(hass, entry, async_add_entities):
     hass.data[DOMAIN][entry.entry_id]["media_player"] = player
     async_add_entities([player])
     services = {
+        "show_display_app": (
+            {
+                vol.Optional("title", default="Home Assistant"): vol.All(
+                    cv.string, vol.Length(min=1, max=160)
+                ),
+                vol.Optional("message", default=""): vol.All(
+                    cv.string, vol.Length(max=2000)
+                ),
+                vol.Optional("duration", default=30): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=3600)
+                ),
+                vol.Optional("dashboard", default=False): cv.boolean,
+                vol.Optional("layout", default="fullscreen"): vol.In(
+                    ["fullscreen", "overlay", "pip"]
+                ),
+                vol.Optional("priority", default="normal"): vol.In(
+                    ["normal", "urgent"]
+                ),
+            },
+            "async_show_display_app",
+        ),
         "send_remote_command": (
             {
                 vol.Required("command"): vol.In(
@@ -197,6 +218,8 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         return {
             "integration_domain": DOMAIN,
             "native_web_enabled": self.entry.options.get("native_web_enabled", False),
+            "display_app_enabled": self.entry.options.get("display_app_enabled", False),
+            "display_app_mode": self.entry.options.get("display_app_mode", "si"),
             "presentation_active": self.controller.presentation_active,
             "presentation_queue_size": len(self.controller._presentation_queue),
             "presentation_error": self.controller._presentation_error,
@@ -306,6 +329,9 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
 
     async def async_show_toast(self, **kwargs):
         return await self.controller.async_show_toast(**kwargs)
+
+    async def async_show_display_app(self, **kwargs):
+        return await self.controller.async_show_display_app(**kwargs)
 
     async def async_show_native_image(self, **kwargs):
         return await self.controller.async_show_native_image(**kwargs)

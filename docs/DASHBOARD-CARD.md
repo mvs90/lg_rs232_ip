@@ -50,3 +50,7 @@ Home/Menu/Back/Exit use the LG webOS 4.0 guide's documented IR codes `7c`/`43`/`
 The bundle also registers `lg-display-camera-preview` and wraps `ha-camera-stream.render()` for cameras carrying both `integration_domain: lg_rs232_ip` and `preview_mode: periodic_screenshot`. This frontend compatibility hook keeps HA's surrounding dialog and download action; all other cameras call the original renderer. It does not edit HA core files or disable/change service workers. Because the hook uses an internal frontend component, future HA frontend changes require compatibility testing. Native MJPEG remains available for external clients; LG frontend views use the authenticated binary frame response on the same camera route.
 
 Frontend tests: `npm ci`, `npx playwright install chromium webkit`, `npm test`. Tests include an active service worker forwarding camera requests with `fetch()`, as HA does. Python tests also verify module delivery, card discovery metadata and the service-command contract. The card follows Home Assistant's [custom card API](https://developers.home-assistant.io/docs/frontend/custom-ui/custom-card/) and uses [asynchronous static-path registration](https://developers.home-assistant.io/blog/2024/06/18/async_register_static_paths/).
+
+## Display app
+
+With the optional [display app](DISPLAY-APP.md) enabled, the remote adds a separate message/overview section and a fullscreen / HDMI overlay / PiP selector. SI mode is required for HDMI layouts. These controls use `show_display_app`; the existing text-overlay field still uses the native LG toast.

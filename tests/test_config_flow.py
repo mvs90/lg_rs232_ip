@@ -305,3 +305,31 @@ def test_preview_rejects_invalid_active_interval(active):
 
     _, errors, _ = _display_options_form({"preview_active_interval": active}, {})
     assert errors == {"preview_active_interval": "invalid_option_range"}
+
+
+@pytest.mark.asyncio
+async def test_display_app_options_validate_web_url_and_sensor_allowlist(flow):
+    result = await flow.async_step_init(
+        {
+            "display_app_enabled": True,
+            "display_app_base_url": "http://localhost:8123",
+            "display_app_entities": ["light.private"],
+        }
+    )
+    assert set(result["errors"]) == {
+        "display_app_enabled",
+        "display_app_base_url",
+        "display_app_entities",
+    }
+    result = await flow.async_step_init(
+        {
+            "display_app_enabled": True,
+            "native_web_enabled": True,
+            "native_web_password": "secret",
+            "native_web_verify_certificate": False,
+            "display_app_base_url": "http://ha.test:8123/",
+            "display_app_entities": ["sensor.temperature"],
+            "display_app_mode": "si",
+        }
+    )
+    assert result["data"]["display_app_base_url"] == "http://ha.test:8123"

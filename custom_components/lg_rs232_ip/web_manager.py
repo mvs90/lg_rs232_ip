@@ -247,6 +247,80 @@ class LGWebManager:
             result = await self._api("getForegroundAppInfo", "getForegroundAppInfo")
             return result.get("appId")
 
+    async def async_launch_app(self, app_id):
+        """Only the SI launcher and HDMI inputs; no arbitrary app/service dispatch."""
+        if app_id not in {
+            "commercial.signage.signageapplauncher",
+            *(f"com.webos.app.hdmi{i}" for i in range(1, 5)),
+        }:
+            raise LGWebError("Unsupported display app")
+        async with self._lock:
+            await self._api("setInputSouce", "setInputSouce", appId=app_id)
+        for _ in range(10):
+            if await self.async_foreground_app() == app_id:
+                return
+            await asyncio.sleep(0.4)
+        raise LGWebError("Display app launch was not confirmed")
+
+    @staticmethod
+    def validate_si_settings(settings):
+        keys = {
+            "serverIpPort",
+            "siServerIp",
+            "secureConnection",
+            "appLaunchMode",
+            "fqdnAddr",
+            "fqdnMode",
+            "appType",
+        }
+        if not isinstance(settings, dict) or not keys <= settings.keys():
+            raise LGWebError("Cannot read complete SI settings")
+        result = {key: settings[key] for key in keys}
+        if (
+            any(not isinstance(value, str) for value in result.values())
+            or result["secureConnection"] not in {"on", "off"}
+            or result["fqdnMode"] not in {"on", "off"}
+            or result["appLaunchMode"] not in {"none", "local", "remote", "usb"}
+            or result["appType"] not in {"zip", "ipk"}
+            or not result["serverIpPort"].isdigit()
+            or not 0 <= int(result["serverIpPort"]) <= 65535
+            or len(result["fqdnAddr"]) > 2048
+            or len(result["siServerIp"]) > 255
+        ):
+            raise LGWebError("Unsupported SI settings")
+        return result
+
+    async def async_get_si_settings(self):
+        async with self._lock:
+            value = await self._api(
+                "getSystemSettings",
+                "systemSettings",
+                category="commercial",
+                keys=[
+                    "serverIpPort",
+                    "siServerIp",
+                    "secureConnection",
+                    "appLaunchMode",
+                    "fqdnAddr",
+                    "fqdnMode",
+                    "appType",
+                ],
+            )
+        return self.validate_si_settings(value)
+
+    async def async_set_si_settings(self, settings):
+        settings = self.validate_si_settings(settings)
+        async with self._lock:
+            await self._api(
+                "setSystemSettings",
+                "setSystemSettings",
+                category="commercial",
+                settings=settings,
+                shouldCallback=True,
+            )
+        if await self.async_get_si_settings() != settings:
+            raise LGWebError("SI setting change was not confirmed")
+
     async def async_upload_image(self, image: bytes) -> dict:
         if not 0 < len(image) <= 5 * 1024 * 1024:
             raise LGWebError("Image must be at most 5 MiB")

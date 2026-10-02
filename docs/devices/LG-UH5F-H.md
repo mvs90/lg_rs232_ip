@@ -198,3 +198,25 @@ The final guarded hardware test confirmed **OSD 01 → 00 during native playback
 See [native media actions](../NATIVE-MEDIA.md) for user-facing examples and compatibility limits. A browser fullscreen hint appeared in an exploratory capture; do not promise suppression of every browser-owned message merely from the input OSD option.
 
 Final controller round-trip checks also ran both website/HLS and native MP4 with `suppress_osd_during_switch` enabled. Both completed without `presentation_error`, returned to HDMI1, and restored the originally enabled OSD; URL mode was off with its original empty value afterward.
+
+## SI application and external HDMI plane — 2.3 investigation
+
+The publicly distributed [LG webOS CLI](https://github.com/webos-tools/cli), npm `@webos-tools/cli` 3.2.6, includes Signage SDK templates. Its `files/templates/signage-sdk-templates/scap_api/1.5.0/js/cordova-cd/configuration.js` documents the following `commercial` settings through `getServerProperty` / `setServerProperty`; `inputSource.js` creates the external-video element. No third-party SDK code is bundled by this integration.
+
+| Native field | Observed / supported values |
+|---|---|
+| `appLaunchMode` | `none`, `local`, `remote`, `usb`; hosted prototype uses `remote` temporarily |
+| `appType` | `zip` / `ipk`; hosted launcher tested with `zip` |
+| `fqdnMode`, `secureConnection` | Native strings `on` / `off` |
+| `fqdnAddr` | URL of hosted app entry point |
+| `siServerIp`, `serverIpPort` | Native strings, preserved from the previous configuration |
+
+Control Manager's authenticated Socket.IO `_api` methods `getSystemSettings` / `setSystemSettings`, category `commercial`, read and write these seven fields. The getter returns a flat dictionary; the setter uses `shouldCallback: true`. Each mutation was verified with a fresh readback, and the original settings were restored. The launcher is **`commercial.signage.signageapplauncher`**, started by the Control Manager's exact method spelling **`setInputSouce`**. `com.lg.app.signage` is the conventional separately installed app ID and was not installed on this panel; treating it as the hosted launcher was rejected. SI-to-HDMI return was verified with the same web method and the original `com.webos.app.hdmi1` ID.
+
+Within the hosted SI app, `PalmSystem` and `PalmServiceBridge` are present; the browser reports Chromium **53.0.2785.34**. A `<video autoplay><source type="service/webos-external" src="ext://hdmi:1"></video>` produced the running 3840×2160 HDMI source. Metadata arrived before dimensions were nonzero, so the app waits for actual video dimensions before confirming an HDMI layout. CSS places the native HDMI plane under the notification or in a smaller PiP rectangle. Both results were captured on the real panel; see release evidence for complete HA tests.
+
+webOS can retain a launched SI page in memory after returning to HDMI. Changing `fqdnAddr` alone did not refresh that cached prototype. The production app closes on leaving the foreground and refreshes when its version changes; its stable paired endpoint serves current state without relaunching for every sensor update. Two deliberate display restarts were used during development to remove earlier disposable pages. Routine production notifications require no display restart.
+
+The public SDK also describes privileged functions such as `changeLogoImage` and `restartApplication`; presence in the SDK or presence of `PalmServiceBridge` is **not** proof that every call is permitted in this hosted app. They have not been added as unrestricted Luna command passthrough. Existing USB boot-image workflow remains unchanged.
+
+SI settings enable this app path. SuperSign server settings configure LG's separate management products; Crestron settings target Crestron control systems. Neither was changed. HDMI-in-app is a useful basis for a future resident app but this release does not claim continuous standby/CEC/HDCP/audio acceptance.

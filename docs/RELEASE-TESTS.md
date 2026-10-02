@@ -1,5 +1,17 @@
 # Release acceptance — 2026-10-02
 
+## LG 2.3.0: hosted SI app, HDMI overlay and PiP
+
+**218 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 44 browser tests pass across Chromium and WebKit.** New coverage includes real token-scoped HTTP routes, fragmented/oversized/invalid event requests, URL and sensor validation, expiry, restored settings after ambiguous writes/restart/cancellation, foreign-SI/input ownership, no-wake recovery, website fallback, and the actual OSD guard with initially enabled and disabled OSD. Frontend tests exercise plain-text rendering, acknowledged paint, blanking private content after connection loss, HDMI readiness before acknowledgement and remote-card actions. Browser HDMI-plane properties are simulated; hardware results below are separate.
+
+In the shared **HA 2026.9.4 Docker instance**, setup was completed through HA's ordinary options flow. The physical **75UH5F-HJ / 04.13.50 / webOS 4.0.1-136** loaded the HA-hosted app through its SI launcher and reported its platform bridge. Fullscreen, HDMI-overlay and HDMI-PiP actions each completed with a rendering acknowledgement, no presentation error, the original HDMI 1 foreground app, and byte-for-byte equal SI settings after return. The configured 12-second displays took roughly 22–24 seconds including setup, launch and restoration. This timing is not a guaranteed instant-overlay latency.
+
+Private panel captures verified the full-screen message/selected sensor, a notification over the running HDMI picture, and a smaller HDMI picture beside the HA overview. A fresh multi-frame HA camera stream was used for PiP verification after a normal cached screenshot initially still showed the prior HDMI view. A separate 30-second PiP presentation was cancelled through `clear_content`; HDMI and SI settings were restored with no presentation error. Public documentation contains no captured programme imagery or private pairing URLs.
+
+The OSD option stayed enabled throughout these app tests. Additional physical HA switch tests started with OSD **on** and **off**: the final state matched each initial state, and manually disabled OSD remained off during the app. The transition-only suppression code is covered by software command-sequence tests; a state query several seconds after launch is not evidence of the short suppression interval itself. The panel's original OSD-on state and the temporarily enabled OSD test entity's registry setting were restored.
+
+The user authorized these display tests, including reversible SI changes and development restarts. No SuperSign/Crestron setting, installed third-party SI app, Sonos/Apple TV setting or socket state was changed. Resident app standby/CEC/audio, all HDMI ports, all protected-content providers and arbitrary privileged SCAP commands remain unverified. The app is hosted and timed; always-on HDMI replacement is not enabled.
+
 ## LG 2.2.1: Safari with Home Assistant's service worker
 
 **184 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 36 browser tests pass across Chromium and WebKit.** New browser cases run with an active service worker forwarding camera requests through `fetch()`. They verify decoded, changing frames in the LG camera component, both component registration orders, repeated module loading, stable connections across state updates, reconnects, detachment and restoration of the original renderer for other cameras.

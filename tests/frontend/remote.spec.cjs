@@ -173,7 +173,7 @@ test("message survives state updates and input is rendered as text", async ({
   await mount(page, { name: "<img src=x onerror=alert(1)>" });
   await expect(page.locator("h2")).toHaveText("<img src=x onerror=alert(1)>");
   expect(await page.locator("h2 img").count()).toBe(0);
-  await page.locator("summary").click();
+  await page.locator("#message-panel summary").click();
   await page
     .getByRole("textbox", { name: "Nachricht auf dem Display" })
     .fill("Hallo <b>LG</b>");
@@ -699,4 +699,22 @@ test("native LG preview releases streams on detach and retries through service w
   await expect(page.locator("#image")).toBeVisible();
   await page.evaluate(() => nativePreview.remove());
   await expect.poll(() => previewServer.stats.active).toBe(0);
+});
+
+test('display app controls respect opt-in and send only selected display', async ({page}) => {
+  await mount(page);
+  await expect(page.locator('#app-panel')).toBeHidden();
+  await update(page, {attributes: {...initial.attributes, display_app_enabled: true}});
+  await page.locator('#app-panel summary').click();
+  await page.locator('#app-message').fill('Test notification');
+  await page.locator('#app-layout').selectOption('pip');
+  await page.locator('#app-send').click();
+  await page.locator('#app-dashboard').click();
+  const sent = await calls(page);
+  expect(sent[0][0]).toBe('lg_rs232_ip');
+  expect(sent[0][1]).toBe('show_display_app');
+  expect(sent[0][2].message).toBe('Test notification');
+  expect(sent[0][2].layout).toBe('pip');
+  expect(sent[1][2].dashboard).toBe(true);
+  expect(sent[1][2].entity_id).toBe('media_player.display');
 });

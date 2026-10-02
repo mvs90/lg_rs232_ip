@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.3.0
+
+- Add an optional HA-hosted display app with per-device pairing, automatic temporary SI configuration, rendering acknowledgement, sensor allowlist and HA setup options. No external CMS or developer-mode installation is needed.
+- Add fullscreen, HDMI overlay and HDMI picture-in-picture layouts; expose the action, device test/overview/recovery buttons, status sensor and remote-card controls.
+- Reuse the presentation queue, AV ownership, wake/quiet-hour policy and OSD transition guard. Preserve disabled OSD and user input changes, journal settings before writes, restore HDMI/SI on completion or cancellation, and retry owned recovery after reconnect.
+- Keep arbitrary HA service access and unrestricted entity data out of the panel endpoint. Bound requests, expire withdrawn/offline content, render messages as text, and use local ES5 assets compatible with the tested webOS 4 platform.
+- Document the verified SI launcher and external-video path, server/Crestron distinctions, and limitations of permanent app operation, HDCP/audio and model compatibility.
+
 ## 2.2.1
 
 - Fix the enlarged LG camera view in macOS Safari when Home Assistant's service worker is active. Share the remote card's abortable binary JPEG reader with the LG view instead of sending multipart MJPEG through Safari's Fetch implementation.

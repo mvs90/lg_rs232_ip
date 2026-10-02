@@ -30,6 +30,13 @@ const TEXT = {
     signal: "HDMI signal present",
     content: "Temporary content active",
     clear: "Return to input",
+    app: "Display app",
+    appLayout: "Layout",
+    appFullscreen: "Fullscreen",
+    appOverlay: "Overlay on HDMI",
+    appPip: "HDMI picture-in-picture",
+    appSend: "Show notification",
+    appDashboard: "Show sensor overview",
     message: "Text overlay",
     messageHint: "Message on the display",
     send: "Send",
@@ -54,6 +61,13 @@ const TEXT = {
   },
   de: {
     title: "LG-Fernbedienung",
+    app: "Display-App",
+    appLayout: "Ansicht",
+    appFullscreen: "Vollbild",
+    appOverlay: "Einblendung über HDMI",
+    appPip: "HDMI als Bild-in-Bild",
+    appSend: "Nachricht anzeigen",
+    appDashboard: "Sensorübersicht anzeigen",
     on: "Ein",
     off: "Standby",
     unknown: "Status unbekannt",
@@ -513,6 +527,7 @@ class LGDisplayRemote extends LGPreviewHost {
         <button id="louder" title="${t.louder}" aria-label="${t.louder}">${icon("plus")}</button><button id="mute"></button></div></div>
       <div id="presentation" class="presentation" hidden><span id="presentation-status"></span><button id="clear">${icon("exit-to-app")} ${t.clear}</button></div>
       <details id="message-panel" hidden><summary>${t.message}</summary><textarea id="message" maxlength="1000" aria-label="${t.messageHint}" placeholder="${t.messageHint}"></textarea><div class="send-row"><button id="send" class="primary">${icon("send")} ${t.send}</button></div></details>
+      <details id="app-panel" hidden><summary>${t.app}</summary><label for="app-layout">${t.appLayout}</label><select id="app-layout"><option value="fullscreen">${t.appFullscreen}</option><option value="overlay">${t.appOverlay}</option><option value="pip">${t.appPip}</option></select><textarea id="app-message" maxlength="2000" aria-label="${t.app}" placeholder="${t.messageHint}"></textarea><div class="send-row"><button id="app-send">${t.appSend}</button><button id="app-dashboard">${t.appDashboard}</button></div></details>
       <div id="feedback" class="feedback" role="status" aria-live="polite" hidden></div>
     </ha-card>`;
     this.shadowRoot.querySelectorAll("[data-remote]").forEach((button) => {
@@ -570,6 +585,8 @@ class LGDisplayRemote extends LGPreviewHost {
       if (message && this._state().attributes.native_web_enabled)
         await this._call("lg_rs232_ip", "show_toast", { message });
     };
+    this._get("app-send").onclick = () => this._call("lg_rs232_ip", "show_display_app", {message: this._get("app-message").value, duration: 30, layout: this._get("app-layout").value});
+    this._get("app-dashboard").onclick = () => this._call("lg_rs232_ip", "show_display_app", {dashboard: true, duration: 60, layout: this._get("app-layout").value});
     this._get("image").onerror = () => this._previewError();
     this._get("preview-open").onclick = () =>
       fire(this, "hass-more-info", { entityId: this._config.camera_entity });
@@ -688,6 +705,11 @@ class LGDisplayRemote extends LGPreviewHost {
       `${t.content}${a.presentation_queue_size ? ` · ${a.presentation_queue_size} ${t.queued}` : ""}`;
     this._get("message-panel").hidden =
       !a.native_web_enabled || this._config.show_message === false;
+    const appLayout = this._get("app-layout");
+    [...appLayout.options].forEach(option => { option.disabled = option.value !== "fullscreen" && a.display_app_mode === "website"; });
+    if (a.display_app_mode === "website") appLayout.value = "fullscreen";
+    this._get("app-panel").hidden = !a.display_app_enabled || !a.native_web_enabled;
+    this._get("app-send").disabled = this._get("app-dashboard").disabled = !this._ready();
     this._get("send").disabled =
       !this._ready() || !this._get("message").value.trim();
     const feedback = this._get("feedback");

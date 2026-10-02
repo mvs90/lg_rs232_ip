@@ -156,6 +156,7 @@ def _display_options_form(user_input, saved_options):
         "native_web_verify_certificate": True,
         "preview_enabled": False,
         "suppress_osd_during_switch": False,
+        "display_app_enabled": False,
     }
     if user_input is not None:
         for key, (low, high, default) in ranges.items():
@@ -172,6 +173,30 @@ def _display_options_form(user_input, saved_options):
             values["native_web_password"] = saved_options["native_web_password"]
         if values.get("preview_enabled") and not values.get("native_web_enabled"):
             errors["preview_enabled"] = "preview_requires_web"
+        if values.get("display_app_enabled") and not values.get("native_web_enabled"):
+            errors["display_app_enabled"] = "preview_requires_web"
+        if values.get("display_app_base_url"):
+            from .display_app import validate_base_url
+
+            try:
+                values["display_app_base_url"] = validate_base_url(
+                    values["display_app_base_url"]
+                )
+            except ValueError:
+                errors["display_app_base_url"] = "invalid_display_app_url"
+        if values.get("display_app_mode", "si") not in {"si", "website"}:
+            errors["display_app_mode"] = "invalid_display_app_mode"
+        entities = values.get("display_app_entities", [])
+        if (
+            not isinstance(entities, list)
+            or len(entities) > 12
+            or any(
+                not isinstance(e, str)
+                or e.split(".")[0] not in {"sensor", "binary_sensor"}
+                for e in entities
+            )
+        ):
+            errors["display_app_entities"] = "invalid_display_app_entities"
         if values.get("native_web_enabled"):
             if not values.get("native_web_password"):
                 errors["native_web_password"] = "invalid_native_web_settings"
@@ -203,6 +228,7 @@ def _display_options_form(user_input, saved_options):
         "quiet_hours_start": "22:00",
         "quiet_hours_end": "07:00",
         "native_web_fingerprint": "",
+        "display_app_base_url": "",
         **{f"input_name_hdmi{i}": f"HDMI {i}" for i in range(1, 4)},
     }.items():
         schema[vol.Optional(key, default=values.get(key, default))] = str
@@ -212,4 +238,18 @@ def _display_options_form(user_input, saved_options):
     schema[
         vol.Optional("preview_height", default=values.get("preview_height", "720"))
     ] = vol.In(["360", "720", "1080"])
+    schema[
+        vol.Optional("display_app_mode", default=values.get("display_app_mode", "si"))
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=["si", "website"], translation_key="display_app_mode"
+        )
+    )
+    schema[
+        vol.Optional(
+            "display_app_entities", default=values.get("display_app_entities", [])
+        )
+    ] = selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=["sensor", "binary_sensor"], multiple=True)
+    )
     return vol.Schema(schema), errors, values
