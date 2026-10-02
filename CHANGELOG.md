@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.1
+
+- Fix the enlarged LG camera view in macOS Safari when Home Assistant's service worker is active. Share the remote card's abortable binary JPEG reader with the LG view instead of sending multipart MJPEG through Safari's Fetch implementation.
+- Scope the frontend compatibility renderer to this integration's screenshot cameras. Preserve Home Assistant's camera dialog, settings and snapshot download; other cameras retain their original renderer.
+- Cover active service-worker delivery, both component registration orders, successive decoded frames, duplicate module loading, reconnects and connection cleanup in Chromium and WebKit.
+
 ## 2.2.0
 
 - Use correctly framed MJPEG for the enlarged camera view, with recovery after empty or failed first captures and neutral frames instead of stale content.

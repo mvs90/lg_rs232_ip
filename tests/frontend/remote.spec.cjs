@@ -543,3 +543,160 @@ test("frame reader handles split headers and payloads and rejects oversized fram
   });
   expect(result).toEqual({ decoded: ["abc", "defg"], rejected: true });
 });
+
+for (const definedFirst of [true, false]) {
+  test(`LG native camera view works through service worker, registration first: ${definedFirst}`, async ({
+    page,
+  }) => {
+    await page.goto(previewServer.url);
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.register("/service-worker.js");
+      await navigator.serviceWorker.ready;
+      if (!navigator.serviceWorker.controller) {
+        await new Promise((resolve) =>
+          navigator.serviceWorker.addEventListener(
+            "controllerchange",
+            resolve,
+            { once: true },
+          ),
+        );
+      }
+    });
+    const registerCamera = async () =>
+      page.evaluate(() => {
+        class NativeCamera extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: "open" });
+          }
+          set stateObj(state) {
+            this._state = state;
+            if (this.isConnected) this.paint();
+          }
+          get stateObj() {
+            return this._state;
+          }
+          connectedCallback() {
+            this.paint();
+          }
+          render() {
+            return `Native camera: ${this.stateObj?.entity_id || "none"}`;
+          }
+          paint() {
+            const rendered = this.render();
+            if (
+              rendered instanceof Node &&
+              this.shadowRoot.firstChild === rendered
+            )
+              return;
+            this.shadowRoot.replaceChildren(rendered);
+          }
+        }
+        customElements.define("ha-camera-stream", NativeCamera);
+      });
+    if (definedFirst) await registerCamera();
+    await page.addScriptTag({ path: script });
+    if (!definedFirst) await registerCamera();
+    await page.evaluate(() => {
+      window.camera = document.createElement("ha-camera-stream");
+      camera.stateObj = {
+        entity_id: "camera.display",
+        state: "idle",
+        attributes: {
+          integration_domain: "lg_rs232_ip",
+          preview_mode: "periodic_screenshot",
+          entity_picture: "/api/camera_proxy/camera.display?token=test",
+          collection_enabled: true,
+          last_capture: "2026-10-02T12:00:00Z",
+          friendly_name: "LG Display preview",
+        },
+      };
+      window.loadedFrames = 0;
+      camera.addEventListener("load", () => loadedFrames++);
+      document.body.append(camera);
+    });
+    await expect(page.locator("#image")).toHaveAttribute("src", /^blob:/);
+    await expect
+      .poll(() => page.locator("#image").evaluate((el) => el.naturalWidth))
+      .toBe(64);
+    await expect
+      .poll(() => page.evaluate(() => loadedFrames))
+      .toBeGreaterThan(2);
+    const pixels = async () =>
+      (await page.locator("#image").screenshot()).toString("base64");
+    const first = await pixels();
+    await expect.poll(pixels).not.toBe(first);
+    const connections = previewServer.stats.connections;
+    await page.evaluate(() => {
+      camera.stateObj = {
+        ...camera.stateObj,
+        attributes: {
+          ...camera.stateObj.attributes,
+          last_capture: "2026-10-02T12:00:01Z",
+        },
+      };
+    });
+    expect(previewServer.stats.connections).toBe(connections);
+    await page.evaluate(() => {
+      window.renderBefore =
+        customElements.get("ha-camera-stream").prototype.render;
+    });
+    await page.addScriptTag({ path: script, type: "module" });
+    expect(
+      await page.evaluate(
+        () =>
+          renderBefore ===
+          customElements.get("ha-camera-stream").prototype.render,
+      ),
+    ).toBe(true);
+    await page.evaluate(() => {
+      camera.stateObj = {
+        entity_id: "camera.front_door",
+        state: "idle",
+        attributes: {},
+      };
+    });
+    await expect(page.locator("ha-camera-stream")).toContainText(
+      "Native camera: camera.front_door",
+    );
+    await expect.poll(() => previewServer.stats.active).toBe(0);
+  });
+}
+
+test("native LG preview releases streams on detach and retries through service worker", async ({
+  page,
+}) => {
+  await mount(page);
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.register("/service-worker.js");
+    await navigator.serviceWorker.ready;
+    if (!navigator.serviceWorker.controller)
+      await new Promise((resolve) =>
+        navigator.serviceWorker.addEventListener("controllerchange", resolve, {
+          once: true,
+        }),
+      );
+    window.nativePreview = document.createElement("lg-display-camera-preview");
+    nativePreview.stateObj = {
+      entity_id: "camera.display",
+      state: "idle",
+      attributes: {
+        entity_picture: "/api/camera_proxy/camera.display?token=test",
+        last_capture: "2026-10-02T12:00:00Z",
+        collection_enabled: true,
+      },
+    };
+    document.body.replaceChildren(nativePreview);
+  });
+  await expect
+    .poll(() => page.locator("#image").evaluate((el) => el.naturalWidth))
+    .toBe(64);
+  const count = previewServer.stats.connections;
+  previewServer.disconnect();
+  await expect
+    .poll(() => previewServer.stats.connections)
+    .toBeGreaterThan(count);
+  await expect(page.locator("#image")).toBeVisible();
+  await page.evaluate(() => nativePreview.remove());
+  await expect.poll(() => previewServer.stats.active).toBe(0);
+});

@@ -1,5 +1,13 @@
 # Release acceptance — 2026-10-02
 
+## LG 2.2.1: Safari with Home Assistant's service worker
+
+**184 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 36 browser tests pass across Chromium and WebKit.** New browser cases run with an active service worker forwarding camera requests through `fetch()`. They verify decoded, changing frames in the LG camera component, both component registration orders, repeated module loading, stable connections across state updates, reconnects, detachment and restoration of the original renderer for other cameras.
+
+The remaining macOS Safari failure was reproduced in the real browser against the shared **HA 2026.9.4 Docker instance**. Safari reported `FetchEvent.respondWith received an error: Load failed` for the native camera request. The 2.2.0 native-MJPEG browser fixture had no active service worker and therefore missed this condition. The 2.2.1 frontend now uses the remote's binary JPEG reader inside the LG camera view as well. The updated integration was installed in that container; the owner then **visually confirmed that the preview works in Safari**. No browser security setting or Home Assistant core/service-worker file was changed.
+
+This is a scoped frontend compatibility hook for `ha-camera-stream`, not a new HA public API. Its component contract should be retested with future frontend versions. The preview remains demand-driven screenshots; full-motion capture is not claimed.
+
 ## LG 2.2.0: enlarged view and adaptive screenshot capture
 
 **184 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 30 browser tests pass across Chromium and WebKit.** The new regression cases cover strict multipart parsing, initial-empty recovery, binary frame delivery, shared captures, request cancellation, off/on generations, retry backoff, unloading, frame decoding, reconnects and releasing hidden/detached remote views. Both browser engines render successive images in a native MJPEG image element. WebKit's multipart Fetch rejection and retained image-loader connections are avoided in the remote with an abortable binary response through the same authenticated HA camera route.

@@ -1,6 +1,6 @@
 # LG Professional Display
 
-Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.2.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
+Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.2.1 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
 
 [Deutsche Anleitung](docs/README.de.md) · [Dashboard remote](docs/DASHBOARD-CARD.md) · [Features and actions](docs/FEATURES.md) · [Device reference](docs/devices/LG-UH5F-H.md) · [MIT license](LICENSE)
 
@@ -22,7 +22,7 @@ Requires Home Assistant 2025.3 or later; tested on 2025.3.4 and 2026.9.4. Availa
 - Native text overlays, temporary fullscreen images and MP4 videos, HTTP(S) streams and websites, with input restoration and owned-file cleanup.
 - OSD suppression during switching that preserves a manually disabled OSD.
 - Boot-logo on/off and preparation of a custom boot image for **USB import**.
-- A screenshot camera with 1–3600 second background refresh, automatic faster capture while the remote or enlarged preview is open (default 1 second), and 360/720/1080p resolution. Shared MJPEG delivery displays successive screenshots; this is not a native video endpoint.
+- A screenshot camera with 1–3600 second background refresh, automatic faster capture while the remote or enlarged preview is open (default 1 second), and 360/720/1080p resolution. From 2.2.1, the LG frontend uses Safari-compatible binary JPEG delivery, including the enlarged camera dialog. Standard MJPEG remains available to external clients; this is not a native video endpoint.
 
 LG device control works without any Apple TV, soundbar or socket. Native web features require the separate Mobile URL password. An empty SHA-256 field is filled automatically on save and used for subsequent certificate checks. Verification is enabled by default and can be explicitly disabled; basic RS232/IP control requires no web login. [Setup, limits and examples](docs/FEATURES.md), [videos/streams/websites](docs/NATIVE-MEDIA.md).
 

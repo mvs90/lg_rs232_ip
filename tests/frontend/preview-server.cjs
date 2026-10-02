@@ -8,6 +8,21 @@ async function startPreviewServer() {
   const responses = new Set();
   const stats = { active: 0, connections: 0, frames: 0 };
   const server = http.createServer((request, response) => {
+    if (request.url === "/service-worker.js") {
+      response.writeHead(200, {
+        "Content-Type": "application/javascript",
+        "Cache-Control": "no-store",
+      });
+      response.end(`
+        self.addEventListener("install", () => self.skipWaiting());
+        self.addEventListener("activate", event => event.waitUntil(self.clients.claim()));
+        self.addEventListener("fetch", event => {
+          if (new URL(event.request.url).pathname.startsWith("/api/"))
+            event.respondWith(fetch(event.request));
+        });
+      `);
+      return;
+    }
     if (!request.url.startsWith("/api/camera_proxy_stream/")) {
       response.end(
         '<body style="margin:16px;background:#f4f5f8;font-family:Arial;color:#172b3a"></body>',

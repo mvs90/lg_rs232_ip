@@ -249,11 +249,10 @@ async function* jpegFrames(response) {
   }
 }
 
-class LGDisplayRemote extends HTMLElement {
+class LGPreviewHost extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._busy = false;
     this._previewVisible = false;
     this._visibilityChanged = () => this._update();
   }
@@ -331,6 +330,119 @@ class LGDisplayRemote extends HTMLElement {
       }, 2000);
     }
   }
+  _get(id) {
+    return this.shadowRoot.getElementById(id);
+  }
+  _updatePreview(on) {
+    const container = this._get("preview"),
+      img = this._get("image"),
+      t = TEXT[this._language];
+    container.hidden =
+      this._config.show_preview === false || !this._config.camera_entity;
+    const camera = this._hass.states[this._config.camera_entity],
+      a = camera?.attributes || {};
+    const usable =
+      !container.hidden &&
+      on &&
+      this.isConnected &&
+      this._previewVisible &&
+      document.visibilityState === "visible" &&
+      camera &&
+      a.collection_enabled !== false &&
+      typeof a.entity_picture === "string" &&
+      a.entity_picture.startsWith("/api/camera_proxy/");
+    if (!usable) {
+      this._stopPreview();
+      img.hidden = true;
+      this._previewKey = undefined;
+      this._get("preview-placeholder").hidden = false;
+      this._get("capture").textContent = t.screenshot;
+      return;
+    }
+    // One persistent stream activates shared fast capture. Frame/state updates
+    // must not reconnect it; hiding/unmounting the card closes it immediately.
+    const key = a.entity_picture.replace(
+      "/api/camera_proxy/",
+      "/api/camera_proxy_stream/",
+    );
+    if (this._previewKey !== key) {
+      this._stopPreview();
+      this._previewKey = key;
+      this._startPreview(key);
+    }
+    img.hidden = this._previewFailed || !!a.preview_error || !a.last_capture;
+    this._get("preview-placeholder").hidden = !img.hidden;
+    const captured = new Date(a.last_capture);
+    this._get("capture").textContent =
+      `${t.screenshot}${Number.isNaN(captured.getTime()) ? "" : ` · ${captured.toLocaleTimeString(this._language)}`}`;
+  }
+}
+
+class LGDisplayCameraPreview extends LGPreviewHost {
+  constructor() {
+    super();
+    this.shadowRoot.innerHTML = `<style>${STYLE}
+      :host {display:block;width:100%} .preview {margin:0;border-radius:0}
+      .preview img {aspect-ratio:var(--lg-preview-aspect,16/9);object-fit:var(--lg-preview-fit,contain)}
+    </style><figure class="preview" id="preview">
+      <img id="image" hidden><div id="preview-placeholder" class="preview-placeholder"></div>
+      <figcaption class="caption" id="capture"></figcaption></figure>`;
+    this._get("image").onerror = () => this._previewError();
+    this._get("image").onload = () => fire(this, "load");
+  }
+  set stateObj(state) {
+    this._config = { camera_entity: state?.entity_id };
+    this._hass = { states: state ? { [state.entity_id]: state } : {} };
+    this._language = (document.documentElement.lang || "en").startsWith("de")
+      ? "de"
+      : "en";
+    this._get("image").alt =
+      `Preview of the ${state?.attributes?.friendly_name || TEXT[this._language].preview} camera.`;
+    this._get("preview-placeholder").textContent =
+      TEXT[this._language].previewMissing;
+    this._update();
+  }
+  _update() {
+    if (this._config) this._updatePreview(true);
+  }
+}
+
+// HA routes its native MJPEG image through a service-worker fetch, which fails
+// in Safari. Use our abortable JPEG reader for LG cameras within that same view.
+// No HA files/service workers are changed; all other cameras keep HA's renderer.
+function installLGCameraPreview() {
+  customElements.whenDefined("ha-camera-stream").then(() => {
+    const prototype = customElements.get("ha-camera-stream").prototype;
+    const installed = Symbol.for("lg_rs232_ip.preview.renderer");
+    const viewKey = Symbol.for("lg_rs232_ip.preview.view");
+    if (prototype[installed] || typeof prototype.render !== "function") return;
+    const original = prototype.render;
+    Object.defineProperty(prototype, installed, { value: true });
+    prototype.render = function (...args) {
+      const state = this.stateObj;
+      if (
+        state?.attributes?.integration_domain !== "lg_rs232_ip" ||
+        state.attributes.preview_mode !== "periodic_screenshot"
+      ) {
+        this[viewKey] = undefined;
+        return original.apply(this, args);
+      }
+      const view = (this[viewKey] ||= document.createElement(
+        "lg-display-camera-preview",
+      ));
+      view.stateObj = state;
+      view.style.setProperty("--lg-preview-aspect", this.aspectRatio || "16/9");
+      view.style.setProperty("--lg-preview-fit", this.fitMode || "contain");
+      return view;
+    };
+  });
+}
+
+class LGDisplayRemote extends LGPreviewHost {
+  constructor() {
+    super();
+    this._busy = false;
+  }
   static getConfigElement() {
     return document.createElement("lg-display-remote-editor");
   }
@@ -381,9 +493,6 @@ class LGDisplayRemote extends HTMLElement {
   }
   get hass() {
     return this._hass;
-  }
-  _get(id) {
-    return this.shadowRoot.getElementById(id);
   }
   _build() {
     this._stopPreview();
@@ -587,49 +696,6 @@ class LGDisplayRemote extends HTMLElement {
     feedback.classList.toggle("error", !!this._error);
     this._updatePreview(on);
   }
-  _updatePreview(on) {
-    const container = this._get("preview"),
-      img = this._get("image"),
-      t = TEXT[this._language];
-    container.hidden =
-      this._config.show_preview === false || !this._config.camera_entity;
-    const camera = this._hass.states[this._config.camera_entity],
-      a = camera?.attributes || {};
-    const usable =
-      !container.hidden &&
-      on &&
-      this.isConnected &&
-      this._previewVisible &&
-      document.visibilityState === "visible" &&
-      camera &&
-      a.collection_enabled !== false &&
-      typeof a.entity_picture === "string" &&
-      a.entity_picture.startsWith("/api/camera_proxy/");
-    if (!usable) {
-      this._stopPreview();
-      img.hidden = true;
-      this._previewKey = undefined;
-      this._get("preview-placeholder").hidden = false;
-      this._get("capture").textContent = t.screenshot;
-      return;
-    }
-    // One persistent stream activates shared fast capture. Frame/state updates
-    // must not reconnect it; hiding/unmounting the card closes it immediately.
-    const key = a.entity_picture.replace(
-      "/api/camera_proxy/",
-      "/api/camera_proxy_stream/",
-    );
-    if (this._previewKey !== key) {
-      this._stopPreview();
-      this._previewKey = key;
-      this._startPreview(key);
-    }
-    img.hidden = this._previewFailed || !!a.preview_error || !a.last_capture;
-    this._get("preview-placeholder").hidden = !img.hidden;
-    const captured = new Date(a.last_capture);
-    this._get("capture").textContent =
-      `${t.screenshot}${Number.isNaN(captured.getTime()) ? "" : ` · ${captured.toLocaleTimeString(this._language)}`}`;
-  }
 }
 
 class LGDisplayRemoteEditor extends HTMLElement {
@@ -739,6 +805,10 @@ class LGDisplayRemoteEditor extends HTMLElement {
     fire(this, "config-changed", { config: { ...this._config } });
   }
 }
+
+if (!customElements.get("lg-display-camera-preview"))
+  customElements.define("lg-display-camera-preview", LGDisplayCameraPreview);
+installLGCameraPreview();
 
 if (!customElements.get("lg-display-remote"))
   customElements.define("lg-display-remote", LGDisplayRemote);

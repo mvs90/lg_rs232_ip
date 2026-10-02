@@ -188,9 +188,9 @@ class LGDisplayPreview(Camera):
 
     async def handle_async_still_stream(self, request, interval):
         """Correct multipart framing, including recovery from an empty first capture."""
-        # WebKit rejects multipart MIME responses in fetch(). The bundled card
+        # WebKit rejects multipart MIME responses in fetch(). The bundled views
         # requests identical length-delimited parts as binary data so AbortController
-        # can close the connection reliably; native HA image views still use MJPEG.
+        # can close the connection reliably; other clients can still use MJPEG.
         content_type = (
             "application/octet-stream"
             if request.query.get("lg_preview") == "frames"
@@ -237,6 +237,7 @@ class LGDisplayPreview(Camera):
     @property
     def extra_state_attributes(self):
         return {
+            "integration_domain": DOMAIN,
             "preview_mode": "periodic_screenshot",
             "collection_enabled": self._attr_is_on,
             "refresh_interval": self._interval,
