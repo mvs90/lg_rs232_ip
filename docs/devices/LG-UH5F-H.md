@@ -83,6 +83,12 @@ python3 tools/read_display_inventory.py DISPLAY_IP --output local/inventory.json
 
 Use `--include-serial` only for a private record. Outputs contain the installation address and must not be committed. No subnet scan, power cycle or authentication attempt is part of the tool.
 
+## HDMI/audio topology and power domains
+
+Owner clarification on 2026-10-02: **Apple TV → FeinTech AX310 HDMI 2.1 eARC audio extractor → LG HDMI 1**, plus the AX310 eARC output to Sonos. The LG lacks the required eARC connection. The extractor is **permanently powered and excluded from the display's switched socket**. In this installation it keeps Apple TV in standby when the LG loses mains power; the owner reports that display disconnection can otherwise wake Apple TV. No new mains interruption/A/B test was performed to verify the physical cause. See [AX310 reference](FEINTECH-AX310.md) for wiring, implications and remaining acceptance checks.
+
+The existing HDMI1 signal/video inventory was therefore observed through an active extractor, not a direct Apple TV-to-LG cable. Do not infer source activity or a complete HDMI-chain power-down from the LG's supply state. The exact Sonos model and extractor EDID/CEC settings remain unrecorded.
+
 ## Standby design for this installation
 
 The panel already has no-signal power-off enabled. Keep the integration's faster independently confirmed no-signal shutdown and continuous-idle fallback. The captured baseline contains a signal, so it is **not** a reproduction of the Apple TV standby fault.

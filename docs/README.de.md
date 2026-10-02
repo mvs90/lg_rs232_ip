@@ -16,6 +16,18 @@ Ab Home Assistant 2025.3. Die Aufnahme in den allgemeinen HACS-Katalog ist noch 
 
 Unter **Konfigurieren** den Zuspieler und dessen HDMI-Eingang auswählen. Optional einen Lautstärke-Mediaplayer auswählen. Lautstärke und Stummschaltung können nur am gekoppelten Eingang, immer über das Soundsystem oder am Display gesteuert werden. HDMI-Namen und sichtbare Apps sind einstellbar. Pro Display sind ein Zuspieler und ein Lautstärkegerät vorgesehen. Das Ausschalten des Soundsystems wird nicht automatisch gekoppelt. Ab Version 1.2 kann dessen TV-Eingang beim ausdrücklichen Einschalten gewählt werden.
 
+## Sonos-Anschluss über FeinTech AX310
+
+In der dokumentierten Installation ist ein **FeinTech AX310 HDMI 2.1 Audio Extractor für eARC-Soundbars** nötig, da das LG-Display den erforderlichen eARC-Anschluss nicht bietet:
+
+**Apple TV → AX310 → LG HDMI 1**, zusätzlich **AX310 → eARC → Sonos**.
+
+Der AX310 ist ein aktives HDMI-Gerät mit **dauerhafter Stromversorgung**. Die schaltbare Steckdose versorgt ausschließlich das Display. Apple TV und Sonos werden getrennt verwaltet. In dieser Installation bleibt Apple TV dank des dauerhaft versorgten AX310 im Standby, wenn das Display vom Strom getrennt wird; ohne diese Wirkung kann die Display-Stromtrennung das Apple TV aufwecken. Das ist eine Beobachtung des Besitzers und keine allgemeine Garantie für andere Anlagen.
+
+Die Logik unterscheidet deshalb Display-Stromzustand, HDMI-Signal und Apple-TV-Zustand. Ein bestätigtes Apple-TV-Standby darf das Display auch bei vorhandenem Signal ausschalten. Umgekehrt beweist ein eingeschalteter Extractor keine laufende Wiedergabe. Bei einer falschen Idle-Meldung **und** gültigem HDMI-Signal bleibt die Lage mehrdeutig; die Integration unterstellt hier keinen Standby. Ein optionaler Leistungssensor muss allein das Display messen.
+
+Beim Abschalten der Display-Steckdose sendet die Integration keine Einschalt- oder Ausschaltbefehle an die anderen Geräte. Eine Software-Steuerung des AX310 ist nicht implementiert. Ton nativer LG-Inhalte gelangt über diese Anordnung nicht automatisch zurück zu Sonos; Sonos-Durchsagen aus HA sind davon unabhängig. [Anschluss- und Funktionsreferenz](devices/FEINTECH-AX310.md).
+
 ## Apple TV meldet trotz Standby „idle“
 
 Die Erkennung vertraut nicht allein dem Apple TV:

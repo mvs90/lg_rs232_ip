@@ -159,3 +159,69 @@ async def test_playback_and_volume_routing(player):
     player._async_call_volume_service.assert_awaited_once_with(
         "volume_set", volume_level=0.4
     )
+
+
+@pytest.mark.asyncio
+async def test_extractor_retained_signal_does_not_veto_confirmed_player_standby(player):
+    player._test_states["media_player.apple_tv"] = State(
+        "media_player.apple_tv", "standby"
+    )
+    player._lg_display.async_get_signal_status.return_value = True
+    for now in (1000, 1011):
+        with patch(
+            "custom_components.lg_rs232_ip.media_player.time.monotonic",
+            return_value=now,
+        ):
+            await player._async_check_standby()
+    player._lg_display.async_power_off.assert_awaited_once()
+    assert player._last_standby_reason == "linked_standby"
+
+
+@pytest.mark.asyncio
+async def test_display_socket_cut_targets_only_display_not_active_hdmi_chain(player):
+    player._config_entry.options.update(
+        power_supply_switch_entity_id="switch.display_socket",
+        power_supply_off_delay_seconds=0,
+        linked_volume_media_player_entity_id="media_player.sonos",
+    )
+    player._lg_display.async_get_power_status.return_value = False
+    player._async_call_switch_service = AsyncMock(return_value=True)
+    player._test_states["media_player.apple_tv"] = State(
+        "media_player.apple_tv", "standby"
+    )
+    await player._async_delayed_power_supply_off("display standby confirmed")
+    player._async_call_switch_service.assert_awaited_once_with(
+        "switch.display_socket", "turn_off"
+    )
+    player._async_call_linked_service.assert_not_awaited()
+    player.hass.services.async_call.assert_not_awaited()
+    player._start_display_wake_task.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_player_remaining_in_standby_after_display_socket_off_never_wakes(player):
+    player._test_states["media_player.apple_tv"] = State(
+        "media_player.apple_tv", "standby"
+    )
+    player._lg_display.async_get_power_status.return_value = False
+    await player._async_handle_power_supply_state_change(
+        SimpleNamespace(
+            data={
+                "new_state": State("switch.display_socket", "off"),
+            }
+        )
+    )
+    await player._async_handle_linked_state_change(
+        SimpleNamespace(
+            data={
+                "old_state": State("media_player.apple_tv", "standby"),
+                "new_state": State(
+                    "media_player.apple_tv", "standby", {"app_name": "Apple TV"}
+                ),
+            }
+        )
+    )
+    await player.async_update()
+    player._start_display_wake_task.assert_not_called()
+    player._async_call_linked_service.assert_not_awaited()
+    player.hass.services.async_call.assert_not_awaited()

@@ -185,6 +185,12 @@ An explicit change through the integration's OSD switch takes precedence over th
 On the tested UH5F-H, enabling OSD during native image playback is rejected. The guard remembers its own temporary lock and restores it after returning to HDMI; OSD can therefore remain suppressed for the full image duration. A pre-existing manual off state never gains this restore ownership.
 
 
+## Active HDMI extractor and separate power domains
+
+For the documented LG/Sonos setup, use the [FeinTech AX310 wiring reference](devices/FEINTECH-AX310.md). Apple TV feeds AX310; video goes to LG HDMI 1 and eARC audio to Sonos. The **display-only socket must leave AX310 powered**. The owner reports that Apple TV stays in standby in this arrangement when the display is disconnected from mains. This is a physical, installation-specific observation, not a new software command or universal CEC guarantee.
+
+The normal linked standby, no-signal and stale-idle protections remain in force. A retained signal does not veto confirmed Apple TV standby; a powered extractor does not itself prove a signal or playback. Display-only power measurements exclude the extractor. The volume target controls Sonos through its existing HA integration, independently of display mains. Native LG content audio is not automatically returned to Sonos via an eARC connection that the LG does not have.
+
 ## Boot logo and custom boot image (v1.5)
 
 The **Boot logo** switch controls the display's actual persistent boot-logo setting (`sn a3 00/01`), independently of native web access. It reads the setting back after changes, does not wake the panel and never reboots it. A panel that rejects the status query makes the entity unavailable rather than reporting a fabricated off state. On the tested 75UH5F-HJ, off/on acknowledgements and readbacks passed; a physical boot cycle was not performed.

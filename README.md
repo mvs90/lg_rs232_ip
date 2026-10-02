@@ -33,6 +33,12 @@ Under the integration's **Configure** options:
 
 The linked integrations remain installed as device drivers. Expose only the combined TV to dashboards/HomeKit if you want one visible device. One playback entity and one volume entity can be linked per display; multiple independently mapped players are not supported yet. Sound-system TV input selection is optional; power-off and grouping are not automatic.
 
+## eARC soundbar with an active HDMI extractor
+
+The documented Sonos installation uses **Apple TV → FeinTech AX310 → LG HDMI 1**, with the AX310's eARC output connected to Sonos. The LG does not provide the required eARC connection. **Only the LG is on the switched socket; AX310 remains permanently powered.** The owner reports that this arrangement keeps Apple TV in standby when the display loses mains power, whereas display disconnection can otherwise wake it. This is installation-specific, not a general extractor guarantee.
+
+Keep display power, HDMI signal and player state separate. A confirmed Apple TV standby state may shut down the LG even if a signal remains present. Do not use the extractor's power consumption as LG standby evidence. [Wiring, behaviour and acceptance checks](docs/devices/FEINTECH-AX310.md).
+
 ## Multi-stage standby protection
 
 Apple TV can incorrectly remain `idle` after going to sleep. This integration does not treat a repeated `idle` update or a polled active state as a reason to wake the display.
