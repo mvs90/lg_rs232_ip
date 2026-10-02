@@ -1,5 +1,13 @@
 # Release acceptance — 2026-10-02
 
+## LG 2.2.0: enlarged view and adaptive screenshot capture
+
+**184 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 30 browser tests pass across Chromium and WebKit.** The new regression cases cover strict multipart parsing, initial-empty recovery, binary frame delivery, shared captures, request cancellation, off/on generations, retry backoff, unloading, frame decoding, reconnects and releasing hidden/detached remote views. Both browser engines render successive images in a native MJPEG image element. WebKit's multipart Fetch rejection and retained image-loader connections are avoided in the remote with an abortable binary response through the same authenticated HA camera route.
+
+On **HA 2026.9.4 in the shared Docker instance**, the physical 75UH5F-HJ supplied 1280×720 frames to two concurrent clients. Seven unique frames were shared between the clients; six consecutive fresh-capture intervals measured **0.968–1.045 seconds**. The existing normal interval was **10 seconds**: `active_viewers` changed from 0 to 2, effective interval to 1 second, then back to 0 viewers / 10 seconds after disconnect. The card rendered the real camera as decoded JPEGs; clicking its preview opened HA's enlarged camera dialog, where a real 1280×720 image decoded successfully. No physical power/input/media commands were needed for this test.
+
+The original broken enlarged view was not consistently reproducible in Chromium. The release corrects the inherited multipart boundary mismatch and avoids terminating the image stream after an empty first capture. Chromium/WebKit browser fixtures plus the real HA enlarged-view check verify the corrected delivery; they do not establish a single exclusive cause for the original screenshot on every client.
+
 ## LG 2.1.0: bundled dashboard remote
 
 **168 Python tests pass on both supported HA/Python combinations; ten Chromium tests pass.** Browser coverage includes entity-scoped service calls, power/state guards, custom input labels, volume/mute, presentation return, native text, preserved editor/input state, duplicate-submit suppression, errors, preview invalidation, keyboard controls and a 320-pixel-wide mobile layout.

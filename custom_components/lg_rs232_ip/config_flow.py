@@ -140,7 +140,8 @@ def _display_options_form(user_input, saved_options):
     values = dict(saved_options if user_input is None else user_input)
     ranges = {
         "polling_interval": (1, 3600, 30),
-        "preview_interval": (10, 3600, 30),
+        "preview_interval": (1, 3600, 30),
+        "preview_active_interval": (0, 10, 1),
         "display_wake_timeout": (5, 300, 60),
         "power_transition_timeout": (0, 300, 20),
     }

@@ -79,11 +79,15 @@ The action fits the image without cropping or distorting it onto a black **1920�
 
 No verified network boot-image import was found in this panel's inspected Content/Control Manager frontend. Uploading a regular media file is not equivalent to installing a boot logo. This action does not replace an existing panel logo, alter boot configuration or reboot the panel. Other model families, especially stretched panels, need their own boot-image size limits checked before using the generated file. [LG webOS 4 guide, Background Image](https://gscs-b2c.lge.com/open/downloadFile?fileId=c1dJJrQEObZ7aWsYE0hHA).
 
-## Periodic display preview (v1.5)
+## Display preview and adaptive refresh (v2.2)
 
-Enable **native LG web access** first, then **display preview through screenshots** in integration options. Set the **interval from 10 to 3600 seconds** (default 30) and **height 360/720/1080 pixels** (default 720). The interval runs between completion of one attempt and the next; network/capture time adds to it. The camera entity **Display preview** provides actual JPEG captures of the panel, including the HDMI content seen in the hardware test. It is a periodically refreshed screenshot view, **not a native video/RTSP stream**. The LG web interface itself offers a 10-second screenshot refresh; a native continuous-video endpoint was not established.
+Enable **native LG web access** first, then **display preview through screenshots** in integration options. **Normal screenshot interval** accepts 1–3600 seconds (default 30). **Open preview interval** accepts 0–10 seconds (default 1); 0 disables acceleration. Choose **height 360/720/1080 pixels** (default 720). Existing installations retain their normal interval and automatically use the 1-second active default unless changed.
 
-Use a standard picture-entity card, substituting your entity ID:
+While the bundled remote preview is visible or HA's enlarged camera view is open, the shared collector uses the shorter of the normal and active intervals. Closing the last stream restores the normal interval. The remote also closes its stream when it leaves the viewport, the browser tab becomes hidden, or the card is removed. A click on the remote preview opens the standard enlarged camera dialog. Other cards that open the camera's MJPEG endpoint also activate faster collection; a thumbnail/still-image request alone does not. The native HA dialog controls its own stream lifecycle.
+
+All viewers share one in-memory capture; two dashboards do not double the LG capture rate. Intervals are measured between capture starts. Captures never overlap; if an attempt takes longer, the next waits until at least 100 ms after completion. Errors use a growing retry delay (up to 30 seconds) to avoid continuously hammering an unavailable device. In the hardware check on a 75UH5F-HJ, 360p captures took about 0.6 seconds and 720p captures about 0.8 seconds, so approximately one new frame per second is realistic. Firmware, network and image resolution affect the result. This is a succession of real JPEG screenshots delivered as a browser-compatible MJPEG stream, **not a native video/RTSP/HLS feed**.
+
+Use the bundled remote or a standard picture-entity card, substituting your entity ID:
 
 ```yaml
 type: picture-entity
@@ -93,9 +97,9 @@ show_name: true
 show_state: true
 ```
 
-`camera.turn_off` pauses image collection and clears the cached frame; `camera.turn_on` resumes it. These actions never change display power. Restart/reload restores the options' configured preview enablement. The collector never wakes an off display and skips capture when power cannot be confirmed. Concurrent dashboards share the same rate-limited, in-memory frame. The configured interval is the collection rate; dashboard rendering may introduce additional delay.
+`camera.turn_off` pauses image collection and clears the cached frame; `camera.turn_on` resumes it. These actions never change display power. Restart/reload restores the options' configured preview enablement. The collector never wakes an off display and skips capture when power cannot be confirmed. Failed captures discard old pixels; an open stream shows a neutral blank frame and recovers when captures succeed again, even if its first capture was unavailable.
 
-Attributes expose `last_capture`, `refresh_interval`, `capture_height` and `preview_error`. Failed captures discard the old frame instead of presenting it as current, and retry on the next scheduled interval. No screenshot is stored to disk or included in diagnostics by the camera. HA's own camera permissions and standard `camera.snapshot` action still apply. Screenshots may contain whatever is currently visible on the display; availability/black frames depend on firmware, source and content. There is no attempt to bypass content-protection restrictions.
+Attributes expose `collection_enabled`, `last_capture`, `refresh_interval`, `active_refresh_interval`, `effective_refresh_interval`, `active_viewers`, `capture_height` and `preview_error`. `active_viewers` counts MJPEG connections, not individual people. The frequently changing `last_capture` timestamp is excluded from recorder history. No screenshot is stored to disk or included in diagnostics by the camera. HA's camera permissions and standard `camera.snapshot` action still apply. Screenshots can include HDMI content, depending on firmware, source and content; there is no attempt to bypass content protection.
 
 ## Native video, websites and streams (1.6)
 

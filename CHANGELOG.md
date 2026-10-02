@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2.0
+
+- Use correctly framed MJPEG for the enlarged camera view, with recovery after empty or failed first captures and neutral frames instead of stale content.
+- Capture faster while preview streams are open: default 1 second, configurable 0–10 seconds (0 disables acceleration). Restore the normal interval after the last viewer closes; normal interval now accepts 1–3600 seconds.
+- Share captures across all viewers, isolate capture cancellation from disconnected requests, discard results from before camera-off, and back off on failures.
+- Remote preview opens the enlarged camera dialog, retains one stream across state updates, and closes it when hidden, offscreen or removed.
+- Add strict multipart HTTP regression tests and Chromium/WebKit preview decoding and connection lifecycle coverage.
+
 ## 2.1.0
 
 - Bundle the LG Display Remote dashboard card and load it automatically with the integration. Include a visual editor, card picker entry, German/English labels, theme support and mobile layout.

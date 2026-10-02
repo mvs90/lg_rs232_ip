@@ -32,13 +32,15 @@
           "native_web_fingerprint": "SHA-256-Fingerabdruck (leer = automatisch ermitteln)",
           "suppress_osd_during_switch": "OSD während Quellen-/Vollbildumschaltung unterdrücken",
           "preview_enabled": "Display-Vorschau durch Screenshots aktivieren",
-          "preview_interval": "Screenshot-Intervall (10–3600 Sekunden)",
+          "preview_interval": "Normales Screenshot-Intervall (1–3600 Sekunden)",
           "preview_height": "Screenshot-Höhe (Pixel)",
-          "native_web_verify_certificate": "LG-HTTPS-Zertifikat prüfen"
+          "native_web_verify_certificate": "LG-HTTPS-Zertifikat prüfen",
+          "preview_active_interval": "Intervall bei geöffneter Vorschau (0–10 Sekunden; 0 = aus)"
         },
         "data_description": {
           "native_web_fingerprint": "Wird beim Speichern vom Display gelesen und für spätere Verbindungen gespeichert. Ein vorhandener Abdruck wird nicht automatisch ersetzt.",
-          "native_web_verify_certificate": "Standardmäßig aktiv. Ohne Prüfung bleibt HTTPS verschlüsselt, die Identität des Displays wird jedoch nicht geprüft."
+          "native_web_verify_certificate": "Standardmäßig aktiv. Ohne Prüfung bleibt HTTPS verschlüsselt, die Identität des Displays wird jedoch nicht geprüft.",
+          "preview_active_interval": "Bei sichtbarer Fernbedienung oder geöffneter Großansicht schneller aufnehmen, danach zum normalen Intervall zurückkehren. Standard: 1 Sekunde. 0 deaktiviert die Beschleunigung. Die Aufnahmegeschwindigkeit des Displays begrenzt die tatsächliche Bildrate."
         },
         "description": "Hier die Display-Einstellungen bestätigen. Für die Vorschaukamera den nativen LG-Webzugriff und die Screenshot-Vorschau aktivieren sowie das Mobile-URL-Passwort eintragen. Der Zertifikat-Fingerabdruck wird automatisch ermittelt, wenn das Feld leer bleibt. Alle Einstellungen lassen sich später über Konfigurieren ändern."
       }
@@ -49,7 +51,7 @@
       "invalid_time": "Uhrzeit als HH:MM eingeben.",
       "invalid_native_web_settings": "Mobile-URL-Passwort bzw. gültigen SHA-256-Abdruck eingeben; das Abdruckfeld darf zur automatischen Ermittlung leer bleiben.",
       "preview_requires_web": "Für die Vorschau muss der native LG-Webzugriff aktiviert sein.",
-      "invalid_preview_interval": "Das Screenshot-Intervall muss zwischen 10 und 3600 Sekunden liegen.",
+      "invalid_preview_interval": "Das normale Screenshot-Intervall muss zwischen 1 und 3600 Sekunden liegen.",
       "cannot_read_certificate": "Das LG-HTTPS-Zertifikat konnte nicht gelesen werden. Webzugriff auf Port 3777 prüfen, einen Abdruck eintragen oder die Zertifikatsprüfung ausdrücklich ausschalten."
     },
     "abort": {
@@ -80,13 +82,15 @@
           "native_web_fingerprint": "SHA-256-Fingerabdruck (leer = automatisch ermitteln)",
           "suppress_osd_during_switch": "OSD während Quellen-/Vollbildumschaltung unterdrücken",
           "preview_enabled": "Display-Vorschau durch Screenshots aktivieren",
-          "preview_interval": "Screenshot-Intervall (10–3600 Sekunden)",
+          "preview_interval": "Normales Screenshot-Intervall (1–3600 Sekunden)",
           "preview_height": "Screenshot-Höhe (Pixel)",
-          "native_web_verify_certificate": "LG-HTTPS-Zertifikat prüfen"
+          "native_web_verify_certificate": "LG-HTTPS-Zertifikat prüfen",
+          "preview_active_interval": "Intervall bei geöffneter Vorschau (0–10 Sekunden; 0 = aus)"
         },
         "data_description": {
           "native_web_fingerprint": "Wird beim Speichern vom Display gelesen und für spätere Verbindungen gespeichert. Ein vorhandener Abdruck wird nicht automatisch ersetzt.",
-          "native_web_verify_certificate": "Standardmäßig aktiv. Ohne Prüfung bleibt HTTPS verschlüsselt, die Identität des Displays wird jedoch nicht geprüft."
+          "native_web_verify_certificate": "Standardmäßig aktiv. Ohne Prüfung bleibt HTTPS verschlüsselt, die Identität des Displays wird jedoch nicht geprüft.",
+          "preview_active_interval": "Bei sichtbarer Fernbedienung oder geöffneter Großansicht schneller aufnehmen, danach zum normalen Intervall zurückkehren. Standard: 1 Sekunde. 0 deaktiviert die Beschleunigung. Die Aufnahmegeschwindigkeit des Displays begrenzt die tatsächliche Bildrate."
         }
       }
     },
@@ -95,7 +99,7 @@
       "invalid_time": "Uhrzeit als HH:MM eingeben.",
       "invalid_native_web_settings": "Mobile-URL-Passwort bzw. gültigen SHA-256-Abdruck eingeben; das Abdruckfeld darf zur automatischen Ermittlung leer bleiben.",
       "preview_requires_web": "Für die Vorschau muss der native LG-Webzugriff aktiviert sein.",
-      "invalid_preview_interval": "Das Screenshot-Intervall muss zwischen 10 und 3600 Sekunden liegen.",
+      "invalid_preview_interval": "Das normale Screenshot-Intervall muss zwischen 1 und 3600 Sekunden liegen.",
       "cannot_read_certificate": "Das LG-HTTPS-Zertifikat konnte nicht gelesen werden. Webzugriff auf Port 3777 prüfen, einen Abdruck eintragen oder die Zertifikatsprüfung ausdrücklich ausschalten."
     }
   },

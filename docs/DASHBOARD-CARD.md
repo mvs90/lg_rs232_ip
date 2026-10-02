@@ -37,11 +37,11 @@ show_message: true
 
 ## English quick start
 
-Update the integration, restart HA and reload the frontend. Edit a dashboard, choose **Add card → LG Display Remote**, select an LG display and optionally its preview camera, then save. The visual editor also exposes the title and visibility options shown above. Controls operate the LG itself; AV Companion entities are intentionally outside this card's scope. Preview uses existing periodic camera captures, not a live stream or a separate polling loop.
+Update the integration, restart HA and reload the frontend. Edit a dashboard, choose **Add card → LG Display Remote**, select an LG display and optionally its preview camera, then save. The visual editor also exposes the title and visibility options shown above. Controls operate the LG itself; AV Companion entities are intentionally outside this card's scope. From 2.2, a visible preview opens the shared screenshot stream and automatically activates the faster capture interval (default 1 second). Click it to open the enlarged view. Hidden/offscreen cards close their stream; once all viewers close, collection returns to the normal interval. Configure both intervals in the LG integration settings. This remains a screenshot preview, not full-motion video.
 
 ## Troubleshooting and development
 
-If the card picker does not list the card, fully reload the page after HA restarts and check that the LG integration is loaded. The integration registers `/lg_rs232_ip/lg-display-remote.js?v=2.1.0` as a frontend module. Do not add a second resource entry for it. The card bundle has no credentials and calls the existing authenticated HA entity services.
+If the card picker does not list the card, fully reload the page after HA restarts and check that the LG integration is loaded. The integration registers `/lg_rs232_ip/lg-display-remote.js?v=2.2.0` as a frontend module. Do not add a second resource entry for it. The card bundle has no credentials and calls the existing authenticated HA entity services.
 
 Home/Menu/Back/Exit use the LG webOS 4.0 guide's documented IR codes `7c`/`43`/`28`/`5b` (pages 67–68; [LG reference](devices/LG-UH5F-H.md)). Individual model support remains device-dependent.
 

@@ -244,3 +244,166 @@ async def test_camera_timer_and_frame_are_removed_on_unload(preview):
     entity._next_capture = 0
     assert await entity.async_camera_image() is None
     assert web.async_capture.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_active_viewers_change_rate_and_share_capture(preview):
+    entity, _, web = preview
+    await entity.async_update()
+    entity._viewers_changed(1)
+    assert entity.is_streaming
+    assert entity.extra_state_attributes["effective_refresh_interval"] == 1
+    assert entity._next_capture == entity._last_started + 1
+    entity._viewers_changed(1)
+    await asyncio.gather(*(entity.async_camera_image() for _ in range(4)))
+    assert web.async_capture.await_count == 1
+    entity._viewers_changed(-1)
+    assert entity._effective_interval == 1
+    entity._viewers_changed(-1)
+    assert not entity.is_streaming
+    assert entity._effective_interval == 30
+    assert entity._next_capture == entity._last_started + 30
+
+
+@pytest.mark.asyncio
+async def test_active_acceleration_can_be_disabled(preview):
+    entity, _, _ = preview
+    entity._active_interval = 0
+    await entity.async_update()
+    entity._viewers_changed(1)
+    assert entity._effective_interval == 30
+    entity._viewers_changed(-1)
+
+
+@pytest.mark.asyncio
+async def test_disconnected_request_does_not_cancel_shared_capture(preview):
+    entity, _, web = preview
+    started, finish = asyncio.Event(), asyncio.Event()
+
+    async def capture(_):
+        started.set()
+        await finish.wait()
+        return b"shared-frame"
+
+    web.async_capture.side_effect = capture
+    first = asyncio.create_task(entity.async_camera_image())
+    await started.wait()
+    second = asyncio.create_task(entity.async_camera_image())
+    first.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await first
+    finish.set()
+    assert await second == b"shared-frame"
+    assert web.async_capture.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_off_then_on_discards_capture_from_before_off(preview):
+    entity, _, web = preview
+    started, finish = asyncio.Event(), asyncio.Event()
+
+    async def capture(_):
+        started.set()
+        await finish.wait()
+        return b"before-off"
+
+    web.async_capture.side_effect = capture
+    first = asyncio.create_task(entity.async_update())
+    await started.wait()
+    await entity.async_turn_off()
+    resumed = asyncio.create_task(entity.async_turn_on())
+    finish.set()
+    await asyncio.gather(first, resumed)
+    assert entity._image is None
+    web.async_capture.side_effect = None
+    await entity.async_update()
+    assert entity._image == b"real-frame"
+
+
+@pytest.mark.asyncio
+async def test_fast_capture_failure_backs_off_even_if_viewer_reconnects(preview):
+    entity, _, web = preview
+    web.async_capture.side_effect = LGWebError("offline")
+    entity._viewers_changed(1)
+    entity._next_capture = 0
+    await entity.async_update()
+    assert entity._next_capture >= entity._last_finished + 1.9
+    entity._viewers_changed(1)
+    await entity.async_update()
+    assert web.async_capture.await_count == 1
+    entity._viewers_changed(-2)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["mjpeg", "interval", "frames"])
+async def test_mjpeg_is_strictly_parseable_and_recovers_from_empty_first_frame(
+    preview, mode
+):
+    from aiohttp import ClientSession, MultipartReader, web as aiohttp_web
+    from aiohttp.test_utils import TestServer
+    from custom_components.lg_rs232_ip.camera import _EMPTY_FRAME
+
+    entity, display, web = preview
+    display.async_get_power_status.return_value = None
+
+    async def stream(request):
+        if mode == "interval":
+            return await entity.handle_async_still_stream(request, 1)
+        return await entity.handle_async_mjpeg_stream(request)
+
+    app = aiohttp_web.Application()
+    app.router.add_get("/camera", stream)
+    async with TestServer(app) as server, ClientSession() as client:
+        url = "/camera?lg_preview=frames" if mode == "frames" else "/camera"
+        async with client.get(server.make_url(url)) as response:
+            assert response.headers["Cache-Control"].startswith("no-store")
+            if mode == "frames":
+                assert response.headers["Content-Type"] == "application/octet-stream"
+                reader = MultipartReader(
+                    {
+                        "Content-Type": "multipart/x-mixed-replace; boundary=lg-display-frame"
+                    },
+                    response.content,
+                )
+            else:
+                reader = MultipartReader.from_response(response)
+            for _ in range(2):
+                part = await asyncio.wait_for(reader.next(), 2)
+                assert part.headers["Content-Type"] == "image/jpeg"
+                assert bytes(await part.read()) == _EMPTY_FRAME
+            assert entity._active_viewers == 1
+            web.async_capture.return_value = b"recovered-real-frame"
+            display.async_get_power_status.return_value = True
+            entity._next_capture = 0
+            part = await asyncio.wait_for(reader.next(), 2)
+            assert bytes(await part.read()) == b"recovered-real-frame"
+            assert entity._error is None
+        # The next write detects a disconnected viewer and restores the idle rate.
+        async with asyncio.timeout(3):
+            while entity._active_viewers:
+                await asyncio.sleep(0.05)
+        assert entity._effective_interval == 30
+        assert not entity.is_streaming
+
+
+@pytest.mark.asyncio
+async def test_unload_cancels_pending_capture_and_never_rearms_timer(preview):
+    from homeassistant.components.camera import Camera
+
+    entity, _, web = preview
+    started = asyncio.Event()
+
+    async def capture(_):
+        started.set()
+        await asyncio.Event().wait()
+
+    web.async_capture.side_effect = capture
+    request = asyncio.create_task(entity.async_camera_image())
+    await started.wait()
+    with patch.object(Camera, "async_will_remove_from_hass", new_callable=AsyncMock):
+        await entity.async_will_remove_from_hass()
+    with pytest.raises(asyncio.CancelledError):
+        await request
+    assert entity._refresh_task is None
+    assert entity._timer_unsub is None
+    assert entity._image is None

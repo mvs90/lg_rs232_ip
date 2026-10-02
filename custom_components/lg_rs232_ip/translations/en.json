@@ -32,13 +32,15 @@
           "native_web_fingerprint": "SHA-256 fingerprint (blank = detect automatically)",
           "suppress_osd_during_switch": "Suppress OSD during input/fullscreen switching",
           "preview_enabled": "Enable display preview through screenshots",
-          "preview_interval": "Screenshot interval (10–3600 seconds)",
+          "preview_interval": "Normal screenshot interval (1–3600 seconds)",
           "preview_height": "Screenshot height (pixels)",
-          "native_web_verify_certificate": "Verify LG HTTPS certificate"
+          "native_web_verify_certificate": "Verify LG HTTPS certificate",
+          "preview_active_interval": "Open preview interval (0–10 seconds; 0 = disabled)"
         },
         "data_description": {
           "native_web_fingerprint": "Read from the display on save and stored for subsequent connections. An existing fingerprint is not replaced automatically.",
-          "native_web_verify_certificate": "Enabled by default. Disabling verification keeps HTTPS encryption but does not verify the identity of the display."
+          "native_web_verify_certificate": "Enabled by default. Disabling verification keeps HTTPS encryption but does not verify the identity of the display.",
+          "preview_active_interval": "Capture faster while the remote preview or enlarged view is open, then return to the normal interval. Default: 1 second. Set 0 to disable acceleration. Actual frame rate is limited by the display capture speed."
         },
         "description": "Confirm the display settings before finishing setup. For the preview camera, enable native LG web access and screenshot preview and enter the Mobile URL password. Leave the fingerprint blank for automatic detection. All settings can be changed later through Configure."
       }
@@ -49,7 +51,7 @@
       "invalid_time": "Enter a time as HH:MM.",
       "invalid_native_web_settings": "Provide the Mobile URL password and, if entered, a valid SHA-256 fingerprint; leave the fingerprint blank for automatic detection.",
       "preview_requires_web": "Enable native LG web access before enabling preview.",
-      "invalid_preview_interval": "Screenshot interval must be between 10 and 3600 seconds.",
+      "invalid_preview_interval": "The normal screenshot interval must be between 1 and 3600 seconds.",
       "cannot_read_certificate": "Cannot read the LG HTTPS certificate. Check web access on port 3777, enter a fingerprint, or explicitly disable certificate verification."
     },
     "abort": {
@@ -80,13 +82,15 @@
           "native_web_fingerprint": "SHA-256 fingerprint (blank = detect automatically)",
           "suppress_osd_during_switch": "Suppress OSD during input/fullscreen switching",
           "preview_enabled": "Enable display preview through screenshots",
-          "preview_interval": "Screenshot interval (10–3600 seconds)",
+          "preview_interval": "Normal screenshot interval (1–3600 seconds)",
           "preview_height": "Screenshot height (pixels)",
-          "native_web_verify_certificate": "Verify LG HTTPS certificate"
+          "native_web_verify_certificate": "Verify LG HTTPS certificate",
+          "preview_active_interval": "Open preview interval (0–10 seconds; 0 = disabled)"
         },
         "data_description": {
           "native_web_fingerprint": "Read from the display on save and stored for subsequent connections. An existing fingerprint is not replaced automatically.",
-          "native_web_verify_certificate": "Enabled by default. Disabling verification keeps HTTPS encryption but does not verify the identity of the display."
+          "native_web_verify_certificate": "Enabled by default. Disabling verification keeps HTTPS encryption but does not verify the identity of the display.",
+          "preview_active_interval": "Capture faster while the remote preview or enlarged view is open, then return to the normal interval. Default: 1 second. Set 0 to disable acceleration. Actual frame rate is limited by the display capture speed."
         }
       }
     },
@@ -95,7 +99,7 @@
       "invalid_time": "Enter a time as HH:MM.",
       "invalid_native_web_settings": "Provide the Mobile URL password and, if entered, a valid SHA-256 fingerprint; leave the fingerprint blank for automatic detection.",
       "preview_requires_web": "Enable native LG web access before enabling preview.",
-      "invalid_preview_interval": "Screenshot interval must be between 10 and 3600 seconds.",
+      "invalid_preview_interval": "The normal screenshot interval must be between 1 and 3600 seconds.",
       "cannot_read_certificate": "Cannot read the LG HTTPS certificate. Check web access on port 3777, enter a fingerprint, or explicitly disable certificate verification."
     }
   },

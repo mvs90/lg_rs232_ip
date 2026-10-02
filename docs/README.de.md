@@ -48,3 +48,5 @@ Der ältere LG-Browser unterstützt nicht jede moderne Webseite. DRM, RTSP/RTMP 
 **Apple TV → FeinTech AX310 → LG HDMI 1**, AX310 eARC → Sonos. Der AX310 bleibt dauerhaft versorgt; nur der LG hängt an der schaltbaren Steckdose. [Anschlussreferenz](devices/FEINTECH-AX310.md).
 
 Die vollständigen Beispiele und Grenzen stehen in [FEATURES](FEATURES.md), [NATIVE-MEDIA](NATIVE-MEDIA.md) und der [Gerätereferenz 75UH5F-HJ](devices/LG-UH5F-H.md). [Prüfbericht](RELEASE-TESTS.md).
+
+Ab **2.2.0** beschleunigt sich die Vorschau automatisch, solange die Fernbedienung sichtbar oder die Kamera-Großansicht geöffnet ist. Standard: **1 Sekunde**, anschließend wieder das normale Intervall (standardmäßig 30 Sekunden). Unter **Konfigurieren** sind beide Intervalle einstellbar; **0** beim Intervall für die geöffnete Vorschau deaktiviert die Beschleunigung. Ein Klick auf das Vorschaubild öffnet die Großansicht. Mehrere Ansichten teilen sich dieselbe Aufnahme. Das LG liefert einzelne Screenshots, deshalb entsteht kein flüssiges Video mit 25/30 Bildern pro Sekunde.

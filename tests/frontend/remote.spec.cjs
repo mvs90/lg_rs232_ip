@@ -1,5 +1,13 @@
 const { test, expect } = require("@playwright/test");
 const path = require("node:path");
+const { startPreviewServer } = require("./preview-server.cjs");
+let previewServer;
+test.beforeAll(async () => {
+  previewServer = await startPreviewServer();
+});
+test.afterAll(async () => {
+  await previewServer.close();
+});
 const script = path.resolve(
   "custom_components/lg_rs232_ip/www/lg-display-remote.js",
 );
@@ -18,9 +26,7 @@ const initial = {
   },
 };
 async function mount(page, config = {}) {
-  await page.setContent(
-    '<body style="margin:16px;background:#f4f5f8;font-family:Arial;color:#172b3a"></body>',
-  );
+  await page.goto(previewServer.url);
   await page.addScriptTag({ path: script });
   await page.evaluate(
     ({ state, config }) => {
@@ -215,9 +221,7 @@ test("pending request blocks repeats and failures are visible without optimistic
   await expect(page.locator("#status")).toHaveText("Ein");
 });
 
-test("preview requests only new captures and removes stale image on failure or standby", async ({
-  page,
-}) => {
+async function preview(page) {
   await mount(page, { camera_entity: "camera.display" });
   await page.evaluate(() => {
     hass.states["camera.display"] = {
@@ -225,27 +229,114 @@ test("preview requests only new captures and removes stale image on failure or s
       attributes: {
         entity_picture: "/api/camera_proxy/camera.display?token=test",
         last_capture: "2026-10-02T12:00:00Z",
+        collection_enabled: true,
       },
     };
     card.hass = { ...hass };
   });
-  const src = await page.locator("#image").getAttribute("src");
-  expect(src).toContain("capture=2026-10-02");
+  await expect(page.locator("#image")).toHaveAttribute("src", /^blob:/);
+  await expect
+    .poll(() => page.locator("#image").evaluate((el) => el.naturalWidth))
+    .toBe(64);
+}
+
+test("preview decodes changing multipart frames and keeps one stream through state updates", async ({
+  page,
+}) => {
+  await preview(page);
+  const connected = previewServer.stats.connections;
+  // WebKit's canvas API can expose only the initial MJPEG frame. Inspect rendered pixels.
+  const pixels = async () =>
+    (await page.locator("#image").screenshot()).toString("base64");
+  const first = await pixels();
+  await expect.poll(pixels).not.toBe(first);
   await update(page, {
     attributes: { ...initial.attributes, volume_level: 0.6 },
   });
-  expect(await page.locator("#image").getAttribute("src")).toBe(src);
+  await page.evaluate(() => {
+    hass.states["camera.display"].attributes.last_capture =
+      "2026-10-02T12:00:01Z";
+    card.hass = { ...hass };
+  });
+  expect(previewServer.stats.connections).toBe(connected);
   await page.evaluate(() => {
     hass.states["camera.display"].attributes.preview_error = "capture_failed";
     card.hass = { ...hass };
   });
-  await expect(page.locator("#image")).not.toHaveAttribute("src");
+  await expect(page.locator("#image")).toBeHidden();
+  await expect(page.locator("#image")).toHaveAttribute("src");
   await page.evaluate(() => {
     delete hass.states["camera.display"].attributes.preview_error;
     card.hass = { ...hass };
   });
+  await expect(page.locator("#image")).toBeVisible();
+  expect(previewServer.stats.connections).toBe(connected);
   await update(page, { state: "off" });
-  await expect(page.locator("#image")).not.toHaveAttribute("src");
+  await expect(page.locator("#image")).not.toHaveAttribute(
+    "src",
+    /camera_proxy_stream/,
+  );
+  await expect.poll(() => previewServer.stats.active).toBe(0);
+});
+
+test("preview opens selected camera and stops capture offscreen, hidden or detached", async ({
+  page,
+}) => {
+  await preview(page);
+  await page.evaluate(() =>
+    card.addEventListener(
+      "hass-more-info",
+      (event) => (window.moreInfo = event.detail),
+    ),
+  );
+  await page.getByRole("button", { name: "Vorschau vergrößern" }).click();
+  expect(await page.evaluate(() => window.moreInfo)).toEqual({
+    entityId: "camera.display",
+  });
+  await page.evaluate(() => (card.style.display = "none"));
+  await expect.poll(() => previewServer.stats.active).toBe(0);
+  await page.evaluate(() => (card.style.display = "block"));
+  await expect.poll(() => previewServer.stats.active).toBe(1);
+  // Emulate the browser visibility event; the actual stream must be released.
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(() => previewServer.stats.active).toBe(0);
+  await page.evaluate(() => {
+    delete document.visibilityState;
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect.poll(() => previewServer.stats.active).toBe(1);
+  await page.evaluate(() => card.remove());
+  await expect.poll(() => previewServer.stats.active).toBe(0);
+});
+
+test("camera collection off prevents streams and configuration rebuild releases old stream", async ({
+  page,
+}) => {
+  await preview(page);
+  await page.evaluate(() => {
+    hass.states["camera.display"].attributes.collection_enabled = false;
+    card.hass = { ...hass };
+  });
+  await expect.poll(() => previewServer.stats.active).toBe(0);
+  await page.evaluate(() => {
+    hass.states["camera.display"].attributes.collection_enabled = true;
+    card.hass = { ...hass };
+  });
+  await expect.poll(() => previewServer.stats.active).toBe(1);
+  await page.evaluate(() =>
+    card.setConfig({ ...card._config, name: "New title" }),
+  );
+  await expect.poll(() => previewServer.stats.active).toBe(1);
+  await page.evaluate(() =>
+    card.setConfig({ ...card._config, show_preview: false }),
+  );
+  await expect.poll(() => previewServer.stats.active).toBe(0);
 });
 
 test("editor picks LG only, supports optional camera and preserves config after updates", async ({
@@ -373,4 +464,82 @@ test("failed volume and source changes restore the last confirmed HA values", as
   await expect(
     page.getByRole("combobox", { name: "Eingang", exact: true }),
   ).toHaveValue("HDMI 1");
+});
+
+test("preview reconnects after interrupted response", async ({ page }) => {
+  await preview(page);
+  const count = previewServer.stats.connections;
+  previewServer.disconnect();
+  await expect
+    .poll(() => previewServer.stats.connections)
+    .toBeGreaterThan(count);
+  await expect(page.locator("#image")).toBeVisible();
+  await expect
+    .poll(() => page.locator("#image").evaluate((el) => el.naturalWidth))
+    .toBe(64);
+  await page.evaluate(() => card.remove());
+  await expect.poll(() => previewServer.stats.active).toBe(0);
+});
+
+test("native enlarged image decodes successive standard MJPEG frames", async ({
+  page,
+}) => {
+  await page.goto(previewServer.url);
+  await page.evaluate(() => {
+    const img = document.createElement("img");
+    img.id = "native";
+    img.src = "/api/camera_proxy_stream/camera.display";
+    document.body.append(img);
+  });
+  await expect
+    .poll(() => page.locator("#native").evaluate((el) => el.naturalWidth))
+    .toBe(64);
+  const pixels = async () =>
+    (await page.locator("#native").screenshot()).toString("base64");
+  const first = await pixels();
+  await expect.poll(pixels).not.toBe(first);
+});
+
+test("frame reader handles split headers and payloads and rejects oversized frames", async ({
+  page,
+}) => {
+  await mount(page);
+  const result = await page.evaluate(async () => {
+    function response(text) {
+      const bytes = new TextEncoder().encode(text);
+      let offset = 0;
+      return new Response(
+        new ReadableStream({
+          pull(controller) {
+            if (offset < bytes.length)
+              controller.enqueue(bytes.slice(offset, ++offset));
+            else controller.close();
+          },
+        }),
+        { headers: { "Content-Type": "application/octet-stream" } },
+      );
+    }
+    const frames = jpegFrames(
+      response(
+        "--test\r\nContent-Type: image/jpeg\r\nContent-Length: 3\r\n\r\nabc\r\n--test\r\nContent-Type: image/jpeg\r\nContent-Length: 4\r\n\r\ndefg",
+      ),
+    );
+    const decoded = [
+      (await frames.next()).value,
+      (await frames.next()).value,
+    ].map((bytes) => new TextDecoder().decode(bytes));
+    await frames.return();
+    let rejected = false;
+    try {
+      await jpegFrames(
+        response(
+          "--test\r\nContent-Type: image/jpeg\r\nContent-Length: 999999999\r\n\r\n",
+        ),
+      ).next();
+    } catch {
+      rejected = true;
+    }
+    return { decoded, rejected };
+  });
+  expect(result).toEqual({ decoded: ["abc", "defg"], rejected: true });
 });

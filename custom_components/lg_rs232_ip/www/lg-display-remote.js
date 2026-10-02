@@ -36,6 +36,7 @@ const TEXT = {
     sent: "Command sent",
     failed: "Command failed. Check the display connection.",
     preview: "Display preview",
+    enlarge: "Enlarge preview",
     previewMissing: "Preview unavailable",
     screenshot: "Screenshot",
     display: "LG display",
@@ -87,6 +88,7 @@ const TEXT = {
     sent: "Befehl gesendet",
     failed: "Befehl fehlgeschlagen. Verbindung zum Display prüfen.",
     preview: "Display-Vorschau",
+    enlarge: "Vorschau vergrößern",
     previewMissing: "Vorschau nicht verfügbar",
     screenshot: "Screenshot",
     display: "LG-Display",
@@ -177,15 +179,157 @@ const STYLE = `
   .error {color:var(--error-color,#db4437);}
   .preview {margin:0 0 20px; border-radius:12px; overflow:hidden; background:var(--secondary-background-color,#f2f3f5);}
   .preview img {display:block; width:100%; aspect-ratio:16/9; object-fit:contain; background:#111;}
+  .preview-open {display:block; width:100%; padding:0; border-radius:0; background:transparent;}
   figcaption {padding:8px 12px;}
   .preview-placeholder {padding:24px 12px; text-align:center; font-size:13px; color:var(--secondary-text-color);}
 `;
+
+// Read length-delimited JPEG parts from our authenticated HA camera endpoint.
+// Explicit fetch cancellation also releases connections reliably in WebKit.
+async function* jpegFrames(response) {
+  if (
+    !response.ok ||
+    !response.headers
+      .get("Content-Type")
+      ?.startsWith("application/octet-stream") ||
+    !response.body
+  )
+    throw new Error("Preview stream unavailable");
+  const reader = response.body.getReader();
+  let buffer = new Uint8Array(),
+    length = null;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) throw new Error("Preview stream ended");
+      if (buffer.length + value.length > 6 * 1024 * 1024)
+        throw new Error("Preview frame too large");
+      const joined = new Uint8Array(buffer.length + value.length);
+      joined.set(buffer);
+      joined.set(value, buffer.length);
+      buffer = joined;
+      while (true) {
+        if (length === null) {
+          let end = -1;
+          for (let i = 0; i + 3 < buffer.length; i++) {
+            if (
+              buffer[i] === 13 &&
+              buffer[i + 1] === 10 &&
+              buffer[i + 2] === 13 &&
+              buffer[i + 3] === 10
+            ) {
+              end = i;
+              break;
+            }
+          }
+          if (end < 0) {
+            if (buffer.length > 8192)
+              throw new Error("Invalid preview headers");
+            break;
+          }
+          const headers = new TextDecoder().decode(buffer.subarray(0, end));
+          const match = /Content-Length:\s*(\d+)/i.exec(headers);
+          length = match ? Number(match[1]) : 0;
+          if (
+            !/Content-Type:\s*image\/jpeg/i.test(headers) ||
+            length < 1 ||
+            length > 5 * 1024 * 1024
+          )
+            throw new Error("Invalid preview frame");
+          buffer = buffer.subarray(end + 4);
+        }
+        if (buffer.length < length) break;
+        yield buffer.slice(0, length);
+        buffer = buffer.subarray(length);
+        length = null;
+      }
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+}
 
 class LGDisplayRemote extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
     this._busy = false;
+    this._previewVisible = false;
+    this._visibilityChanged = () => this._update();
+  }
+  connectedCallback() {
+    document.addEventListener("visibilitychange", this._visibilityChanged);
+    this._observePreview();
+  }
+  disconnectedCallback() {
+    document.removeEventListener("visibilitychange", this._visibilityChanged);
+    this._previewObserver?.disconnect();
+    this._previewObserver = undefined;
+    this._previewVisible = false;
+    this._stopPreview();
+  }
+  _observePreview() {
+    this._previewObserver?.disconnect();
+    if (!this.isConnected || !this._get("preview")) return;
+    this._previewObserver = new IntersectionObserver((entries) => {
+      this._previewVisible = entries.some((entry) => entry.isIntersecting);
+      this._update();
+    });
+    this._previewObserver.observe(this._get("preview"));
+  }
+  _stopPreview() {
+    this._previewAbort?.abort();
+    this._previewAbort = undefined;
+    this._get("image")?.removeAttribute("src");
+    if (this._previewBlob) URL.revokeObjectURL(this._previewBlob);
+    this._previewBlob = undefined;
+    this._previewKey = undefined;
+    clearTimeout(this._previewRetryTimer);
+    this._previewRetryTimer = undefined;
+    this._previewFailed = false;
+  }
+  async _startPreview(url) {
+    const controller = new AbortController();
+    this._previewAbort = controller;
+    try {
+      const response = await fetch(
+        `${url}${url.includes("?") ? "&" : "?"}lg_preview=frames`,
+        {
+          signal: controller.signal,
+          cache: "no-store",
+          credentials: "same-origin",
+        },
+      );
+      for await (const bytes of jpegFrames(response)) {
+        if (controller.signal.aborted) break;
+        const previous = this._previewBlob;
+        this._previewBlob = URL.createObjectURL(
+          new Blob([bytes], { type: "image/jpeg" }),
+        );
+        this._get("image").src = this._previewBlob;
+        if (previous) URL.revokeObjectURL(previous);
+        this._previewFailed = false;
+        this._update();
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) this._previewError();
+    }
+  }
+  _previewError() {
+    this._previewFailed = true;
+    this._get("image").hidden = true;
+    this._get("preview-placeholder").hidden = false;
+    if (
+      !this._previewRetryTimer &&
+      this.isConnected &&
+      this._previewVisible &&
+      document.visibilityState === "visible"
+    ) {
+      this._previewRetryTimer = setTimeout(() => {
+        this._stopPreview();
+        this._update();
+      }, 2000);
+    }
   }
   static getConfigElement() {
     return document.createElement("lg-display-remote-editor");
@@ -242,6 +386,7 @@ class LGDisplayRemote extends HTMLElement {
     return this.shadowRoot.getElementById(id);
   }
   _build() {
+    this._stopPreview();
     const t = TEXT[language(this._hass)];
     this._language = language(this._hass);
     const key = (command, image, cls = "", label = false) =>
@@ -249,7 +394,7 @@ class LGDisplayRemote extends HTMLElement {
     this.shadowRoot.innerHTML = `<style>${STYLE}</style><ha-card>
       <header><div class="heading"><h2 id="title"></h2><div class="status"><span id="dot" class="dot"></span><span id="status"></span></div></div>
         <button id="more" title="${t.more}" aria-label="${t.more}">${icon("dots-horizontal")}</button><button class="power" id="power">${icon("power")}</button></header>
-      <figure class="preview" id="preview" hidden><img id="image" alt="${t.preview}" hidden><div id="preview-placeholder" class="preview-placeholder">${t.previewMissing}</div><figcaption class="caption" id="capture"></figcaption></figure>
+      <figure class="preview" id="preview" hidden><button class="preview-open" id="preview-open" aria-label="${t.enlarge}" title="${t.enlarge}"><img id="image" alt="${t.preview}" hidden><div id="preview-placeholder" class="preview-placeholder">${t.previewMissing}</div></button><figcaption class="caption" id="capture"></figcaption></figure>
       <div class="source" id="sources"><label for="source">${t.source}</label><select id="source" aria-label="${t.source}"></select></div>
       <div class="navigation" role="group" aria-label="${t.navigation}"><div class="pad">
         ${key("up", "chevron-up", "up")}${key("left", "chevron-left", "left")}${key("select", null, "ok")}${key("right", "chevron-right", "right")}${key("down", "chevron-down", "down")}
@@ -316,14 +461,14 @@ class LGDisplayRemote extends HTMLElement {
       if (message && this._state().attributes.native_web_enabled)
         await this._call("lg_rs232_ip", "show_toast", { message });
     };
-    this._get("image").onerror = () => {
-      this._get("image").hidden = true;
-      this._get("preview-placeholder").hidden = false;
-    };
+    this._get("image").onerror = () => this._previewError();
+    this._get("preview-open").onclick = () =>
+      fire(this, "hass-more-info", { entityId: this._config.camera_entity });
     this._previewKey = undefined;
     this._sourceSignature = undefined;
     this._volumeEditing = false;
     this._built = true;
+    this._observePreview();
   }
   _state() {
     return this._hass?.states[this._config?.entity];
@@ -453,27 +598,34 @@ class LGDisplayRemote extends HTMLElement {
     const usable =
       !container.hidden &&
       on &&
+      this.isConnected &&
+      this._previewVisible &&
+      document.visibilityState === "visible" &&
       camera &&
-      !["off", "unavailable", "unknown"].includes(camera.state) &&
-      a.last_capture &&
-      !a.preview_error &&
+      a.collection_enabled !== false &&
       typeof a.entity_picture === "string" &&
       a.entity_picture.startsWith("/api/camera_proxy/");
     if (!usable) {
-      img.removeAttribute("src");
+      this._stopPreview();
       img.hidden = true;
       this._previewKey = undefined;
       this._get("preview-placeholder").hidden = false;
       this._get("capture").textContent = t.screenshot;
       return;
     }
-    const key = `${a.entity_picture}|${a.last_capture}`;
+    // One persistent stream activates shared fast capture. Frame/state updates
+    // must not reconnect it; hiding/unmounting the card closes it immediately.
+    const key = a.entity_picture.replace(
+      "/api/camera_proxy/",
+      "/api/camera_proxy_stream/",
+    );
     if (this._previewKey !== key) {
+      this._stopPreview();
       this._previewKey = key;
-      img.hidden = false;
-      this._get("preview-placeholder").hidden = true;
-      img.src = `${a.entity_picture}${a.entity_picture.includes("?") ? "&" : "?"}capture=${encodeURIComponent(a.last_capture)}`;
+      this._startPreview(key);
     }
+    img.hidden = this._previewFailed || !!a.preview_error || !a.last_capture;
+    this._get("preview-placeholder").hidden = !img.hidden;
     const captured = new Date(a.last_capture);
     this._get("capture").textContent =
       `${t.screenshot}${Number.isNaN(captured.getTime()) ? "" : ` · ${captured.toLocaleTimeString(this._language)}`}`;

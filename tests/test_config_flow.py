@@ -55,7 +55,7 @@ async def test_native_password_not_prefilled_and_preserved(flow):
 async def test_preview_needs_web_access_and_bounded_interval(flow):
     with patch("homeassistant.helpers.entity_registry.async_get"):
         result = await flow.async_step_init(
-            {"preview_enabled": True, "preview_interval": 1}
+            {"preview_enabled": True, "preview_interval": 0}
         )
     assert result["errors"]["preview_enabled"] == "preview_requires_web"
     assert result["errors"]["preview_interval"] == "invalid_preview_interval"
@@ -137,7 +137,7 @@ async def test_initial_settings_save_as_options_not_connection_data(setup_flow):
 async def test_initial_preview_validation_keeps_settings_open(setup_flow):
     await connect_setup(setup_flow)
     result = await setup_flow.async_step_settings(
-        {"preview_enabled": True, "preview_interval": 1}
+        {"preview_enabled": True, "preview_interval": 0}
     )
     assert result["step_id"] == "settings"
     assert result["errors"] == {
@@ -285,3 +285,23 @@ async def test_stored_pin_is_not_automatically_replaced(flow):
         result = await flow.async_step_init(form["data_schema"]({}))
     read.assert_not_awaited()
     assert result["data"]["native_web_fingerprint"] == "ab" * 32
+
+
+@pytest.mark.parametrize("active", [0, 1, 10])
+def test_preview_allows_one_second_and_active_interval_boundaries(active):
+    from custom_components.lg_rs232_ip.config_flow import _display_options_form
+
+    _, errors, values = _display_options_form(
+        {"preview_interval": 1, "preview_active_interval": active}, {}
+    )
+    assert not errors
+    assert values["preview_interval"] == 1
+    assert values["preview_active_interval"] == active
+
+
+@pytest.mark.parametrize("active", [-1, 11, True, 0.5])
+def test_preview_rejects_invalid_active_interval(active):
+    from custom_components.lg_rs232_ip.config_flow import _display_options_form
+
+    _, errors, _ = _display_options_form({"preview_active_interval": active}, {})
+    assert errors == {"preview_active_interval": "invalid_option_range"}
