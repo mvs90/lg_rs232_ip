@@ -14,3 +14,16 @@ Record panel model/firmware, HA version and release version. Tests below deliber
 10. Pair the combined entity with HomeKit in accessory mode. Verify one TV, on/off, source selection and sound-system volume. Do not export the underlying devices again.
 
 Automated tests use synthetic state objects and a local TCP server. They cannot certify a physical LG panel, tvOS, HDMI handshake, or Apple Home pairing.
+
+## Additional 1.2 checks
+
+11. Configure the Apple TV remote and verify actual wake/suspend, HomeKit arrows/menu and isolation between two TVs.
+12. Start a wake while the panel boots, then immediately turn off. No background task may wake it later.
+13. Configure a separate content player. Play a compatible media-source item, then verify timed source restoration, queue ordering and manual cancellation.
+14. Change the HDMI input using the physical remote during a presentation. The integration must not restore over this choice.
+15. Verify default no-wake and overnight quiet hours. Urgent requests may bypass quiet hours but must not bypass no-wake.
+16. With an actual renderer script, verify show/clear session ownership, error handling and both supported modes. Without it, notification actions must fail explicitly.
+17. Verify Sonos TV source, night mode, speech enhancement and announcement volume through the optional links.
+18. If using a power sensor, measure display-only standby consumption; verify stale/invalid measurements never count as evidence.
+
+The automated suite runs against Home Assistant 2025.3.4 (Python 3.13) and 2026.9.4 (Python 3.14), including real HA entity-service routing and a local TCP server. This does not certify on-device rendering, tvOS behaviour or specific Sonos firmware.

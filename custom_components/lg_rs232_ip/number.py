@@ -21,6 +21,7 @@ SCAN_INTERVAL = timedelta(seconds=10)
 class LGDisplayBaseNumber(NumberEntity):
     """Base number entity with cleaner Home Assistant device-view naming."""
 
+    _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -54,6 +55,8 @@ async def async_setup_entry(
 
 class LGDisplayBrightnessNumber(LGDisplayBaseNumber):
     """Brightness control for LG Display."""
+
+    _attr_entity_registry_enabled_default = True
 
     def __init__(self, lg_display: LGDisplay, name: str, unique_id: str) -> None:
         """Initialize the number entity."""
@@ -98,7 +101,10 @@ class LGDisplayBrightnessNumber(LGDisplayBaseNumber):
             return
 
         brightness_value = int(value)
-        if await self._lg_display.async_send_command("k", "h", brightness_value):
+        if (
+            await self._lg_display.async_send_command("k", "h", brightness_value)
+            is not None
+        ):
             self._attr_native_value = brightness_value
             self.async_write_ha_state()
 
@@ -115,6 +121,8 @@ class LGDisplayBrightnessNumber(LGDisplayBaseNumber):
 
 class LGDisplayVolumeNumber(LGDisplayBaseNumber):
     """Volume control for LG Display."""
+
+    _attr_entity_registry_enabled_default = True
 
     def __init__(self, lg_display: LGDisplay, name: str, unique_id: str) -> None:
         """Initialize the number entity."""
@@ -159,7 +167,10 @@ class LGDisplayVolumeNumber(LGDisplayBaseNumber):
             return
 
         volume_value = int(value)
-        if await self._lg_display.async_send_command("k", "f", volume_value):
+        if (
+            await self._lg_display.async_send_command("k", "f", volume_value)
+            is not None
+        ):
             self._attr_native_value = volume_value
             self.async_write_ha_state()
 

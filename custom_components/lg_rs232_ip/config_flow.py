@@ -157,6 +157,9 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
         values = dict(self._config_entry.options if user_input is None else user_input)
         ranges = {
             "polling_interval": (1, 3600, 60, "invalid_polling_range"),
+            "display_wake_timeout": (5, 300, 60, "invalid_option_range"),
+            "power_supply_startup_delay": (0, 120, 0, "invalid_option_range"),
+            "standby_power_threshold": (0, 1000, 0, "invalid_option_range"),
             "power_transition_timeout": (
                 0,
                 300,
@@ -176,6 +179,12 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
             "linked_media_player_entity_id": "media_player",
             "linked_volume_media_player_entity_id": "media_player",
             "power_supply_switch_entity_id": "switch",
+            "linked_remote_entity_id": "remote",
+            "content_media_player_entity_id": "media_player",
+            "notification_script_entity_id": "script",
+            "sonos_night_sound_entity_id": "switch",
+            "sonos_speech_enhancement_entity_id": "switch",
+            "power_sensor_entity_id": "sensor",
         }
         if user_input is not None:
             for key, (low, high, default, error) in ranges.items():
@@ -197,11 +206,16 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
                     continue
                 values[key] = entity_id
                 selected = registry.async_get(entity_id)
-                if (
-                    selected is not None
-                    and selected.config_entry_id == self._config_entry.entry_id
+                if selected is not None and (
+                    selected.config_entry_id == self._config_entry.entry_id
+                    or getattr(selected, "platform", None) == DOMAIN
                 ):
                     errors[key] = "self_reference"
+            for key in ("quiet_hours_start", "quiet_hours_end"):
+                from homeassistant.util import dt as dt_util
+
+                if dt_util.parse_time(values.get(key, "00:00")) is None:
+                    errors[key] = "invalid_time"
             if not errors:
                 return self.async_create_entry(title="", data=values)
 
@@ -214,6 +228,9 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
             "show_input_hdmi2": True,
             "show_input_hdmi3": True,
             "show_linked_app_sources": True,
+            "notification_wake_display": False,
+            "quiet_hours_enabled": False,
+            "sonos_select_tv_source": False,
         }.items():
             schema[vol.Optional(key, default=values.get(key, default))] = bool
         schema.update(self._standby_schema(values))
@@ -226,6 +243,8 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
             )
         for key, default, choices in (
             ("linked_media_player_input", "HDMI 1", list(INPUT_SOURCES)),
+            ("content_player_input", "HDMI 2", list(INPUT_SOURCES)),
+            ("linked_remote_power_mode", "generic", ["generic", "apple_tv"]),
             (
                 "linked_volume_sync_mode",
                 "hdmi1_only",
@@ -239,6 +258,12 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
                     )
                 )
             )
+        for key, default in {
+            "quiet_hours_start": "22:00",
+            "quiet_hours_end": "07:00",
+            "sonos_tv_source": "TV",
+        }.items():
+            schema[vol.Optional(key, default=values.get(key, default))] = str
         for index in range(1, 4):
             key = f"input_name_hdmi{index}"
             schema[vol.Optional(key, default=values.get(key, f"HDMI {index}"))] = str

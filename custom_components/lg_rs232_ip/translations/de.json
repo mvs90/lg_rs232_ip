@@ -45,7 +45,24 @@
           "power_supply_off_delay_seconds": "Verzögerung Strom aus (Sekunden)",
           "standby_signal_check": "HDMI-Signal am Display prüfen",
           "standby_no_signal_seconds": "Abschalten bei fehlendem Signal (Sekunden; 0 = aus)",
-          "standby_idle_seconds": "Idle-Rückfallzeit bei unbekanntem Signal (Sekunden; 0 = aus)"
+          "standby_idle_seconds": "Idle-Rückfallzeit bei unbekanntem Signal (Sekunden; 0 = aus)",
+          "display_wake_timeout": "Zeitlimit für Displaystart (Sekunden)",
+          "power_supply_startup_delay": "Wartezeit nach Einschalten der Steckdose (Sekunden)",
+          "standby_power_threshold": "Zusätzliche Standby-Leistungsschwelle (W)",
+          "power_sensor_entity_id": "Leistungssensor des Displays (W/kW)",
+          "linked_remote_entity_id": "Gekoppelte Fernbedienung",
+          "linked_remote_power_mode": "Ein-/Ausschaltbefehle der Fernbedienung",
+          "content_media_player_entity_id": "Optionaler Player für Inhaltsanzeige",
+          "content_player_input": "HDMI-Eingang für Inhaltsanzeige",
+          "notification_script_entity_id": "Anzeige-Skript für Meldungen (show/clear-Schnittstelle)",
+          "notification_wake_display": "Display für Meldungen/Inhalte einschalten erlauben",
+          "quiet_hours_enabled": "Ruhezeiten für Benachrichtigungen aktivieren",
+          "quiet_hours_start": "Beginn der Ruhezeit (HH:MM)",
+          "quiet_hours_end": "Ende der Ruhezeit (HH:MM)",
+          "sonos_select_tv_source": "TV-Eingang am Soundsystem beim Einschalten wählen",
+          "sonos_tv_source": "Name der TV-Quelle am Soundsystem",
+          "sonos_night_sound_entity_id": "Sonos-Schalter für Nachtmodus",
+          "sonos_speech_enhancement_entity_id": "Sonos-Schalter für Sprachverbesserung"
         }
       }
     },
@@ -56,7 +73,9 @@
       "invalid_transition_timeout_range": "Das Power-Transition-Timeout muss zwischen 0 und 300 Sekunden liegen",
       "invalid_power_supply_off_delay_range": "Die Verzögerung zum Ausschalten der Stromversorgung muss zwischen 0 und 300 Sekunden liegen",
       "invalid_standby_timeout": "0 oder 30 bis 86400 Sekunden eingeben.",
-      "self_reference": "Keine Entität dieser Integration auswählen."
+      "self_reference": "Keine Entität dieser Integration auswählen.",
+      "invalid_option_range": "Wert außerhalb des erlaubten Bereichs.",
+      "invalid_time": "Uhrzeit als HH:MM eingeben."
     }
   }
 }

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.0
+
+- Capability-aware playback controls, seek/repeat/shuffle and media-source/deep-link forwarding.
+- Optional remote entity with Apple TV wakeup/suspend and scoped HomeKit navigation.
+- Separate content-player input, temporary presentations, bounded queue, quiet hours, cancellation and conditional input restoration.
+- Notification renderer script interface with show/clear session contract; native LG overlays remain unsupported pending model/firmware verification.
+- Optional Sonos TV source, night/speech controls and audio announcements.
+- Configurable display startup, confirmed socket state and cancellation of competing wake tasks.
+- Optional fresh power-measurement evidence; idle fallback survives intermittent signal-query failures.
+- Shared short query cache, fresh confirmation reads, rejected-command cooldown and connection cleanup on cancellation.
+- Advanced entities opt-in on new installations, corrected zero-value ACK handling and privacy-conscious diagnostics.
+
+
 ## 1.1.0
 
 First public HACS release, based on the existing private 1.0.0 integration.

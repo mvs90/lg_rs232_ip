@@ -67,12 +67,15 @@ def _parse_usage_time_response(response: str) -> Optional[int]:
 class LGDisplayBaseSensor(SensorEntity):
     """Base sensor entity with cleaner Home Assistant device-view naming."""
 
+    _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
 
 class LGDisplayAlertSensor(LGDisplayBaseSensor):
     """Sensor that exposes the latest integration alert for notifications."""
+
+    _attr_entity_registry_enabled_default = True
 
     def __init__(self, alert_state, name: str, unique_id: str) -> None:
         self._alert_state = alert_state

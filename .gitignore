@@ -1,6 +1,6 @@
 # Original private working copy and on-device diagnostic recordings
 /lg_rs232_ip/
-.venv/
+.venv*/
 __pycache__/
 *.py[cod]
 .pytest_cache/

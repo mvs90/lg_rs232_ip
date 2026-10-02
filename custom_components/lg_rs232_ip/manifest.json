@@ -5,10 +5,13 @@
     "@mvs90"
   ],
   "config_flow": true,
+  "dependencies": [
+    "media_source"
+  ],
   "documentation": "https://github.com/mvs90/lg_rs232_ip",
   "integration_type": "device",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/mvs90/lg_rs232_ip/issues",
   "requirements": [],
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

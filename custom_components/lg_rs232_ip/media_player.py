@@ -34,6 +34,11 @@ from homeassistant.helpers.event import (
 from .const import DOMAIN, INPUT_SOURCES, READ_STATUS
 from .lg_display import LGDisplay
 from .standby import StandbyGuard
+from .controls import ExtendedControls
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_platform
+import voluptuous as vol
+from homeassistant.helpers import config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -94,20 +99,87 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][config_entry.entry_id]
     lg_display = data["lg_display"]
 
-    async_add_entities(
-        [
-            LGDisplayMediaPlayer(
-                hass,
-                config_entry,
-                lg_display,
-                data["name"],
-                config_entry.entry_id,
-            )
-        ]
+    player = LGDisplayMediaPlayer(
+        hass, config_entry, lg_display, data["name"], config_entry.entry_id
     )
+    data["media_player"] = player
+    async_add_entities([player])
+    platform = entity_platform.async_get_current_platform()
+    services = {
+        "send_remote_command": (
+            {
+                vol.Required("command"): vol.In(
+                    [
+                        "up",
+                        "down",
+                        "left",
+                        "right",
+                        "select",
+                        "menu",
+                        "home",
+                        "information",
+                        "skip_forward",
+                        "skip_backward",
+                        "next",
+                        "previous",
+                    ]
+                )
+            },
+            "async_send_remote_command",
+        ),
+        "show_content": (
+            {
+                vol.Required("media_id"): cv.string,
+                vol.Optional("media_type", default="video"): cv.string,
+                vol.Optional("duration", default=30): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=3600)
+                ),
+                vol.Optional("priority", default="normal"): vol.In(
+                    ["normal", "urgent"]
+                ),
+            },
+            "async_show_content",
+        ),
+        "show_notification": (
+            {
+                vol.Required("message"): cv.string,
+                vol.Optional("title", default=""): cv.string,
+                vol.Optional("duration", default=10): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=3600)
+                ),
+                vol.Optional("priority", default="normal"): vol.In(
+                    ["normal", "urgent"]
+                ),
+                vol.Optional("mode", default="overlay"): vol.In(
+                    ["overlay", "fullscreen"]
+                ),
+            },
+            "async_show_notification",
+        ),
+        "clear_content": ({}, "async_clear_content"),
+        "set_sound_mode": (
+            {
+                vol.Required("mode"): vol.In(["night", "speech"]),
+                vol.Required("enabled"): cv.boolean,
+            },
+            "async_set_sound_mode",
+        ),
+        "announce": (
+            {
+                vol.Required("media_id"): cv.string,
+                vol.Optional("media_type", default="music"): cv.string,
+                vol.Optional("volume", default=40): vol.All(
+                    vol.Coerce(int), vol.Range(min=0, max=100)
+                ),
+            },
+            "async_announce",
+        ),
+    }
+    for service, (schema, method) in services.items():
+        platform.async_register_entity_service(service, schema, method)
 
 
-class LGDisplayMediaPlayer(MediaPlayerEntity):
+class LGDisplayMediaPlayer(ExtendedControls, MediaPlayerEntity):
     """Media player entity for LG professional displays."""
 
     _attr_should_poll = False
@@ -162,6 +234,7 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         self._display_unresponsive_since: Optional[float] = None
         self._suppress_linked_power_on_until: float = 0.0
 
+        self._init_controls()
         self._standby_guard = StandbyGuard()
         self._standby_latched = False
         self._signal_present: bool | None = None
@@ -405,14 +478,10 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
 
     @property
     def state(self) -> MediaPlayerState:
-        if self._state != MediaPlayerState.OFF and self._use_linked_content_sync:
-            if self._linked_state in {
-                STATE_PLAYING,
-                STATE_PAUSED,
-                STATE_IDLE,
-                "buffering",
-            }:
-                return MediaPlayerState(self._linked_state)
+        if self._state != MediaPlayerState.OFF and self._playback_target:
+            state = self.hass.states.get(self._playback_target)
+            if state and state.state in {"playing", "paused", "idle", "buffering"}:
+                return MediaPlayerState(state.state)
         return self._state
 
     @property
@@ -434,38 +503,38 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
 
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:
-        linked_features = MediaPlayerEntityFeature(0)
-        if self._use_linked_content_sync:
-            linked = self.hass.states.get(self._linked_entity_id)
-            if linked is not None:
-                linked_features = MediaPlayerEntityFeature(
-                    linked.attributes.get("supported_features", 0)
-                ) & (
-                    MediaPlayerEntityFeature.PLAY
-                    | MediaPlayerEntityFeature.PAUSE
-                    | MediaPlayerEntityFeature.STOP
-                )
-        return (
-            linked_features
-            | MediaPlayerEntityFeature.TURN_ON
-            | MediaPlayerEntityFeature.TURN_OFF
-            | MediaPlayerEntityFeature.VOLUME_SET
-            | MediaPlayerEntityFeature.VOLUME_STEP
-            | MediaPlayerEntityFeature.VOLUME_MUTE
-            | MediaPlayerEntityFeature.SELECT_SOURCE
-            | MediaPlayerEntityFeature.NEXT_TRACK
-            | MediaPlayerEntityFeature.PREVIOUS_TRACK
+        feature = MediaPlayerEntityFeature
+        supported = feature.TURN_ON | feature.TURN_OFF | feature.SELECT_SOURCE
+        if self._playback_target:
+            supported |= self._features_for(self._playback_target) & (
+                feature.PLAY
+                | feature.PAUSE
+                | feature.STOP
+                | feature.NEXT_TRACK
+                | feature.PREVIOUS_TRACK
+                | feature.SEEK
+                | feature.SHUFFLE_SET
+                | feature.REPEAT_SET
+            )
+        if self._features_for(self._content_target) & feature.PLAY_MEDIA:
+            supported |= feature.PLAY_MEDIA
+        volume_features = feature.VOLUME_SET | feature.VOLUME_STEP | feature.VOLUME_MUTE
+        supported |= (
+            self._features_for(self._volume_entity_id) & volume_features
+            if self._use_linked_volume_sync
+            else volume_features
         )
+        return supported
 
     @property
     def volume_level(self) -> Optional[float]:
-        if self._use_linked_volume_sync and self._linked_volume_level is not None:
+        if self._use_linked_volume_sync:
             return self._linked_volume_level
         return self._volume_level
 
     @property
     def is_volume_muted(self) -> Optional[bool]:
-        if self._use_linked_volume_sync and self._linked_is_muted is not None:
+        if self._use_linked_volume_sync:
             return self._linked_is_muted
         return self._is_muted
 
@@ -496,30 +565,64 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         return combined_sources
 
     @property
-    def media_title(self) -> Optional[str]:
-        if self._use_linked_content_sync:
-            return self._linked_media_title
-        return None
+    def media_title(self):
+        state = (
+            self.hass.states.get(self._playback_target)
+            if self._playback_target
+            else None
+        )
+        return (
+            state.attributes.get("media_title")
+            if state and state.state not in _UNAVAILABLE_STATES
+            else None
+        )
 
     @property
-    def media_artist(self) -> Optional[str]:
-        if self._use_linked_content_sync:
-            return self._linked_media_artist
-        return None
+    def media_artist(self):
+        state = (
+            self.hass.states.get(self._playback_target)
+            if self._playback_target
+            else None
+        )
+        return (
+            state.attributes.get("media_artist")
+            if state and state.state not in _UNAVAILABLE_STATES
+            else None
+        )
 
     @property
-    def media_album_name(self) -> Optional[str]:
-        if self._use_linked_content_sync:
-            return self._linked_media_album_name
-        return None
+    def media_album_name(self):
+        state = (
+            self.hass.states.get(self._playback_target)
+            if self._playback_target
+            else None
+        )
+        return (
+            state.attributes.get("media_album_name")
+            if state and state.state not in _UNAVAILABLE_STATES
+            else None
+        )
 
     @property
-    def media_image_url(self) -> Optional[str]:
-        if self._use_linked_content_sync:
-            return self._linked_media_image_url
-        return None
+    def media_image_url(self):
+        state = (
+            self.hass.states.get(self._playback_target)
+            if self._playback_target
+            else None
+        )
+        return (
+            state.attributes.get("entity_picture")
+            if state and state.state not in _UNAVAILABLE_STATES
+            else None
+        )
 
     async def async_added_to_hass(self) -> None:
+        self.async_on_remove(
+            self.hass.bus.async_listen(
+                "homekit_tv_remote_key_pressed", self._async_homekit_key
+            )
+        )
+
         async def refresh(_now):
             self.async_schedule_update_ha_state(True)
 
@@ -565,6 +668,21 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             )
 
     async def async_will_remove_from_hass(self) -> None:
+        self._ha_stopping = True
+        await self._async_cancel_presentations()
+        await self._async_cancel_wake()
+        tasks = [
+            task
+            for task in (
+                self._power_supply_off_task,
+                self._blocked_linked_turn_off_task,
+            )
+            if task is not None and not task.done()
+        ]
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
         if self._ha_stop_unsub is not None:
             self._ha_stop_unsub()
             self._ha_stop_unsub = None
@@ -799,7 +917,8 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         except asyncio.CancelledError:
             return
         finally:
-            self._blocked_linked_turn_off_task = None
+            if self._blocked_linked_turn_off_task is asyncio.current_task():
+                self._blocked_linked_turn_off_task = None
 
     def _start_display_wake_task(self, reason: str) -> None:
         self._cancel_power_supply_off_task()
@@ -828,7 +947,9 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             if self._ha_stopping:
                 return
 
-            power_status = await self._lg_display.async_get_power_status()
+            power_status = await self._lg_display.async_get_power_status(
+                use_cache=False
+            )
             self._log_power_sync(
                 "evaluate delayed power-supply off",
                 reason=reason,
@@ -845,7 +966,8 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         except asyncio.CancelledError:
             return
         finally:
-            self._power_supply_off_task = None
+            if self._power_supply_off_task is asyncio.current_task():
+                self._power_supply_off_task = None
 
     async def _async_ensure_display_on_after_power_restore(self, reason: str) -> None:
         try:
@@ -856,46 +978,41 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
                         reason=reason,
                         switch_entity_id=self._power_supply_switch_entity_id,
                     )
-
-            deadline = time.monotonic() + _DISPLAY_WAKE_TIMEOUT_SECONDS
-            while time.monotonic() < deadline and not self._ha_stopping:
-                power_status = await self._lg_display.async_get_power_status()
-                if power_status is True:
-                    self._log_power_sync(
-                        "display reachable and already on after power restore",
-                        reason=reason,
+                else:
+                    self._report_issue(
+                        "power_supply_unavailable",
+                        "Power supply did not become available",
                     )
+                    return
+
+            await asyncio.sleep(
+                self._config_entry.options.get("power_supply_startup_delay", 0)
+            )
+            deadline = time.monotonic() + self._config_entry.options.get(
+                "display_wake_timeout", 60
+            )
+            requested_on = False
+            while time.monotonic() < deadline and not self._ha_stopping:
+                power_status = await self._lg_display.async_get_power_status(
+                    use_cache=False
+                )
+                if power_status is True:
                     self._clear_issue(
                         "display_unresponsive", message="Display reachable again"
                     )
                     self._state = MediaPlayerState.ON
                     self.async_write_ha_state()
                     return
-                if power_status is False:
-                    if await self._lg_display.async_power_on():
-                        self._log_power_sync(
-                            "display powered on after power restore",
-                            reason=reason,
-                        )
-                        self._clear_issue(
-                            "display_unresponsive", message="Display reachable again"
-                        )
-                        self._state = MediaPlayerState.ON
-                        self.async_write_ha_state()
-                    else:
+                if power_status is False and not requested_on:
+                    if not await self._lg_display.async_power_on():
                         self._report_issue(
                             "display_unresponsive",
-                            "Display did not switch on or respond",
+                            "Display rejected power-on",
                             level="error",
-                            source=self.entity_id,
                             trigger=reason,
-                            details={"phase": "power_restore"},
                         )
-                        self._log_power_sync(
-                            "display power_on failed after power restore",
-                            reason=reason,
-                        )
-                    return
+                        return
+                    requested_on = True
                 await asyncio.sleep(1)
 
             self._report_issue(
@@ -904,7 +1021,11 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
                 level="error",
                 source=self.entity_id,
                 trigger=reason,
-                details={"timeout_seconds": _DISPLAY_WAKE_TIMEOUT_SECONDS},
+                details={
+                    "timeout_seconds": self._config_entry.options.get(
+                        "display_wake_timeout", 60
+                    )
+                },
             )
             self._log_power_sync(
                 "display wake timed out waiting for reachable power status",
@@ -912,15 +1033,16 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
                 timeout_seconds=_DISPLAY_WAKE_TIMEOUT_SECONDS,
             )
         finally:
-            self._display_wake_task = None
+            if self._display_wake_task is asyncio.current_task():
+                self._display_wake_task = None
 
     def _log_power_sync(self, message: str, **context: Any) -> None:
         """Emit structured debug logs for power sync decisions."""
         details = ", ".join(f"{key}={value}" for key, value in context.items())
         if details:
-            _LOGGER.warning("Power-sync decision: %s | %s", message, details)
+            _LOGGER.debug("Power-sync decision: %s | %s", message, details)
         else:
-            _LOGGER.warning("Power-sync decision: %s", message)
+            _LOGGER.debug("Power-sync decision: %s", message)
 
     def _report_issue(
         self,
@@ -1019,8 +1141,14 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
                 service_data,
                 blocking=True,
             )
+            expected = "on" if service == "turn_on" else "off"
             state = self.hass.states.get(entity_id)
-            if state is None or state.state in _UNAVAILABLE_STATES:
+            for _ in range(20):
+                if state is not None and state.state == expected:
+                    break
+                await asyncio.sleep(0.25)
+                state = self.hass.states.get(entity_id)
+            if state is None or state.state != expected:
                 self._report_issue(
                     "power_supply_unavailable",
                     "Power supply switch not available or not responding",
@@ -1164,6 +1292,7 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             )
 
             if new_state.state == STATE_OFF:
+                await self._async_cancel_wake()
                 self._lg_display.set_power_supply_state(False)
                 self._suppress_linked_power_on("power supply switch turned off")
                 self._state = MediaPlayerState.OFF
@@ -1178,10 +1307,12 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
     async def _async_handle_hass_stop(self, event) -> None:
         """Mark integration as stopping to suppress sync side-effects."""
         self._ha_stopping = True
+        await self._async_cancel_presentations()
+        await self._async_cancel_wake()
         self._log_power_sync("home assistant stopping: suppress automatic power sync")
 
     async def _async_handle_linked_state_change(self, event) -> None:
-        if self._ha_stopping:
+        if self._ha_stopping or self._presentation_active:
             self._log_power_sync("skip linked state change: home assistant stopping")
             return
 
@@ -1299,7 +1430,11 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
                     self.async_write_ha_state()
                     return
 
-            if self._ha_stopping or not self._sync_automation_enabled:
+            if (
+                self._ha_stopping
+                or self._presentation_active
+                or not self._sync_automation_enabled
+            ):
                 return
             if await self._lg_display.async_get_input() != self._linked_input_id:
                 return
@@ -1313,7 +1448,9 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
                 display_power=display_power,
             )
             if display_power:
+                await self._async_cancel_wake()
                 if await self._lg_display.async_power_off():
+                    self._schedule_power_supply_off("linked standby confirmed")
                     self._standby_latched = True
                     self._log_power_sync("display powered off from linked off event")
                     self._state = MediaPlayerState.OFF
@@ -1363,7 +1500,19 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
 
         self.async_write_ha_state()
 
+    async def _async_cancel_wake(self):
+        task = self._display_wake_task
+        if task is not None and task is not asyncio.current_task() and not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        self._display_wake_task = None
+
     async def async_turn_on(self) -> None:
+        await self._async_cancel_presentations()
+        async with self._control_lock:
+            await self._async_turn_on_locked()
+
+    async def _async_turn_on_locked(self) -> None:
         self._standby_latched = False
         self._standby_guard.reset()
         self._cancel_power_supply_off_task()
@@ -1372,20 +1521,38 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         self._pending_state = MediaPlayerState.ON
         self._pending_state_until = time.monotonic() + self._pending_power_seconds
         self._start_display_wake_task("local media_player turn_on")
-        await self._async_call_linked_service("turn_on")
+        await self._async_remote_power(True)
+        if self._config_entry.options.get("sonos_select_tv_source", False):
+            await self._required_call(
+                "media_player",
+                "select_source",
+                self._volume_entity_id,
+                source=self._config_entry.options.get("sonos_tv_source", "TV"),
+            )
         self.async_write_ha_state()
 
     async def async_turn_off(self) -> None:
+        await self._async_cancel_presentations()
+        async with self._control_lock:
+            self._suppress_linked_power_on("explicit off")
+            await self._async_cancel_wake()
+            await self._async_turn_off_locked()
+
+    async def _async_turn_off_locked(self) -> None:
         self._standby_latched = True
         self._standby_guard.reset()
         self._log_power_sync("local media_player turn_off requested")
         self._suppress_linked_power_on("local media_player turn_off")
-        if await self._lg_display.async_power_off():
+        if (
+            await self._lg_display.async_get_power_status(use_cache=False) is False
+            or await self._lg_display.async_power_off()
+        ):
             self._log_power_sync("display powered off from local media_player turn_off")
             self._state = MediaPlayerState.OFF
             self._pending_state = MediaPlayerState.OFF
             self._pending_state_until = time.monotonic() + self._pending_power_seconds
-            await self._async_call_linked_service("turn_off")
+            await self._async_remote_power(False)
+            self._schedule_power_supply_off("explicit confirmed off")
             self.async_write_ha_state()
         else:
             self._report_issue(
@@ -1459,6 +1626,20 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     async def async_select_source(self, source: str) -> None:
+        await self._async_cancel_presentations()
+        async with self._control_lock:
+            await self._async_select_source_locked(source)
+
+    async def _async_select_source_locked(self, source: str) -> None:
+        if (
+            source not in self._sources
+            and source not in self._linked_source_display_map()
+        ):
+            raise HomeAssistantError("Unknown source")
+        await self._async_cancel_wake()
+        await self._async_ensure_display_on_after_power_restore("source selection")
+        if await self._lg_display.async_get_power_status(use_cache=False) is not True:
+            raise HomeAssistantError("Display did not become ready")
         self._standby_guard.reset()
         source_id = self._sources.get(source)
         if source_id is not None:
@@ -1499,22 +1680,25 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         self.async_write_ha_state()
 
     async def async_media_next_track(self) -> None:
-        if self._use_linked_content_sync:
-            await self._async_call_linked_service("media_next_track")
-            return
-        if await self._lg_display.async_key_right():
-            self.async_write_ha_state()
+        await self._async_playback_action(
+            "media_next_track", MediaPlayerEntityFeature.NEXT_TRACK
+        )
 
     async def async_media_previous_track(self) -> None:
-        if self._use_linked_content_sync:
-            await self._async_call_linked_service("media_previous_track")
-            return
-        if await self._lg_display.async_key_left():
-            self.async_write_ha_state()
+        await self._async_playback_action(
+            "media_previous_track", MediaPlayerEntityFeature.PREVIOUS_TRACK
+        )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         return {
+            "presentation_active": self._presentation_active,
+            "presentation_queue_size": len(self._presentation_queue),
+            "presentation_error": self._presentation_error,
+            "notification_backend_configured": bool(
+                self._option_entity("notification_script_entity_id")
+            ),
+            "native_overlay_supported": False,
             "signal_present": self._signal_present,
             "standby_candidate": self._standby_guard.reason,
             "standby_samples": self._standby_guard.samples,
@@ -1527,6 +1711,7 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         now = time.monotonic()
         eligible = (
             bool(self._linked_entity_id)
+            and not self._presentation_active
             and self._is_linked_input_active
             and self._sync_automation_enabled
             and not self._ha_stopping
@@ -1548,6 +1733,7 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             time.monotonic(),
             self._linked_state,
             self._signal_present,
+            low_power=self._power_sensor_in_standby(),
             eligible=eligible,
             no_signal_seconds=options.get("standby_no_signal_seconds", 120),
             idle_seconds=options.get("standby_idle_seconds", 900),
@@ -1556,12 +1742,13 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             return
         # Re-read the physical input and power before committing a shutdown.
         power = await self._lg_display.async_get_power_status(use_cache=False)
-        input_id = await self._lg_display.async_get_input()
+        input_id = await self._lg_display.async_get_input(use_cache=False)
         if (
             power is not True
             or input_id != self._linked_input_id
             or self._ha_stopping
             or not self._sync_automation_enabled
+            or self._presentation_active
             or time.monotonic()
             < max(self._pending_state_until, self._pending_source_until)
         ):
@@ -1577,7 +1764,10 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             time.monotonic(),
             self._linked_state,
             signal,
-            eligible=not self._ha_stopping and self._sync_automation_enabled,
+            low_power=self._power_sensor_in_standby(),
+            eligible=not self._ha_stopping
+            and not self._presentation_active
+            and self._sync_automation_enabled,
             no_signal_seconds=options.get("standby_no_signal_seconds", 120),
             idle_seconds=options.get("standby_idle_seconds", 900),
         )
@@ -1588,19 +1778,16 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         await self.async_turn_off()
 
     async def async_media_play(self) -> None:
-        if self._use_linked_content_sync:
-            await self._async_call_linked_service("media_play")
+        await self._async_playback_action("media_play", MediaPlayerEntityFeature.PLAY)
 
     async def async_media_pause(self) -> None:
-        if self._use_linked_content_sync:
-            await self._async_call_linked_service("media_pause")
+        await self._async_playback_action("media_pause", MediaPlayerEntityFeature.PAUSE)
 
     async def async_media_stop(self) -> None:
-        if self._use_linked_content_sync:
-            await self._async_call_linked_service("media_stop")
+        await self._async_playback_action("media_stop", MediaPlayerEntityFeature.STOP)
 
     async def async_update(self) -> None:
-        if self._ha_stopping:
+        if self._ha_stopping or self._presentation_active:
             return
 
         self._update_linked_cache_from_state()

@@ -31,6 +31,7 @@ SCAN_INTERVAL = timedelta(seconds=10)
 class LGDisplayBaseSelect(SelectEntity):
     """Base select entity with cleaner Home Assistant device-view naming."""
 
+    _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -77,6 +78,8 @@ async def async_setup_entry(
 
 class LGDisplayInputSelect(LGDisplayBaseSelect):
     """Input selection for LG Display."""
+
+    _attr_entity_registry_enabled_default = True
 
     def __init__(
         self,

@@ -23,6 +23,7 @@ SCAN_INTERVAL = timedelta(seconds=10)
 class LGDisplayBaseSwitch(SwitchEntity):
     """Base switch entity with cleaner Home Assistant device-view naming."""
 
+    _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -40,43 +41,25 @@ async def async_setup_entry(
         LGDisplaySyncAutomationSwitch(hass, data["name"], config_entry.entry_id),
     ]
 
-    if await _power_supported(lg_display):
-        entities.extend(
-            [
-                LGDisplayPowerSwitch(lg_display, data["name"], config_entry.entry_id),
-                LGDisplayMuteSwitch(lg_display, data["name"], config_entry.entry_id),
-                LGDisplayAutoSleepSwitch(
-                    lg_display, data["name"], config_entry.entry_id
-                ),
-                LGDisplayDpmSwitch(lg_display, data["name"], config_entry.entry_id),
-                LGDisplayScreenMuteSwitch(
-                    lg_display, data["name"], config_entry.entry_id
-                ),
-                LGDisplayRemoteLockSwitch(
-                    lg_display, data["name"], config_entry.entry_id
-                ),
-                LGDisplayOsdSelectSwitch(
-                    lg_display, data["name"], config_entry.entry_id
-                ),
-            ]
-        )
-    else:
-        _LOGGER.warning(
-            "Power control unsupported or no response from LG display at %s:%s",
-            data["host"],
-            data["port"],
-        )
+    entities.extend(
+        [
+            LGDisplayPowerSwitch(lg_display, data["name"], config_entry.entry_id),
+            LGDisplayMuteSwitch(lg_display, data["name"], config_entry.entry_id),
+            LGDisplayAutoSleepSwitch(lg_display, data["name"], config_entry.entry_id),
+            LGDisplayDpmSwitch(lg_display, data["name"], config_entry.entry_id),
+            LGDisplayScreenMuteSwitch(lg_display, data["name"], config_entry.entry_id),
+            LGDisplayRemoteLockSwitch(lg_display, data["name"], config_entry.entry_id),
+            LGDisplayOsdSelectSwitch(lg_display, data["name"], config_entry.entry_id),
+        ]
+    )
 
     async_add_entities(entities)
 
 
-async def _power_supported(lg_display: LGDisplay) -> bool:
-    """Return True if the display supports power status queries."""
-    return await lg_display.async_get_power_status() is not None
-
-
 class LGDisplaySyncAutomationSwitch(LGDisplayBaseSwitch, RestoreEntity):
     """Block or allow linked power automation for LG Display."""
+
+    _attr_entity_registry_enabled_default = True
 
     _attr_entity_category = None
 
@@ -141,6 +124,8 @@ class LGDisplaySyncAutomationSwitch(LGDisplayBaseSwitch, RestoreEntity):
 class LGDisplayPowerSwitch(LGDisplayBaseSwitch):
     """Power switch for LG Display."""
 
+    _attr_entity_registry_enabled_default = True
+
     def __init__(self, lg_display: LGDisplay, name: str, unique_id: str) -> None:
         """Initialize the switch."""
         self._lg_display = lg_display
@@ -166,7 +151,7 @@ class LGDisplayPowerSwitch(LGDisplayBaseSwitch):
     @property
     def available(self) -> bool:
         """Return True unless the display is intentionally unpowered."""
-        return not self._lg_display.is_intentionally_unpowered
+        return True
 
     @property
     def scan_interval(self) -> int:
@@ -190,6 +175,14 @@ class LGDisplayPowerSwitch(LGDisplayBaseSwitch):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the display."""
+        player = (
+            self.hass.data.get(DOMAIN, {}).get(self._unique_id, {}).get("media_player")
+        )
+        if player is not None:
+            await player.async_turn_on()
+            self._is_on = player._state != "off"
+            self.async_write_ha_state()
+            return
         if await self._lg_display.async_power_on():
             await asyncio.sleep(0.5)  # Wait for display to respond
             status = await self._lg_display.async_get_power_status()
@@ -203,6 +196,14 @@ class LGDisplayPowerSwitch(LGDisplayBaseSwitch):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the display."""
+        player = (
+            self.hass.data.get(DOMAIN, {}).get(self._unique_id, {}).get("media_player")
+        )
+        if player is not None:
+            await player.async_turn_off()
+            self._is_on = player._state != "off"
+            self.async_write_ha_state()
+            return
         if await self._lg_display.async_power_off():
             await asyncio.sleep(0.5)  # Wait for display to respond
             status = await self._lg_display.async_get_power_status()
@@ -223,6 +224,8 @@ class LGDisplayPowerSwitch(LGDisplayBaseSwitch):
 
 class LGDisplayMuteSwitch(LGDisplayBaseSwitch):
     """Mute switch for LG Display."""
+
+    _attr_entity_registry_enabled_default = True
 
     def __init__(self, lg_display: LGDisplay, name: str, unique_id: str) -> None:
         """Initialize the switch."""
@@ -277,7 +280,7 @@ class LGDisplayMuteSwitch(LGDisplayBaseSwitch):
         if power_status is False:
             return
 
-        if await self._lg_display.async_send_command("k", "e", 0x00):
+        if await self._lg_display.async_send_command("k", "e", 0x00) is not None:
             self._is_on = True
             self.async_write_ha_state()
 
@@ -287,7 +290,7 @@ class LGDisplayMuteSwitch(LGDisplayBaseSwitch):
         if power_status is False:
             return
 
-        if await self._lg_display.async_send_command("k", "e", 0x01):
+        if await self._lg_display.async_send_command("k", "e", 0x01) is not None:
             self._is_on = False
             self.async_write_ha_state()
 

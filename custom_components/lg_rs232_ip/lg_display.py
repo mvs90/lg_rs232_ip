@@ -63,9 +63,12 @@ class LGDisplay:
         self._power_supply_expected_off = False
         self._last_power_status: Optional[bool] = None
         self._last_power_status_at: float = 0.0
+        self._query_cache = {}
+        self._unsupported_until = {}
 
     def set_power_supply_state(self, is_on: bool) -> None:
         """Hint whether the external power supply is expected to be on or off."""
+        self._query_cache.clear()
         self._power_supply_expected_off = not is_on
         if is_on:
             self._next_connect_attempt_at = 0.0
@@ -145,6 +148,7 @@ class LGDisplay:
 
     async def async_disconnect(self) -> None:
         """Disconnect from the LG Display."""
+        self._query_cache.clear()
         if self._writer:
             self._writer.close()
             try:
@@ -164,6 +168,7 @@ class LGDisplay:
         *,
         check_power: bool = False,
         query_suffix: str = "",
+        use_cache: bool = True,
     ) -> Optional[str]:
         """Send raw LG RS232 command and get response.
 
@@ -184,6 +189,16 @@ class LGDisplay:
                 return None
 
         async with self._command_lock:
+            key = (cmd1, cmd2, value, query_suffix)
+            is_query = value == READ_STATUS or bool(query_suffix)
+            if is_query:
+                if time.monotonic() < self._unsupported_until.get(key, 0):
+                    return None
+                cached = self._query_cache.get(key)
+                if use_cache and cached and time.monotonic() - cached[0] < 2:
+                    return cached[1]
+            else:
+                self._query_cache.clear()
             if not self._connected or not self._writer or not self._reader:
                 if not await self.async_connect():
                     return None
@@ -219,7 +234,24 @@ class LGDisplay:
                         )
                         if match:
                             self._last_successful_response = time.monotonic()
+                            if is_query:
+                                if re.search(r"\sNG", response_str, re.IGNORECASE) and (
+                                    cmd1,
+                                    cmd2,
+                                ) != ("k", "a"):
+                                    self._unsupported_until[key] = (
+                                        time.monotonic() + 300
+                                    )
+                                else:
+                                    self._query_cache[key] = (
+                                        time.monotonic(),
+                                        response_str,
+                                    )
                             return response_str
+            except asyncio.CancelledError:
+                self._query_cache.clear()
+                await self.async_disconnect()
+                raise
             except asyncio.TimeoutError:
                 # Discard delayed replies so they cannot satisfy a later query.
                 await self.async_disconnect()
@@ -271,7 +303,7 @@ class LGDisplay:
                 except ValueError:
                     pass
             elif status == "NG":
-                _LOGGER.warning("Command returned NG status")
+                _LOGGER.debug("Command returned NG status")
                 return None
 
         _LOGGER.warning("Could not parse response: %s", response)
@@ -284,6 +316,7 @@ class LGDisplay:
         value: int,
         *,
         check_power: bool = False,
+        use_cache: bool = True,
     ) -> Optional[int]:
         """Send a command to the LG Display.
 
@@ -300,6 +333,7 @@ class LGDisplay:
             cmd2,
             value,
             check_power=check_power,
+            use_cache=use_cache,
         )
         if response is None:
             return None
@@ -391,7 +425,9 @@ class LGDisplay:
         ):
             return self._last_power_status
 
-        result = await self.async_send_command("k", "a", READ_STATUS, check_power=False)
+        result = await self.async_send_command(
+            "k", "a", READ_STATUS, check_power=False, use_cache=use_cache
+        )
         if result not in (0x00, 0x01):
             return None
 
@@ -402,7 +438,9 @@ class LGDisplay:
 
     async def async_get_signal_status(self) -> Optional[bool]:
         """Read LG status check sv <id> 02 ff; unknown is never no-signal."""
-        response = await self.async_send_raw_command("s", "v", 0x02, query_suffix=" ff")
+        response = await self.async_send_raw_command(
+            "s", "v", 0x02, query_suffix=" ff", use_cache=False
+        )
         if response is None:
             return None
         value = self._parse_response(response)
@@ -419,13 +457,15 @@ class LGDisplay:
         result = await self.async_send_command("k", "f", READ_STATUS)
         return result
 
-    async def async_get_input(self) -> Optional[int]:
+    async def async_get_input(self, *, use_cache: bool = True) -> Optional[int]:
         """Get current input source.
 
         Returns:
             Input ID (hex value) or None if error
         """
-        result = await self.async_send_command("x", "b", READ_STATUS)
+        result = await self.async_send_command(
+            "x", "b", READ_STATUS, use_cache=use_cache
+        )
         return result
 
     async def async_get_picture_mode(self) -> Optional[int]:

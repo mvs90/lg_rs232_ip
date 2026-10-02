@@ -21,7 +21,7 @@ async def test_signal_decoding(reply, expected):
     display.async_send_raw_command = AsyncMock(return_value=reply)
     assert await display.async_get_signal_status() is expected
     display.async_send_raw_command.assert_awaited_once_with(
-        "s", "v", 2, query_suffix=" ff"
+        "s", "v", 2, query_suffix=" ff", use_cache=False
     )
 
 
@@ -64,3 +64,60 @@ async def test_bad_power_value_is_unknown():
     assert await display.async_get_power_status() is None
     assert not await display.async_power_off()
     assert not await display.async_power_on()
+
+
+@pytest.mark.asyncio
+async def test_shared_query_cache_and_write_invalidation():
+    from unittest.mock import Mock
+
+    display = LGDisplay("example.invalid")
+    reader = asyncio.StreamReader()
+    writer = Mock()
+    writer.drain = AsyncMock()
+
+    def reply(data):
+        reader.feed_data(b"f 01 OK32x")
+
+    writer.write.side_effect = reply
+    display._reader, display._writer, display._connected = reader, writer, True
+    assert await display.async_get_volume() == 50
+    assert await display.async_get_volume() == 50
+    assert writer.write.call_count == 1
+    await display.async_set_volume(50)
+    await display.async_get_volume()
+    assert writer.write.call_count == 3
+
+
+@pytest.mark.asyncio
+async def test_cancelled_query_discards_connection():
+    from unittest.mock import Mock
+
+    display = LGDisplay("example.invalid")
+    display._reader = asyncio.StreamReader()
+    writer = Mock()
+    writer.drain = AsyncMock()
+    writer.wait_closed = AsyncMock()
+    display._writer = writer
+    display._connected = True
+    task = asyncio.create_task(display.async_get_volume())
+    await asyncio.sleep(0)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    writer.close.assert_called_once()
+    assert not display.is_connected
+
+
+@pytest.mark.asyncio
+async def test_rejected_optional_query_is_temporarily_suppressed():
+    from unittest.mock import Mock
+
+    display = LGDisplay("example.invalid")
+    reader = asyncio.StreamReader()
+    writer = Mock()
+    writer.drain = AsyncMock()
+    writer.write.side_effect = lambda _: reader.feed_data(b"g 01 NGffx")
+    display._reader, display._writer, display._connected = reader, writer, True
+    assert await display.async_send_command("n", "g", 255) is None
+    assert await display.async_send_command("n", "g", 255) is None
+    assert writer.write.call_count == 1

@@ -1,6 +1,10 @@
 # LG Professional Display RS232/IP
 
-Control an LG professional signage display locally from Home Assistant. Optionally combine the display, an existing media player (such as Apple TV), and a sound system into **one TV media-player entity** for dashboards and Apple Home.
+Control an LG professional signage display locally from Home Assistant.
+
+**Version 1.2 adds remote/HomeKit navigation, media forwarding, temporary content, optional Sonos actions and a notification-renderer interface. [Setup and examples](docs/FEATURES.md).**
+
+ Optionally combine the display, an existing media player (such as Apple TV), and a sound system into **one TV media-player entity** for dashboards and Apple Home.
 
 [Deutsche Anleitung](docs/README.de.md) · [Report a problem](https://github.com/mvs90/lg_rs232_ip/issues) · [MIT license](LICENSE)
 
@@ -27,7 +31,7 @@ Under the integration's **Configure** options:
 - **Source names and visibility**: rename or hide HDMI inputs and choose which linked apps to expose.
 - **Power supply switch**: optionally control an external socket. It is switched off only after confirmed display standby. Keep the display powered for normal network wake unless you configure this socket.
 
-The linked integrations remain installed as device drivers. Expose only the combined TV to dashboards/HomeKit if you want one visible device. One playback entity and one volume entity can be linked per display; multiple independently mapped players are not supported yet. Sound-system power/input switching is not automatic.
+The linked integrations remain installed as device drivers. Expose only the combined TV to dashboards/HomeKit if you want one visible device. One playback entity and one volume entity can be linked per display; multiple independently mapped players are not supported yet. Sound-system TV input selection is optional; power-off and grouping are not automatic.
 
 ## Multi-stage standby protection
 
@@ -35,7 +39,7 @@ Apple TV can incorrectly remain `idle` after going to sleep. This integration do
 
 1. A genuine linked `off`/`standby` transition is briefly confirmed before display shutdown, on the linked HDMI input only. Polling recovers missed standby events with repeated observations.
 2. The display's independent **HDMI signal query** (`sv <set-id> 02 ff`) is checked. Continuous no-signal observations for **120 seconds**, followed by a fresh power/input/signal confirmation, trigger shutdown even if the player incorrectly says `idle` or `playing`.
-3. If signal status is unsupported or unknown, **900 seconds of continuous `idle`** is a configurable fallback. A detected signal blocks this fallback; `playing`, `paused`, `buffering`, `unknown` and `unavailable` do not count as idle.
+3. If signal status is unsupported or unknown, **900 seconds of continuous `idle`** is a configurable fallback. An optional, fresh display power measurement can provide an additional 120-second idle/low-consumption confirmation. A detected signal blocks this fallback; `playing`, `paused`, `buffering`, `unknown` and `unavailable` do not count as idle.
 4. Automatic shutdown cannot be reversed by polling stale Apple TV state. Explicit turn-on or a genuine active state transition can wake again. After an automatic shutdown, an `idle` transition alone stays blocked; start playback or use the combined TV's turn-on command.
 
 Signal checking and both timeouts are configurable. Set a timeout to **0** to disable that layer. The idle fallback is a heuristic: on a panel without signal-status support it can also shut down an Apple TV menu after 15 minutes. Increase or disable it if that is undesirable. Delays start at the first valid observation and can overshoot by a polling interval. Startup, source changes, power transitions and interrupted evidence reset the check. Restarting Home Assistant starts a new confirmation period.
@@ -58,7 +62,7 @@ homekit:
         - media_player.lg_display_media_player
 ```
 
-Do not configure the same accessory through both YAML and the UI. This does not turn the TV into a native Apple TV Home hub. Directional HomeKit remote-key events are not forwarded to a linked Apple TV remote entity in this release.
+Do not configure the same accessory through both YAML and the UI. This does not turn the TV into a native Apple TV Home hub. HomeKit navigation is forwarded when a linked remote is configured; see [extended controls](docs/FEATURES.md).
 
 ## Compatibility and verification
 

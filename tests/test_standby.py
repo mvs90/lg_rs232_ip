@@ -52,3 +52,23 @@ def test_missed_standby_event_recovered_after_confirmation():
     g = StandbyGuard()
     assert g.observe(0, "standby", True, eligible=True) is None
     assert g.observe(10, "standby", True, eligible=True) == "linked_standby"
+
+
+def test_intermitttent_signal_query_does_not_prevent_idle_fallback():
+    g = StandbyGuard()
+    for t in range(0, 900, 60):
+        assert (
+            g.observe(t, "idle", False if t % 120 == 0 else None, eligible=True) is None
+        )
+    assert g.observe(900, "idle", None, eligible=True) == "idle_timeout"
+
+
+def test_power_evidence_needs_idle_and_confirmation():
+    g = StandbyGuard()
+    assert g.observe(0, "idle", None, eligible=True, low_power=True) is None
+    assert g.observe(119, "idle", None, eligible=True, low_power=True) is None
+    assert (
+        g.observe(120, "idle", None, eligible=True, low_power=True) == "idle_low_power"
+    )
+    assert g.observe(121, "playing", None, eligible=True, low_power=True) is None
+    assert g.observe(122, "idle", True, eligible=True, low_power=True) is None
