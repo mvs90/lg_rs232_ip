@@ -487,8 +487,14 @@ class LGDisplayColorTemperatureNumber(LGDisplayBaseNumber):
             return
 
         color_temperature_value = int(value)
-        if not self.native_min_value <= color_temperature_value <= self.native_max_value:
-            raise HomeAssistantError("Color temperature value is outside this model's range")
+        if (
+            not self.native_min_value
+            <= color_temperature_value
+            <= self.native_max_value
+        ):
+            raise HomeAssistantError(
+                "Color temperature value is outside this model's range"
+            )
         if await self._lg_display.async_set_color_temperature(color_temperature_value):
             self._attr_native_value = color_temperature_value
             self.async_write_ha_state()

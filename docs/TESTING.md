@@ -1,4 +1,6 @@
-# Hardware acceptance checks
+# Test coverage and hardware acceptance
+
+The historical combined-system checklist below now requires **AV Companion** for linked devices, standby, socket, sound and combined HomeKit checks. Native LG cases remain in this repository. See [2.0 split results](RELEASE-TESTS.md).
 
 Record panel model/firmware, HA version and release version. Tests below deliberately change device power; run them when the display is not needed. Do not publish private addresses or raw diagnostic recordings.
 

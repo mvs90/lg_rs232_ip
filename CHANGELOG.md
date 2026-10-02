@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.0.0
+
+- Standalone LG controller, pure display entity and display-only configuration.
+- Native overlays/media, OSD, preview and boot-image features retained in LG.
+- Optional player, sound, socket, standby and combined HomeKit features moved to the separate AV Companion repository.
+- Documented API v1 with reload-safe access, presentation ownership and fresh confirmed-off supply guard.
+- New split/lifecycle/concurrency coverage and Home Assistant 2026.9.4 Docker acceptance tests.
+- Fresh configuration only; no migration from the combined prototype.
+
+
 ## 1.6.0
 
 - Native MP4 video presentations: bounded 50 MiB upload, foreground verification, timed restoration and owned-file cleanup.

@@ -9,24 +9,8 @@ from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from .const import DEFAULT_PORT, DOMAIN, INPUT_SOURCES
+from .const import DEFAULT_PORT, DOMAIN
 from .web_manager import normalize_fingerprint
-
-
-def _extract_entity_id(value: Any) -> Optional[str]:
-    """Normalize an entity selector value to an entity_id string."""
-    if value is None:
-        return None
-
-    if isinstance(value, str):
-        return value or None
-
-    if isinstance(value, dict):
-        entity_id = value.get("entity_id")
-        if isinstance(entity_id, str) and entity_id:
-            return entity_id
-
-    return None
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 class LGDisplayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for LG Display RS232/IP."""
 
-    VERSION = 1
+    VERSION = 2
 
     async def async_step_user(
         self, user_input: Optional[Dict[str, Any]] = None
@@ -62,7 +46,9 @@ class LGDisplayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
 
             if not errors:
-                await self.async_set_unique_id(user_input[CONF_HOST])
+                await self.async_set_unique_id(
+                    f"{user_input[CONF_HOST].lower()}:{user_input[CONF_PORT]}"
+                )
                 self._abort_if_unique_id_configured()
 
                 return self.async_create_entry(
@@ -92,114 +78,49 @@ class LGDisplayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class LGDisplayOptionsFlow(config_entries.OptionsFlow):
-    """Handle options for LG Display."""
+    """Display settings only; AV entities belong to AV Companion."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize options flow."""
-        self._config_entry = config_entry
-
-    def _standby_schema(self, values=None):
-        options = values if values is not None else self._config_entry.options
-        return {
-            vol.Optional(
-                "standby_signal_check",
-                default=options.get("standby_signal_check", True),
-            ): bool,
-            vol.Optional(
-                "standby_no_signal_seconds",
-                default=options.get("standby_no_signal_seconds", 120),
-            ): int,
-            vol.Optional(
-                "standby_idle_seconds", default=options.get("standby_idle_seconds", 900)
-            ): int,
-        }
-
-    def _get_linked_media_source_options(
-        self, linked_entity_value: Any = None
-    ) -> list[str]:
-        """Return available sources from the configured linked media player."""
-        linked_entity_id = _extract_entity_id(
-            linked_entity_value
-            if linked_entity_value is not None
-            else self._config_entry.options.get("linked_media_player_entity_id")
-        )
-
-        saved_sources = self._config_entry.options.get(
-            "visible_linked_media_sources", []
-        )
-        ordered_sources: list[str] = []
-
-        def add_source(source: Any) -> None:
-            if source is None:
-                return
-            source_name = str(source).strip()
-            if source_name and source_name not in ordered_sources:
-                ordered_sources.append(source_name)
-
-        if isinstance(saved_sources, (list, tuple, set)):
-            for source in saved_sources:
-                add_source(source)
-
-        if linked_entity_id and self.hass is not None:
-            state = self.hass.states.get(linked_entity_id)
-            if state is not None:
-                for source in state.attributes.get("source_list", []) or []:
-                    add_source(source)
-                add_source(state.attributes.get("source"))
-                add_source(state.attributes.get("app_name"))
-
-        return ordered_sources
+    def __init__(self, entry):
+        self._config_entry = entry
 
     async def async_step_init(self, user_input=None):
-        """Configure optional links and standby protection without nullable defaults."""
-        from homeassistant.helpers import entity_registry as er
-
         errors = {}
         values = dict(self._config_entry.options if user_input is None else user_input)
         ranges = {
-            "polling_interval": (1, 3600, 60, "invalid_polling_range"),
-            "preview_interval": (10, 3600, 30, "invalid_preview_interval"),
-            "display_wake_timeout": (5, 300, 60, "invalid_option_range"),
-            "power_supply_startup_delay": (0, 120, 0, "invalid_option_range"),
-            "standby_power_threshold": (0, 1000, 0, "invalid_option_range"),
-            "power_transition_timeout": (
-                0,
-                300,
-                20,
-                "invalid_transition_timeout_range",
-            ),
-            "media_player_pending_power_seconds": (0, 60, 12, "invalid_pending_range"),
-            "media_player_pending_source_seconds": (0, 60, 8, "invalid_pending_range"),
-            "power_supply_off_delay_seconds": (
-                0,
-                300,
-                5,
-                "invalid_power_supply_off_delay_range",
-            ),
+            "polling_interval": (1, 3600, 30),
+            "preview_interval": (10, 3600, 30),
+            "display_wake_timeout": (5, 300, 60),
+            "power_transition_timeout": (0, 300, 20),
         }
-        entity_fields = {
-            "linked_media_player_entity_id": "media_player",
-            "linked_volume_media_player_entity_id": "media_player",
-            "power_supply_switch_entity_id": "switch",
-            "linked_remote_entity_id": "remote",
-            "content_media_player_entity_id": "media_player",
-            "notification_script_entity_id": "script",
-            "sonos_night_sound_entity_id": "switch",
-            "sonos_speech_enhancement_entity_id": "switch",
-            "power_sensor_entity_id": "sensor",
+        booleans = {
+            "power_transition_mode": True,
+            "show_input_hdmi1": True,
+            "show_input_hdmi2": True,
+            "show_input_hdmi3": True,
+            "notification_wake_display": False,
+            "quiet_hours_enabled": False,
+            "native_web_enabled": False,
+            "preview_enabled": False,
+            "suppress_osd_during_switch": False,
         }
         if user_input is not None:
-            # Never prefill a secret in the form; an empty field preserves the saved one.
-            if not values.get("native_web_password"):
-                if saved_password := self._config_entry.options.get(
-                    "native_web_password"
-                ):
-                    values["native_web_password"] = saved_password
-            if values.get("preview_enabled", False) and not values.get(
-                "native_web_enabled", False
+            for key, (low, high, default) in ranges.items():
+                value = values.get(key, default)
+                if type(value) is not int or not low <= value <= high:
+                    errors[key] = (
+                        "invalid_preview_interval"
+                        if key == "preview_interval"
+                        else "invalid_option_range"
+                    )
+            if not values.get("native_web_password") and self._config_entry.options.get(
+                "native_web_password"
             ):
+                values["native_web_password"] = self._config_entry.options[
+                    "native_web_password"
+                ]
+            if values.get("preview_enabled") and not values.get("native_web_enabled"):
                 errors["preview_enabled"] = "preview_requires_web"
-            if values.get("native_web_enabled", False):
+            if values.get("native_web_enabled"):
                 if not values.get("native_web_password"):
                     errors["native_web_password"] = "invalid_native_web_settings"
                 try:
@@ -208,114 +129,36 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
                     )
                 except ValueError:
                     errors["native_web_fingerprint"] = "invalid_native_web_settings"
-            for key, (low, high, default, error) in ranges.items():
-                value = values.get(key, default)
-                if type(value) is not int or not low <= value <= high:
-                    errors[key] = error
-            for key, default in (
-                ("standby_no_signal_seconds", 120),
-                ("standby_idle_seconds", 900),
-            ):
-                value = values.get(key, default)
-                if type(value) is not int or not (value == 0 or 30 <= value <= 86400):
-                    errors[key] = "invalid_standby_timeout"
-            registry = er.async_get(self.hass)
-            for key in entity_fields:
-                entity_id = _extract_entity_id(values.get(key))
-                if not entity_id:
-                    values.pop(key, None)
-                    continue
-                values[key] = entity_id
-                selected = registry.async_get(entity_id)
-                if selected is not None and (
-                    selected.config_entry_id == self._config_entry.entry_id
-                    or getattr(selected, "platform", None) == DOMAIN
-                ):
-                    errors[key] = "self_reference"
-            for key in ("quiet_hours_start", "quiet_hours_end"):
-                from homeassistant.util import dt as dt_util
+            from homeassistant.util import dt as dt_util
 
+            for key in ("quiet_hours_start", "quiet_hours_end"):
                 if dt_util.parse_time(values.get(key, "00:00")) is None:
                     errors[key] = "invalid_time"
             if not errors:
                 return self.async_create_entry(title="", data=values)
-
-        schema = {}
-        for key, (_, _, default, _) in ranges.items():
-            schema[vol.Optional(key, default=values.get(key, default))] = int
-        for key, default in {
-            "power_transition_mode": True,
-            "show_input_hdmi1": True,
-            "show_input_hdmi2": True,
-            "show_input_hdmi3": True,
-            "show_linked_app_sources": True,
-            "notification_wake_display": False,
-            "quiet_hours_enabled": False,
-            "native_web_enabled": False,
-            "preview_enabled": False,
-            "suppress_osd_during_switch": False,
-            "sonos_select_tv_source": False,
-        }.items():
-            schema[vol.Optional(key, default=values.get(key, default))] = bool
-        schema.update(self._standby_schema(values))
-        for key, domain in entity_fields.items():
-            entity_id = _extract_entity_id(values.get(key))
-            schema[vol.Optional(key, default=entity_id or vol.UNDEFINED)] = (
-                selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain=domain, multiple=False)
-                )
-            )
-        for key, default, choices in (
-            ("preview_height", "720", ["360", "720", "1080"]),
-            ("linked_media_player_input", "HDMI 1", list(INPUT_SOURCES)),
-            ("content_player_input", "HDMI 2", list(INPUT_SOURCES)),
-            ("linked_remote_power_mode", "generic", ["generic", "apple_tv"]),
-            (
-                "linked_volume_sync_mode",
-                "hdmi1_only",
-                ["hdmi1_only", "always", "display_only"],
-            ),
-        ):
-            schema[vol.Optional(key, default=values.get(key, default))] = (
-                selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=choices, mode=selector.SelectSelectorMode.DROPDOWN
-                    )
-                )
-            )
+        schema = {
+            vol.Optional(key, default=values.get(key, default)): int
+            for key, (_, _, default) in ranges.items()
+        }
+        schema.update(
+            {
+                vol.Optional(key, default=values.get(key, default)): bool
+                for key, default in booleans.items()
+            }
+        )
         for key, default in {
             "quiet_hours_start": "22:00",
             "quiet_hours_end": "07:00",
-            "sonos_tv_source": "TV",
+            "native_web_fingerprint": "",
+            **{f"input_name_hdmi{i}": f"HDMI {i}" for i in range(1, 4)},
         }.items():
             schema[vol.Optional(key, default=values.get(key, default))] = str
         schema[vol.Optional("native_web_password")] = selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
         )
         schema[
-            vol.Optional(
-                "native_web_fingerprint",
-                default=values.get("native_web_fingerprint", ""),
-            )
-        ] = str
-        for index in range(1, 4):
-            key = f"input_name_hdmi{index}"
-            schema[vol.Optional(key, default=values.get(key, f"HDMI {index}"))] = str
-        sources = self._get_linked_media_source_options(
-            values.get("linked_media_player_entity_id")
-        )
-        schema[
-            vol.Optional(
-                "visible_linked_media_sources",
-                default=values.get("visible_linked_media_sources", sources),
-            )
-        ] = selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=sources,
-                multiple=True,
-                mode=selector.SelectSelectorMode.DROPDOWN,
-            )
-        )
+            vol.Optional("preview_height", default=values.get("preview_height", "720"))
+        ] = vol.In(["360", "720", "1080"])
         return self.async_show_form(
             step_id="init", data_schema=vol.Schema(schema), errors=errors
         )

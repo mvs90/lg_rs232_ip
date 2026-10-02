@@ -1,62 +1,3 @@
-show_content:
-  name: Show content temporarily
-  description: Queue media on the configured content player and restore the prior
-    display input.
-  target:
-    entity:
-      domain: media_player
-      integration: lg_rs232_ip
-  fields:
-    media_id:
-      name: Media URL or media-source ID
-      selector: &id001
-        text: {}
-      required: true
-    media_type:
-      name: Media type
-      selector: *id001
-      default: video
-    duration: &id002
-      name: Duration (seconds)
-      selector:
-        number:
-          min: 1
-          max: 3600
-          mode: box
-      default: 30
-    priority: &id003
-      name: Priority
-      selector:
-        select:
-          options:
-          - normal
-          - urgent
-      default: normal
-show_notification:
-  name: Show notification
-  description: Requires a configured renderer script. For native LG text overlays use show_toast.
-  target:
-    entity:
-      domain: media_player
-      integration: lg_rs232_ip
-  fields:
-    message:
-      name: Message
-      selector: *id001
-      required: true
-    title:
-      name: Title
-      selector: *id001
-    duration: *id002
-    priority: *id003
-    mode:
-      name: Mode
-      selector:
-        select:
-          options:
-          - overlay
-          - fullscreen
-      default: overlay
 clear_content:
   name: Clear temporary content
   description: Clear the queue, cancel the current presentation and restore its display
@@ -93,55 +34,10 @@ send_remote_command:
           - next
           - previous
       required: true
-set_sound_mode:
-  name: Set sound mode
-  description: Control the configured Sonos night sound or speech enhancement switch.
-  target:
-    entity:
-      domain: media_player
-      integration: lg_rs232_ip
-  fields:
-    mode:
-      name: Mode
-      selector:
-        select:
-          options:
-          - night
-          - speech
-      required: true
-    enabled:
-      name: Enabled
-      selector:
-        boolean: {}
-      required: true
-announce:
-  name: Announce audio
-  description: Play an audio announcement through a sound system supporting announcement
-    mixing.
-  target:
-    entity:
-      domain: media_player
-      integration: lg_rs232_ip
-  fields:
-    media_id:
-      name: Media URL or media-source ID
-      selector: *id001
-      required: true
-    media_type:
-      name: Media type
-      selector: *id001
-      default: music
-    volume:
-      name: Announcement volume
-      selector:
-        number:
-          min: 0
-          max: 100
-      default: 40
-
 show_toast:
   name: Show native LG text overlay
-  description: Display text over the current picture. Requires native web access and an awake panel. LG controls the duration.
+  description: Display text over the current picture. Requires native web access and
+    an awake panel. LG controls the duration.
   target:
     entity:
       domain: media_player
@@ -152,10 +48,18 @@ show_toast:
       required: true
       selector:
         text: {}
-    priority: *id003
+    priority: &id001
+      name: Priority
+      selector:
+        select:
+          options:
+          - normal
+          - urgent
+      default: normal
 show_native_image:
   name: Show native LG fullscreen image
-  description: Upload a temporary PNG/JPEG (up to 5 MiB), show it, restore the external input and delete the upload. Requires native web access.
+  description: Upload a temporary PNG/JPEG (up to 5 MiB), show it, restore the external
+    input and delete the upload. Requires native web access.
   target:
     entity:
       domain: media_player
@@ -174,11 +78,12 @@ show_native_image:
           min: 1
           max: 3600
           mode: box
-    priority: *id003
-
+    priority: *id001
 prepare_boot_image:
   name: Prepare custom boot image for USB import
-  description: Create a 1920x1080 JPEG in Home Assistant Media. Download and copy it to LG_MONITOR on USB, then import it on the display. Does not install remotely or reboot.
+  description: Create a 1920x1080 JPEG in Home Assistant Media. Download and copy
+    it to LG_MONITOR on USB, then import it on the display. Does not install remotely
+    or reboot.
   target:
     entity:
       domain: media_player
@@ -194,10 +99,11 @@ prepare_boot_image:
       default: local
       selector:
         text: {}
-
 show_native_video:
   name: Show native LG video
-  description: Upload an MP4 file (up to 50 MiB), play for the requested duration, restore the external input and delete the temporary file. Requires native web access.
+  description: Upload an MP4 file (up to 50 MiB), play for the requested duration,
+    restore the external input and delete the temporary file. Requires native web
+    access.
   target:
     entity:
       domain: media_player
@@ -217,11 +123,11 @@ show_native_video:
           min: 1
           max: 3600
           mode: box
-    priority: *id003
-
+    priority: *id001
 show_website:
   name: Show website on LG
-  description: Temporarily set Play via URL and select its input without rebooting. Restore the previous input and URL settings afterward. Requires native web access.
+  description: Temporarily set Play via URL and select its input without rebooting.
+    Restore the previous input and URL settings afterward. Requires native web access.
   target:
     entity:
       domain: media_player
@@ -240,11 +146,12 @@ show_website:
           min: 1
           max: 3600
           mode: box
-    priority: *id003
-
+    priority: *id001
 show_stream:
   name: Show stream on LG
-  description: Open an HTTP(S) HLS or browser-compatible video URL through a temporary HTML video page hosted by Home Assistant. The LG must reach HA and the source. Requires native web access.
+  description: Open an HTTP(S) HLS or browser-compatible video URL through a temporary
+    HTML video page hosted by Home Assistant. The LG must reach HA and the source.
+    Requires native web access.
   target:
     entity:
       domain: media_player
@@ -265,8 +172,9 @@ show_stream:
           mode: box
     muted:
       name: Mute stream audio
-      description: Muted playback is most compatible with browser autoplay. Native LG audio is not automatically sent to Sonos through the AX310.
+      description: Muted playback is most compatible with browser autoplay. Native
+        LG audio is not automatically sent to Sonos through the AX310.
       default: true
       selector:
         boolean: {}
-    priority: *id003
+    priority: *id001

@@ -10,7 +10,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
-from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import DOMAIN, READ_STATUS
 from .lg_display import LGDisplay
@@ -37,9 +36,7 @@ async def async_setup_entry(
     data = hass.data[DOMAIN][config_entry.entry_id]
     lg_display = data["lg_display"]
 
-    entities = [
-        LGDisplaySyncAutomationSwitch(hass, data["name"], config_entry.entry_id),
-    ]
+    entities = []
 
     entities.extend(
         [
@@ -55,70 +52,6 @@ async def async_setup_entry(
     )
 
     async_add_entities(entities)
-
-
-class LGDisplaySyncAutomationSwitch(LGDisplayBaseSwitch, RestoreEntity):
-    """Block or allow linked power automation for LG Display."""
-
-    _attr_entity_registry_enabled_default = True
-
-    _attr_entity_category = None
-
-    def __init__(self, hass: HomeAssistant, name: str, entry_id: str) -> None:
-        self.hass = hass
-        self._name = name
-        self._entry_id = entry_id
-        self._is_on = False
-
-    def _update_shared_state(self) -> None:
-        if DOMAIN in self.hass.data and self._entry_id in self.hass.data[DOMAIN]:
-            self.hass.data[DOMAIN][self._entry_id][
-                "sync_automation_enabled"
-            ] = not self._is_on
-
-    async def async_added_to_hass(self) -> None:
-        last_state = await self.async_get_last_state()
-        if last_state is not None:
-            self._is_on = last_state.state == "on"
-        self._update_shared_state()
-
-    @property
-    def unique_id(self) -> str:
-        return f"{self._entry_id}_sync_automation"
-
-    @property
-    def name(self) -> str:
-        return "Sync Automation Lock"
-
-    @property
-    def is_on(self) -> bool:
-        return self._is_on
-
-    @property
-    def available(self) -> bool:
-        return True
-
-    @property
-    def icon(self) -> str:
-        return "mdi:lock" if self._is_on else "mdi:lock-open-variant"
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return {
-            "identifiers": {(DOMAIN, self._entry_id)},
-            "name": self._name,
-            "manufacturer": "LG",
-        }
-
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        self._is_on = True
-        self._update_shared_state()
-        self.async_write_ha_state()
-
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        self._is_on = False
-        self._update_shared_state()
-        self.async_write_ha_state()
 
 
 class LGDisplayPowerSwitch(LGDisplayBaseSwitch):
@@ -176,11 +109,11 @@ class LGDisplayPowerSwitch(LGDisplayBaseSwitch):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on the display."""
         player = (
-            self.hass.data.get(DOMAIN, {}).get(self._unique_id, {}).get("media_player")
+            self.hass.data.get(DOMAIN, {}).get(self._unique_id, {}).get("controller")
         )
         if player is not None:
             await player.async_turn_on()
-            self._is_on = player._state != "off"
+            self._is_on = player.power is True
             self.async_write_ha_state()
             return
         if await self._lg_display.async_power_on():
@@ -197,11 +130,11 @@ class LGDisplayPowerSwitch(LGDisplayBaseSwitch):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn off the display."""
         player = (
-            self.hass.data.get(DOMAIN, {}).get(self._unique_id, {}).get("media_player")
+            self.hass.data.get(DOMAIN, {}).get(self._unique_id, {}).get("controller")
         )
         if player is not None:
             await player.async_turn_off()
-            self._is_on = player._state != "off"
+            self._is_on = player.power is True
             self.async_write_ha_state()
             return
         if await self._lg_display.async_power_off():

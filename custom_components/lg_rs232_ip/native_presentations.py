@@ -218,14 +218,9 @@ class NativePresentations:
                     raise HomeAssistantError("Cannot preserve the current input")
                 snapshot = (power, previous_input)
                 self._presentation_active = True
-                self._standby_guard.reset()
-                await self._async_cancel_wake()
-                self._cancel_power_supply_off_task()
                 if not power:
                     woke = True
-                    await self._async_ensure_display_on_after_power_restore(
-                        "native media"
-                    )
+                    await self.async_ensure_on("native media")
                     if (
                         await self._lg_display.async_get_power_status(use_cache=False)
                         is not True
@@ -359,9 +354,6 @@ class NativePresentations:
                                     )
                                 self._state = MediaPlayerState.OFF
                                 self._last_display_power = False
-                                self._schedule_power_supply_off(
-                                    "native presentation complete"
-                                )
                             can_delete = True
                 except Exception as err:
                     self._presentation_error = str(err)
@@ -389,7 +381,6 @@ class NativePresentations:
                         remove_page()
                     await self._lg_display.async_restore_pending_osd()
                     self._presentation_active = False
-                    self._standby_guard.reset()
                     self.async_write_ha_state()
 
     async def _async_launch_website(self, web):

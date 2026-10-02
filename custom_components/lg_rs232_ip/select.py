@@ -1,6 +1,5 @@
 """Select platform for LG Display RS232/IP integration."""
 
-import asyncio
 import logging
 import time
 from datetime import timedelta
@@ -75,7 +74,9 @@ async def async_setup_entry(
         ),
     ]
 
-    entities.append(LGDisplayDpmDelaySelect(lg_display, data["name"], config_entry.entry_id))
+    entities.append(
+        LGDisplayDpmDelaySelect(lg_display, data["name"], config_entry.entry_id)
+    )
     async_add_entities(entities)
 
 
@@ -226,103 +227,14 @@ class LGDisplayInputSelect(LGDisplayBaseSelect):
         self._current_input = f"0x{input_id:02x}"
         _LOGGER.debug("LG Display input 0x%02x could not be identified", input_id)
 
-    async def _detect_input_code(self, label: str) -> Optional[int]:
-        """Detect the actual xb code for a named input label."""
-        candidates = INPUT_DETECTION_CANDIDATES.get(
-            label, [self._supported_inputs.get(label)]
-        )
-        # Only try the first candidate to avoid timeouts
-        candidate = candidates[0] if candidates else None
-        if candidate is None:
-            return None
-
-        # Try to set the input, but don't fail if it times out
-        try:
-            set_result = await asyncio.wait_for(
-                self._lg_display.async_set_input(candidate), timeout=15.0
-            )
-            if not set_result:
-                return None
-        except asyncio.TimeoutError:
-            _LOGGER.debug("Timeout setting input %s, assuming it worked", label)
-            # Assume it worked even on timeout
-            self._supported_inputs[label] = candidate
-            return candidate
-
-        await asyncio.sleep(0.5)
-        current_input = await self._lg_display.async_get_input()
-        if current_input == candidate:
-            self._supported_inputs[label] = candidate
-            _LOGGER.debug("Detected xb code 0x%02x for input %s", candidate, label)
-            return candidate
-
-        # If query failed or returned wrong value, still assume it worked
-        _LOGGER.debug("Input verification failed for %s, assuming it worked", label)
-        self._supported_inputs[label] = candidate
-        return candidate
-
     async def async_select_option(self, option: str) -> None:
-        """Select an input."""
         input_id = self._supported_inputs.get(option)
         if input_id is None:
-            _LOGGER.warning("Attempted to select unsupported input option: %s", option)
-            return
-
-        # Check if display is on before attempting input change
-        power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
-            _LOGGER.info("Display is off; ignoring input change request %s", option)
-            return
-
-        if power_status is None:
-            _LOGGER.debug(
-                "Display power state unknown; setting input %s without verification",
-                option,
-            )
-            if await self._lg_display.async_set_input(input_id):
-                self._pending_input = option
-                self._pending_until = time.monotonic() + 8.0
-                self._current_input = option
-                self.async_write_ha_state()
-            else:
-                _LOGGER.error(
-                    "Failed to switch input %s to code 0x%02x", option, input_id
-                )
-            return
-
-        if not await self._lg_display.async_set_input(input_id):
-            _LOGGER.error("Failed to switch input %s to code 0x%02x", option, input_id)
-            return
-
-        self._pending_input = option
-        self._pending_until = time.monotonic() + 8.0
+            raise HomeAssistantError("Unknown LG input")
+        controller = self.hass.data[DOMAIN][self._unique_id]["controller"]
+        await controller.async_select_input(input_id)
         self._current_input = option
         self.async_write_ha_state()
-
-        # Wait a bit and verify the input was actually changed
-        await asyncio.sleep(0.5)
-        current_input_id = await self._lg_display.async_get_input()
-
-        if current_input_id == input_id:
-            self._pending_input = None
-            self._pending_until = 0.0
-            self._current_input = option
-            self.async_write_ha_state()
-            return
-
-        if current_input_id is None:
-            _LOGGER.debug(
-                "Set input %s succeeded but query returned no response; keeping pending state",
-                option,
-            )
-            return
-
-        _LOGGER.debug(
-            "Set input %s to 0x%02x but query returned 0x%02x; keeping pending state",
-            option,
-            input_id,
-            current_input_id,
-        )
 
 
 class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
@@ -336,7 +248,11 @@ class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
 
     @property
     def _modes(self):
-        return SIGNAGE_PICTURE_MODES if is_uh5f(self._lg_display.model_name) else PICTURE_MODES
+        return (
+            SIGNAGE_PICTURE_MODES
+            if is_uh5f(self._lg_display.model_name)
+            else PICTURE_MODES
+        )
 
     @property
     def unique_id(self) -> str:
@@ -647,8 +563,10 @@ class LGDisplayDpmDelaySelect(LGDisplayBaseSelect):
         return self._lg_display.is_available and self._attr_current_option is not None
 
     async def async_update(self):
-        result = await self._lg_display.async_send_command("f", "j", 0xff)
-        self._attr_current_option = next((k for k, v in DPM_DELAYS.items() if v == result), None)
+        result = await self._lg_display.async_send_command("f", "j", 0xFF)
+        self._attr_current_option = next(
+            (k for k, v in DPM_DELAYS.items() if v == result), None
+        )
 
     async def async_select_option(self, option):
         if option not in DPM_DELAYS:

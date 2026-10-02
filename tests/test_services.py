@@ -9,6 +9,7 @@ import voluptuous as vol
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import EntityPlatform
 from custom_components.lg_rs232_ip.media_player import async_setup_entry
+from custom_components.lg_rs232_ip.controller import DisplayController
 
 
 @pytest.mark.asyncio
@@ -17,8 +18,11 @@ async def test_real_entity_services_target_registered_display(tmp_path):
     display = Mock()
     display.async_get_input = AsyncMock(return_value=0x91)
     display.async_send_remote_key = AsyncMock(return_value=True)
-    entry = SimpleNamespace(entry_id="display", options={})
+    entry = SimpleNamespace(entry_id="display", options={}, title="Display")
     hass.data["lg_rs232_ip"] = {"display": {"lg_display": display, "name": "Display"}}
+    hass.data["lg_rs232_ip"]["display"]["controller"] = DisplayController(
+        hass, entry, display
+    )
     platform = EntityPlatform(
         hass=hass,
         logger=logging.getLogger(__name__),
@@ -30,7 +34,7 @@ async def test_real_entity_services_target_registered_display(tmp_path):
     )
     added = []
     with patch(
-        "custom_components.lg_rs232_ip.media_player.entity_platform.async_get_current_platform",
+        "custom_components.lg_rs232_ip.media_player.async_get_current_platform",
         return_value=platform,
     ):
         await async_setup_entry(hass, entry, added.extend)
@@ -54,11 +58,11 @@ async def test_real_entity_services_target_registered_display(tmp_path):
         with pytest.raises(vol.Invalid):
             await hass.services.async_call(
                 "lg_rs232_ip",
-                "show_content",
+                "show_native_video",
                 {"entity_id": player.entity_id, "media_id": "test", "duration": 0},
                 blocking=True,
             )
-        assert hass.services.has_service("lg_rs232_ip", "announce")
+        assert not hass.services.has_service("lg_rs232_ip", "announce")
         assert hass.services.has_service("lg_rs232_ip", "show_native_image")
         for service in ("show_native_video", "show_stream", "show_website"):
             assert hass.services.has_service("lg_rs232_ip", service)

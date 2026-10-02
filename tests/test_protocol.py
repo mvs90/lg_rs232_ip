@@ -126,6 +126,7 @@ async def test_rejected_optional_query_is_temporarily_suppressed():
 @pytest.mark.asyncio
 async def test_x_command_letter_is_not_the_frame_terminator():
     from unittest.mock import Mock
+
     display = LGDisplay("example.invalid")
     reader = asyncio.StreamReader()
     writer = Mock()

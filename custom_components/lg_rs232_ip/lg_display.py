@@ -76,11 +76,11 @@ class LGDisplay:
         self._osd_user_revision = 0
         self._osd_pending_restore_revision = None
 
-    def set_power_supply_state(self, is_on: bool) -> None:
-        """Hint whether the external power supply is expected to be on or off."""
+    def set_power_supply_state(self, is_on: bool | None) -> None:
+        """False suspends I/O; True or None allows fresh device verification."""
         self._query_cache.clear()
-        self._power_supply_expected_off = not is_on
-        if is_on:
+        self._power_supply_expected_off = is_on is False
+        if is_on is not False:
             self._next_connect_attempt_at = 0.0
             self._last_connect_error_message = None
             self._last_power_status = None

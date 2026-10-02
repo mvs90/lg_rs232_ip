@@ -179,14 +179,11 @@ async def test_native_off_by_default_does_not_upload(native):
 async def test_native_optional_wake_restores_confirmed_standby(native):
     player, web = native
     player._config_entry.options["notification_wake_display"] = True
-    player._async_ensure_display_on_after_power_restore = AsyncMock()
+    player.async_ensure_on = AsyncMock()
     player._lg_display.async_get_power_status.side_effect = [False, True, True, False]
-    from unittest.mock import Mock
 
-    player._schedule_power_supply_off = Mock()
     await player._async_present_native(REQUEST)
     player._lg_display.async_power_off.assert_awaited_once()
-    player._schedule_power_supply_off.assert_called_once()
     web.async_delete_image.assert_awaited_once_with(ASSET)
 
 

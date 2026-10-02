@@ -1,5 +1,7 @@
 # Apple TV → FeinTech AX310 → LG display / Sonos
 
+Since LG 2.0, all cross-device rules below are implemented by [AV Companion](https://github.com/mvs90/av_companion). The standalone LG integration controls the display only.
+
 Installation topology supplied by the owner on 2026-10-02. The LG is a 75UH5F-HJ; this setup uses a **FeinTech AX310 HDMI 2.1 audio extractor for an eARC soundbar** because the display does not provide the required eARC connection. The exact Sonos model and AX310 EDID/CEC settings have not been recorded.
 
 ```mermaid

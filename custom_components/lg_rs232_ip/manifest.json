@@ -1,6 +1,6 @@
 {
   "domain": "lg_rs232_ip",
-  "name": "LG Display RS232/IP",
+  "name": "LG Professional Display",
   "codeowners": [
     "@mvs90"
   ],
@@ -14,5 +14,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/mvs90/lg_rs232_ip/issues",
   "requirements": [],
-  "version": "1.6.0"
+  "version": "2.0.0"
 }

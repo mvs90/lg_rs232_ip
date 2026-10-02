@@ -4,10 +4,9 @@ import asyncio
 import pytest
 from homeassistant.core import State
 from homeassistant.components.media_player import (
-    MediaPlayerState,
     MediaPlayerEntityFeature as Feature,
 )
-from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
+from custom_components.lg_rs232_ip.controller import DisplayController
 
 
 @pytest.fixture
@@ -54,14 +53,8 @@ def player():
     display.async_suppress_osd_for_switch = Mock(return_value=AsyncMock())
     display.osd_restore_error = False
     display.async_restore_pending_osd = AsyncMock()
-    p = LGDisplayMediaPlayer(hass, entry, display, "Display", "test")
-    p.hass = hass
+    p = DisplayController(hass, entry, display)
     p.entity_id = "media_player.display"
     p._current_input_id = 0x90
-    p._state = MediaPlayerState.ON
-    p._startup_off_guard_until = 0
     p.async_write_ha_state = Mock()
-    p._async_call_linked_service = AsyncMock(return_value=True)
-    p._start_display_wake_task = Mock()
-    p._test_states = states
     return p

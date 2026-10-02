@@ -108,14 +108,36 @@ async def async_setup_entry(
         LGDisplayEnergySavingSensor(lg_display, data["name"], config_entry.entry_id),
         LGDisplayOSDLanguageSensor(lg_display, data["name"], config_entry.entry_id),
         LGDisplayRemoteLockSensor(lg_display, data["name"], config_entry.entry_id),
-        LGDisplayStatusSensor(lg_display, data["name"], config_entry.entry_id,
-                              "pm_status", "Panel Power Status", "sv", 0x03, PM_STATES),
-        LGDisplayStatusSensor(lg_display, data["name"], config_entry.entry_id,
-                              "pm_mode", "Power Management Mode", "sn", 0x0c,
-                              {v: k for k, v in PM_MODES.items()}),
-        LGDisplayStatusSensor(lg_display, data["name"], config_entry.entry_id,
-                              "signal_status", "Input Signal", "sv", 0x02,
-                              {0: "No signal", 1: "Signal present"}),
+        LGDisplayStatusSensor(
+            lg_display,
+            data["name"],
+            config_entry.entry_id,
+            "pm_status",
+            "Panel Power Status",
+            "sv",
+            0x03,
+            PM_STATES,
+        ),
+        LGDisplayStatusSensor(
+            lg_display,
+            data["name"],
+            config_entry.entry_id,
+            "pm_mode",
+            "Power Management Mode",
+            "sn",
+            0x0C,
+            {v: k for k, v in PM_MODES.items()},
+        ),
+        LGDisplayStatusSensor(
+            lg_display,
+            data["name"],
+            config_entry.entry_id,
+            "signal_status",
+            "Input Signal",
+            "sv",
+            0x02,
+            {0: "No signal", 1: "Signal present"},
+        ),
     ]
 
     async_add_entities(entities)
@@ -602,7 +624,9 @@ class LGDisplayElapsedTimeSensor(LGDisplayBaseSensor):
 class LGDisplayStatusSensor(LGDisplayBaseSensor):
     """Opt-in status sensor backed by an echoed LG subcommand."""
 
-    def __init__(self, display, name, unique_id, key, label, command, parameter, values):
+    def __init__(
+        self, display, name, unique_id, key, label, command, parameter, values
+    ):
         self._lg_display = display
         self._attr_unique_id = f"{unique_id}_{key}"
         self._attr_name = label
@@ -617,5 +641,7 @@ class LGDisplayStatusSensor(LGDisplayBaseSensor):
         return self._lg_display.is_available and self._attr_native_value is not None
 
     async def async_update(self):
-        value = await self._lg_display.async_get_subcommand(self._command, self._parameter)
+        value = await self._lg_display.async_get_subcommand(
+            self._command, self._parameter
+        )
         self._attr_native_value = self._values.get(value)

@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "LG Display RS232/IP einrichten",
+        "title": "LG Professional Display",
         "description": "Geben Sie die IP-Adresse und den Port Ihres LG-Displays ein",
         "data": {
           "host": "IP-Adresse",
@@ -12,57 +12,31 @@
       }
     },
     "error": {
-      "cannot_connect": "Verbindung zum Display fehlgeschlagen. Bitte prüfen Sie IP-Adresse und Port.",
-      "invalid_pending_range": "Der Wert muss zwischen 0 und 60 Sekunden liegen",
-      "invalid_polling_range": "Das Abfrageintervall muss zwischen 1 und 3600 Sekunden liegen",
-      "invalid_transition_timeout_range": "Das Power-Transition-Timeout muss zwischen 0 und 300 Sekunden liegen",
-      "invalid_power_supply_off_delay_range": "Die Verzögerung zum Ausschalten der Stromversorgung muss zwischen 0 und 300 Sekunden liegen"
+      "cannot_connect": "Verbindung zum Display fehlgeschlagen. Bitte prüfen Sie IP-Adresse und Port."
+    },
+    "abort": {
+      "already_configured": "Bereits eingerichtet."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "LG Display Optionen",
+        "title": "LG Professional Display",
         "data": {
           "polling_interval": "Abfrageintervall (Sekunden)",
           "power_transition_mode": "Power-Transition-Modus",
           "power_transition_timeout": "Power-Transition-Timeout (Sekunden)",
-          "linked_media_player_entity_id": "Verknüpfte Media-Player-Entität",
-          "linked_media_player_input": "Verknüpfter Media-Player-HDMI-Eingang",
           "show_input_hdmi1": "HDMI 1 in Quellenliste anzeigen",
           "show_input_hdmi2": "HDMI 2 in Quellenliste anzeigen",
           "show_input_hdmi3": "HDMI 3 in Quellenliste anzeigen",
-          "show_linked_app_sources": "Verknüpfte App-Quellen anzeigen",
-          "visible_linked_media_sources": "Sichtbare verknüpfte App-Quellen",
           "input_name_hdmi1": "Media-Player HDMI-1-Name",
           "input_name_hdmi2": "Media-Player HDMI-2-Name",
           "input_name_hdmi3": "Media-Player HDMI-3-Name",
-          "power_supply_switch_entity_id": "Stromversorgungs-Schalter-Entität",
-          "linked_volume_media_player_entity_id": "Verknüpfte Lautstärke-Media-Player-Entität",
-          "linked_volume_sync_mode": "Verknüpfter Lautstärke-Sync-Modus",
-          "media_player_pending_power_seconds": "Media-Player Pending Power Sekunden",
-          "media_player_pending_source_seconds": "Media-Player Pending Source Sekunden",
-          "power_supply_off_delay_seconds": "Verzögerung Strom aus (Sekunden)",
-          "standby_signal_check": "HDMI-Signal am Display prüfen",
-          "standby_no_signal_seconds": "Abschalten bei fehlendem Signal (Sekunden; 0 = aus)",
-          "standby_idle_seconds": "Idle-Rückfallzeit bei unbekanntem Signal (Sekunden; 0 = aus)",
           "display_wake_timeout": "Zeitlimit für Displaystart (Sekunden)",
-          "power_supply_startup_delay": "Wartezeit nach Einschalten der Steckdose (Sekunden)",
-          "standby_power_threshold": "Zusätzliche Standby-Leistungsschwelle (W)",
-          "power_sensor_entity_id": "Leistungssensor des Displays (W/kW)",
-          "linked_remote_entity_id": "Gekoppelte Fernbedienung",
-          "linked_remote_power_mode": "Ein-/Ausschaltbefehle der Fernbedienung",
-          "content_media_player_entity_id": "Optionaler Player für Inhaltsanzeige",
-          "content_player_input": "HDMI-Eingang für Inhaltsanzeige",
-          "notification_script_entity_id": "Anzeige-Skript für Meldungen (show/clear-Schnittstelle)",
           "notification_wake_display": "Display für Meldungen/Inhalte einschalten erlauben",
           "quiet_hours_enabled": "Ruhezeiten für Benachrichtigungen aktivieren",
           "quiet_hours_start": "Beginn der Ruhezeit (HH:MM)",
           "quiet_hours_end": "Ende der Ruhezeit (HH:MM)",
-          "sonos_select_tv_source": "TV-Eingang am Soundsystem beim Einschalten wählen",
-          "sonos_tv_source": "Name der TV-Quelle am Soundsystem",
-          "sonos_night_sound_entity_id": "Sonos-Schalter für Nachtmodus",
-          "sonos_speech_enhancement_entity_id": "Sonos-Schalter für Sprachverbesserung",
           "native_web_enabled": "Nativen LG-Webzugriff aktivieren (UH5F-H getestet)",
           "native_web_password": "LG-Mobile-URL-Passwort (leer = gespeichertes behalten)",
           "native_web_fingerprint": "SHA-256-Fingerabdruck des LG-HTTPS-Zertifikats",
@@ -70,22 +44,16 @@
           "preview_enabled": "Display-Vorschau durch Screenshots aktivieren",
           "preview_interval": "Screenshot-Intervall (10–3600 Sekunden)",
           "preview_height": "Screenshot-Höhe (Pixel)"
-        }
+        },
+        "data_description": {}
       }
     },
     "error": {
-      "cannot_connect": "Verbindung zum Display fehlgeschlagen. Bitte prüfen Sie IP-Adresse und Port.",
-      "invalid_pending_range": "Der Wert muss zwischen 0 und 60 Sekunden liegen",
-      "invalid_polling_range": "Das Abfrageintervall muss zwischen 1 und 3600 Sekunden liegen",
-      "invalid_transition_timeout_range": "Das Power-Transition-Timeout muss zwischen 0 und 300 Sekunden liegen",
-      "invalid_power_supply_off_delay_range": "Die Verzögerung zum Ausschalten der Stromversorgung muss zwischen 0 und 300 Sekunden liegen",
-      "invalid_standby_timeout": "0 oder 30 bis 86400 Sekunden eingeben.",
-      "self_reference": "Keine Entität dieser Integration auswählen.",
       "invalid_option_range": "Wert außerhalb des erlaubten Bereichs.",
       "invalid_time": "Uhrzeit als HH:MM eingeben.",
       "invalid_native_web_settings": "Web-Passwort und gültigen SHA-256-Zertifikat-Fingerabdruck mit 64 Hex-Zeichen angeben.",
-      "preview_requires_web": "Für die Vorschau muss der native LG-Webzugriff aktiviert sein.",
-      "invalid_preview_interval": "Das Screenshot-Intervall muss zwischen 10 und 3600 Sekunden liegen."
+      "preview_requires_web": "Für die Vorschau muss der native LG-Webzugriff aktiviert sein."
     }
-  }
+  },
+  "title": "LG Professional Display"
 }

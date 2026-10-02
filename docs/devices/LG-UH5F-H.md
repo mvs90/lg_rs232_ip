@@ -160,7 +160,7 @@ These changes are covered by automated tests. Identity and status reads are chec
 3. **Capability profiles:** identify model/firmware at setup, hide unavailable choices and distinguish explicit NG from transient no-response. Use recorded fixtures for each family.
 4. **Blank-screen mode with retained audio/network:** expose verified screen mute as a deliberate action and restore it; do not confuse it with mains-safe standby.
 5. **Thermal and operating-hours alerts:** build HA automations from the existing temperature/hour sensors. Thresholds must come from the exact model's operating limits, not an invented generic warning temperature.
-6. **Multi-input mapping:** independently associate HDMI inputs with player/remote entities, retaining one HomeKit TV. Current integration supports one linked player plus one content target.
+6. **Multi-input mapping:** independently associate HDMI inputs with player/remote entities, retaining one HomeKit TV. AV Companion supports one linked player plus one content target; the LG base has no foreign entity links.
 7. **Brightness automation:** prefer HA time/sun-based backlight control. The ambient-light status query was rejected, so do not rely on a claimed light sensor without further evidence.
 8. **Richer overlays:** basic native text is confirmed. Scrolling text, modal alerts and layout control need individual duration/clear/ownership tests before exposure.
 

@@ -6,7 +6,7 @@ from .const import DOMAIN
 async def async_get_config_entry_diagnostics(hass, entry):
     data = hass.data[DOMAIN][entry.entry_id]
     display = data["lg_display"]
-    player = data.get("media_player")
+    player = data.get("controller")
     return {
         "version": 2,
         "model": display.model_name,
@@ -19,8 +19,7 @@ async def async_get_config_entry_diagnostics(hass, entry):
         "rejected_query_commands": sorted(
             {key[0] + key[1] for key in display._unsupported_until}
         ),
-        "signal_present": player._signal_present if player else None,
-        "standby_reason": player._last_standby_reason if player else None,
+        "signal_present": player.signal if player else None,
         "presentation_active": player._presentation_active if player else False,
         "presentation_queue_size": len(player._presentation_queue) if player else 0,
     }
