@@ -53,3 +53,27 @@ async def test_links_can_be_cleared_and_fallback_disabled(flow):
         result = await flow.async_step_init({"standby_idle_seconds": 0})
     assert "linked_media_player_entity_id" not in result["data"]
     assert result["data"]["standby_idle_seconds"] == 0
+
+
+@pytest.mark.asyncio
+async def test_native_requires_password_and_pin(flow):
+    with patch("homeassistant.helpers.entity_registry.async_get"):
+        result = await flow.async_step_init({"native_web_enabled": True})
+    assert set(result["errors"]) == {"native_web_password", "native_web_fingerprint"}
+
+
+@pytest.mark.asyncio
+async def test_native_password_not_prefilled_and_preserved(flow):
+    flow._config_entry.options = {"native_web_password": "test-secret"}
+    form = await flow.async_step_init()
+    assert "native_web_password" not in form["data_schema"]({})
+    with patch("homeassistant.helpers.entity_registry.async_get"):
+        result = await flow.async_step_init(
+            {
+                "native_web_enabled": True,
+                "native_web_password": "",
+                "native_web_fingerprint": "AB" * 32,
+            }
+        )
+    assert result["data"]["native_web_password"] == "test-secret"
+    assert result["data"]["native_web_fingerprint"] == "ab" * 32

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.0
+
+- Optional OSD suppression during input/native-image transitions, preserving an initially disabled OSD and giving explicit HA OSD changes precedence. Fresh state reads, cancellation cleanup and restoration diagnostics.
+
+- Optional native LG web access with per-device TLS certificate pinning, private session cookies and sanitized failures.
+- `show_toast`: native text over the current picture, confirmed on 75UH5F-HJ / webOS 4.0.1. LG controls duration; no renderer script needed.
+- `show_native_image`: bounded PNG/JPEG download, unique internal-storage upload, foreground verification, timed display, external input restoration and owned-file cleanup. Uses the existing queue/quiet-hours/wake policies.
+- Cancellation waits for bounded upload/launch writes so their results can be cleaned up. Source changes are respected; uncertain restoration retains the image with an error instead of deleting visible media.
+- Document authenticated platform information, observed web protocol and acceptance results for reuse. Direct URL image playback is not used because the panel rejected rendering despite acknowledging launch.
+
+
 ## 1.3.0
 
 - Read-only hardware verification of 75UH5F-HJ / 04.13.50, official LG source inventory and reusable device reference.

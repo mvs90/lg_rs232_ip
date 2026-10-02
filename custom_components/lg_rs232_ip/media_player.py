@@ -156,6 +156,29 @@ async def async_setup_entry(
             },
             "async_show_notification",
         ),
+        "show_toast": (
+            {
+                vol.Required("message"): vol.All(
+                    cv.string, vol.Length(min=1, max=1000)
+                ),
+                vol.Optional("priority", default="normal"): vol.In(
+                    ["normal", "urgent"]
+                ),
+            },
+            "async_show_toast",
+        ),
+        "show_native_image": (
+            {
+                vol.Required("media_id"): cv.string,
+                vol.Optional("duration", default=10): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=3600)
+                ),
+                vol.Optional("priority", default="normal"): vol.In(
+                    ["normal", "urgent"]
+                ),
+            },
+            "async_show_native_image",
+        ),
         "clear_content": ({}, "async_clear_content"),
         "set_sound_mode": (
             {
@@ -1701,7 +1724,8 @@ class LGDisplayMediaPlayer(ExtendedControls, MediaPlayerEntity):
             "notification_backend_configured": bool(
                 self._option_entity("notification_script_entity_id")
             ),
-            "native_overlay_supported": False,
+            "native_toast_configured": self._web_manager is not None,
+            "osd_restore_error": self._lg_display.osd_restore_error,
             "signal_present": self._signal_present,
             "standby_candidate": self._standby_guard.reason,
             "standby_samples": self._standby_guard.samples,

@@ -10,6 +10,7 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import DEFAULT_PORT, DOMAIN, INPUT_SOURCES
+from .web_manager import normalize_fingerprint
 
 
 def _extract_entity_id(value: Any) -> Optional[str]:
@@ -187,6 +188,21 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
             "power_sensor_entity_id": "sensor",
         }
         if user_input is not None:
+            # Never prefill a secret in the form; an empty field preserves the saved one.
+            if not values.get("native_web_password"):
+                if saved_password := self._config_entry.options.get(
+                    "native_web_password"
+                ):
+                    values["native_web_password"] = saved_password
+            if values.get("native_web_enabled", False):
+                if not values.get("native_web_password"):
+                    errors["native_web_password"] = "invalid_native_web_settings"
+                try:
+                    values["native_web_fingerprint"] = normalize_fingerprint(
+                        values.get("native_web_fingerprint", "")
+                    )
+                except ValueError:
+                    errors["native_web_fingerprint"] = "invalid_native_web_settings"
             for key, (low, high, default, error) in ranges.items():
                 value = values.get(key, default)
                 if type(value) is not int or not low <= value <= high:
@@ -230,6 +246,8 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
             "show_linked_app_sources": True,
             "notification_wake_display": False,
             "quiet_hours_enabled": False,
+            "native_web_enabled": False,
+            "suppress_osd_during_switch": False,
             "sonos_select_tv_source": False,
         }.items():
             schema[vol.Optional(key, default=values.get(key, default))] = bool
@@ -264,6 +282,15 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
             "sonos_tv_source": "TV",
         }.items():
             schema[vol.Optional(key, default=values.get(key, default))] = str
+        schema[vol.Optional("native_web_password")] = selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+        )
+        schema[
+            vol.Optional(
+                "native_web_fingerprint",
+                default=values.get("native_web_fingerprint", ""),
+            )
+        ] = str
         for index in range(1, 4):
             key = f"input_name_hdmi{index}"
             schema[vol.Optional(key, default=values.get(key, f"HDMI {index}"))] = str

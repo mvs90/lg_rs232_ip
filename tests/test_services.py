@@ -59,5 +59,16 @@ async def test_real_entity_services_target_registered_display(tmp_path):
                 blocking=True,
             )
         assert hass.services.has_service("lg_rs232_ip", "announce")
+        assert hass.services.has_service("lg_rs232_ip", "show_native_image")
+        web = AsyncMock()
+        hass.data["lg_rs232_ip"]["display"]["web_manager"] = web
+        display.async_get_power_status = AsyncMock(return_value=True)
+        await hass.services.async_call(
+            "lg_rs232_ip",
+            "show_toast",
+            {"entity_id": player.entity_id, "message": "Hello"},
+            blocking=True,
+        )
+        web.async_toast.assert_awaited_once_with("Hello")
     finally:
         await hass.async_stop(force=True)

@@ -19,6 +19,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.util import dt as dt_util
 
 from .const import INPUT_SOURCES
+from .native_presentations import NativePresentations
 
 _LOGGER = logging.getLogger(__name__)
 REMOTE_KEYS = {
@@ -56,7 +57,7 @@ def in_quiet_hours(start: str, end: str) -> bool:
     return first <= now < last if first < last else now >= first or now < last
 
 
-class ExtendedControls:
+class ExtendedControls(NativePresentations):
     """Mixin for explicit, capability-aware optional controls."""
 
     def _init_controls(self):
@@ -367,7 +368,7 @@ class ExtendedControls:
     ):
         if not self._option_entity("notification_script_entity_id"):
             raise ServiceValidationError(
-                "No notification renderer configured; native LG overlays are not supported yet"
+                "No notification renderer configured; use show_toast for native LG text overlays"
             )
         await self._enqueue_presentation(
             dict(
@@ -418,7 +419,10 @@ class ExtendedControls:
             while self._presentation_queue and not self._ha_stopping:
                 request = self._presentation_queue.popleft()
                 try:
-                    await self._async_present_one(request)
+                    if request["kind"] == "native_image":
+                        await self._async_present_native_image(request)
+                    else:
+                        await self._async_present_one(request)
                 except asyncio.CancelledError:
                     raise
                 except Exception as err:
@@ -546,7 +550,8 @@ class ExtendedControls:
         self._presentation_queue.clear()
         task = self._presentation_task
         if task is not None and task is not asyncio.current_task() and not task.done():
-            task.cancel()
+            if not task.cancelling():
+                task.cancel()
             await asyncio.gather(task, return_exceptions=True)
         self._presentation_task = None
 

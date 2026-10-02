@@ -12,6 +12,8 @@ async def async_get_config_entry_diagnostics(hass, entry):
         "model": display.model_name,
         "software_version": display.software_version,
         "connected": display.is_connected,
+        "native_web_configured": data.get("web_manager") is not None,
+        "osd_restore_error": display.osd_restore_error,
         "intentionally_unpowered": display.is_intentionally_unpowered,
         "recent_query_count": len(display._query_cache),
         "rejected_query_commands": sorted(

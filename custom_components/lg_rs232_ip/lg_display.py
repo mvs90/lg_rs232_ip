@@ -1,6 +1,7 @@
 """LG Display communication via RS232/IP."""
 
 import asyncio
+from contextlib import asynccontextmanager
 import logging
 import re
 import time
@@ -69,6 +70,11 @@ class LGDisplay:
         self.software_version: str | None = None
         self._query_cache = {}
         self._unsupported_until = {}
+        self.suppress_osd_during_switch = False
+        self.osd_restore_error = False
+        self._osd_transition_lock = asyncio.Lock()
+        self._osd_user_revision = 0
+        self._osd_pending_restore_revision = None
 
     def set_power_supply_state(self, is_on: bool) -> None:
         """Hint whether the external power supply is expected to be on or off."""
@@ -390,8 +396,9 @@ class LGDisplay:
         """
         if isinstance(input_id, str):
             input_id = int(input_id, 16) if input_id.startswith("0x") else int(input_id)
-        result = await self.async_send_command("x", "b", input_id)
-        return result is not None
+        async with self.async_suppress_osd_for_switch():
+            result = await self.async_send_command("x", "b", input_id)
+            return result == input_id
 
     async def async_send_remote_key(self, key_code: int) -> bool:
         """Send a remote-control key code via mc command."""
@@ -644,17 +651,82 @@ class LGDisplay:
         result = await self.async_send_command("k", "d", 0x01 if enabled else 0x00)
         return result is not None
 
-    async def async_get_osd_select(self) -> Optional[bool]:
-        """Get OSD select/menu state."""
-        result = await self.async_send_command("k", "l", READ_STATUS)
-        if result is None:
-            return None
-        return result == 0x01
+    async def async_get_osd_select(self, *, use_cache: bool = True) -> Optional[bool]:
+        """Return OSD enabled/unlocked: kl 01; disabled/locked: kl 00."""
+        result = await self.async_send_command(
+            "k", "l", READ_STATUS, use_cache=use_cache
+        )
+        return bool(result) if result in (0, 1) else None
+
+    async def _async_write_osd(self, enabled: bool) -> bool:
+        return await self.async_send_command("k", "l", int(enabled)) == int(enabled)
 
     async def async_set_osd_select(self, enabled: bool) -> bool:
-        """Enable or disable OSD select/menu state."""
-        result = await self.async_send_command("k", "l", 0x01 if enabled else 0x00)
-        return result is not None
+        """Explicit user intent supersedes any temporary OSD suppression."""
+        self._osd_user_revision += 1
+        self._osd_pending_restore_revision = None
+        async with self._osd_transition_lock:
+            result = await self._async_write_osd(enabled)
+            if result:
+                self.osd_restore_error = False
+            return result
+
+    async def _async_restore_owned_osd(self):
+        """Restore a known temporary lock; native playback may reject unlock."""
+        revision = self._osd_pending_restore_revision
+        if revision is None or revision != self._osd_user_revision:
+            return
+        current = await self.async_get_osd_select(use_cache=False)
+        if revision != self._osd_user_revision:
+            return
+        if current is False:
+            restored = await self._async_write_osd(True)
+        else:
+            restored = current is True
+        self.osd_restore_error = not restored
+        if restored:
+            self._osd_pending_restore_revision = None
+        else:
+            _LOGGER.debug("OSD restoration pending until display accepts unlock")
+
+    async def async_restore_pending_osd(self):
+        """Retry only our own pending restore, e.g. after leaving native playback."""
+        async with self._osd_transition_lock:
+            await self._async_restore_owned_osd()
+
+    @asynccontextmanager
+    async def async_suppress_osd_for_switch(self):
+        """Temporarily lock OSD only if its fresh original state was enabled."""
+        if not self.suppress_osd_during_switch:
+            yield
+            return
+        async with self._osd_transition_lock:
+            revision = self._osd_user_revision
+            originally_enabled = await self.async_get_osd_select(use_cache=False)
+            owned_lock = self._osd_pending_restore_revision == revision
+            if originally_enabled is not True and not owned_lock:
+                # Unknown is not permission to enable OSD later. Already-off stays off.
+                yield
+                return
+            try:
+                if originally_enabled is True:
+                    self._osd_pending_restore_revision = revision
+                    task = asyncio.create_task(self._async_write_osd(False))
+                    try:
+                        disabled = await asyncio.shield(task)
+                    except asyncio.CancelledError:
+                        await task
+                        raise
+                    if not disabled:
+                        _LOGGER.warning(
+                            "Display did not confirm temporary OSD suppression"
+                        )
+                yield
+            finally:
+                # Native DSMP may reject kl 01 until the return to HDMI. Retain
+                # ownership across that return, never infer it from OSD=off alone.
+                await asyncio.sleep(2)
+                await self._async_restore_owned_osd()
 
     async def async_get_ism_method(self) -> Optional[int]:
         """Get ISM method value."""

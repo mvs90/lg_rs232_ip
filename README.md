@@ -2,7 +2,7 @@
 
 Control an LG professional signage display locally from Home Assistant.
 
-**Version 1.2 adds remote/HomeKit navigation, media forwarding, temporary content, optional Sonos actions and a notification-renderer interface. [Setup and examples](docs/FEATURES.md).**
+**Version 1.4 adds native LG text overlays and temporary fullscreen images, verified on 75UH5F-HJ / webOS 4.0.1. [Setup and examples](docs/FEATURES.md#native-lg-text-overlays-and-fullscreen-images-v14).**
 
  Optionally combine the display, an existing media player (such as Apple TV), and a sound system into **one TV media-player entity** for dashboards and Apple Home.
 
@@ -83,4 +83,4 @@ Protocol reference: [LG RS232 command guide, Status check](https://www.lg.com/us
 
 ## Verified device research
 
-The first read-only hardware inventory identifies **75UH5F-HJ**, software **04.13.50**. See the [reusable model reference](docs/devices/LG-UH5F-H.md) for official LG sources, confirmed commands, energy settings, content/notification options and remaining acceptance tests. Private installation details are not published.
+The hardware inventory and authenticated playback tests identify **75UH5F-HJ**, software **04.13.50**. See the [reusable model reference](docs/devices/LG-UH5F-H.md) for official LG sources, confirmed commands, energy settings, content/notification options and remaining acceptance tests. Private installation details are not published.

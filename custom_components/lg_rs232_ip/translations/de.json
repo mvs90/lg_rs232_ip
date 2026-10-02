@@ -62,7 +62,11 @@
           "sonos_select_tv_source": "TV-Eingang am Soundsystem beim Einschalten wählen",
           "sonos_tv_source": "Name der TV-Quelle am Soundsystem",
           "sonos_night_sound_entity_id": "Sonos-Schalter für Nachtmodus",
-          "sonos_speech_enhancement_entity_id": "Sonos-Schalter für Sprachverbesserung"
+          "sonos_speech_enhancement_entity_id": "Sonos-Schalter für Sprachverbesserung",
+          "native_web_enabled": "Nativen LG-Webzugriff aktivieren (UH5F-H getestet)",
+          "native_web_password": "LG-Mobile-URL-Passwort (leer = gespeichertes behalten)",
+          "native_web_fingerprint": "SHA-256-Fingerabdruck des LG-HTTPS-Zertifikats",
+          "suppress_osd_during_switch": "OSD während Quellen-/Vollbildumschaltung unterdrücken"
         }
       }
     },
@@ -75,7 +79,8 @@
       "invalid_standby_timeout": "0 oder 30 bis 86400 Sekunden eingeben.",
       "self_reference": "Keine Entität dieser Integration auswählen.",
       "invalid_option_range": "Wert außerhalb des erlaubten Bereichs.",
-      "invalid_time": "Uhrzeit als HH:MM eingeben."
+      "invalid_time": "Uhrzeit als HH:MM eingeben.",
+      "invalid_native_web_settings": "Web-Passwort und gültigen SHA-256-Zertifikat-Fingerabdruck mit 64 Hex-Zeichen angeben."
     }
   }
 }

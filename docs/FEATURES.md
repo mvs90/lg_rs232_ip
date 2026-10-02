@@ -66,7 +66,7 @@ target:
 
 This clears the queue and ends the current presentation. Restoration concerns the **display input and any display power enabled for that presentation**. It does not reconstruct a movie's playback position, DRM session or app state. Reusing Apple TV for temporary content can replace its previous playback. A separate content player is preferable when the original movie should continue independently. The integration does not alter Sonos volume for visual presentations. If a source was changed and changed back externally between observations, ownership of that change cannot be determined perfectly.
 
-## Screen notifications: renderer interface, not native LG support
+## Custom screen notifications: renderer interface
 
 Configure **Notification renderer script** only when you have a working on-screen backend. The integration provides queuing, quiet hours, wake policy, duration, cleanup and `overlay`/`fullscreen` selection. It does **not** implement an undocumented UH5C overlay API, install an LG app or turn Apple TV into an arbitrary notification renderer. Without a renderer, `show_notification` returns an explicit error.
 
@@ -92,9 +92,9 @@ The selected script is called directly as `script.<your_script>` with these vari
 | `mode` | `overlay` or `fullscreen` |
 | `duration` | Requested duration in seconds |
 
-The renderer must perform a short show/clear operation and return, not wait out the duration. Each call has a 15-second timeout. It must validate the requested mode, reject unsupported overlays and clear only the matching session. It must not override a newer user-selected view. A backend that supports neither clear nor session ownership should implement those semantics itself before use. The LG model/firmware-specific renderer is still pending.
+The renderer must perform a short show/clear operation and return, not wait out the duration. Each call has a 15-second timeout. It must validate the requested mode, reject unsupported overlays and clear only the matching session. It must not override a newer user-selected view. A backend that supports neither clear nor session ownership should implement those semantics itself before use. For the verified LG-native actions below, no renderer script is needed.
 
-The backend may manage its own content layout. When it changes HDMI input, the integration records the resulting input and restores the original one only if it still owns the selection. An overlay's availability therefore depends on the configured backend; `native_overlay_supported` stays false.
+The backend may manage its own content layout. When it changes HDMI input, the integration records the resulting input and restores the original one only if it still owns the selection. This script's overlay support depends on its backend. The separate `native_toast_configured` attribute reports whether native web access is configured; it is not a live connection check.
 
 ## Sonos / sound-system options
 
@@ -132,3 +132,54 @@ Optionally select a **display-only power sensor** reporting W or kW and configur
 Repeated read queries share a short cache; fresh shutdown confirmations bypass it. Writes invalidate the cache. Optional queries rejected with `NG` are suppressed for five minutes; timeouts do not permanently mark features unsupported. Advanced settings/diagnostic entities are disabled by default on new installations to avoid polling every model-specific command. Existing registry choices are preserved. Enable only the controls your panel supports. Commands and value maps are not automatically certified for every LG model.
 
 Download integration diagnostics for connection and decision information without device addresses, entity names, media URLs or message text. Runtime attributes include `presentation_active`, `presentation_queue_size`, `presentation_error`, and `notification_backend_configured`.
+
+
+## Native LG text overlays and fullscreen images (v1.4)
+
+Verified on **75UH5F-HJ, software 04.13.50, webOS 4.0.1-136**. These optional actions use the display's internal Content/Control Manager interface. Other Signage models or firmware versions need their own acceptance test; consumer webOS TV integrations are a different protocol.
+
+In integration options, enable **native LG web access**, enter the **Mobile URL web password** (LG remote → Home → Mobile URL), and the **SHA-256 fingerprint of the LG HTTPS certificate**. This is separate from the settings administrator PIN. Leaving the password field empty preserves the saved password. HA stores the credential in its private config entry; it is not included in entity attributes or integration diagnostics. The web interfaces on ports 3737 and 3777 must be reachable and use the same certificate, as on the tested display.
+
+Obtain the fingerprint from the browser's certificate details, or run `python3 tools/read_web_certificate.py DISPLAY_IP` on the trusted device network and compare it with the browser certificate. The helper only reads the certificate; it sends no credentials or display commands. The integration pins that certificate for every web request, including WebSocket control. A changed certificate requires deliberate reconfiguration. No router port forwarding is required.
+
+Native text over the current HDMI picture:
+
+```yaml
+action: lg_rs232_ip.show_toast
+target:
+  entity_id: media_player.lg_display
+data:
+  message: "The washing machine is finished."
+  priority: normal
+```
+
+The panel must already be awake. LG controls the toast layout and duration; there is no configurable duration or clear action. Use 1–1000 characters. This does not change the input or pause Apple TV. Quiet hours apply; `urgent` bypasses them.
+
+Temporary fullscreen PNG/JPEG:
+
+```yaml
+action: lg_rs232_ip.show_native_image
+target:
+  entity_id: media_player.lg_display
+data:
+  media_id: media-source://media_source/local/doorbell.png
+  duration: 15
+  priority: normal
+```
+
+HTTP(S), `/local/...` and resolvable media-source IDs are accepted. Home Assistant downloads the image (maximum 5 MiB) without the LG login cookies, uploads a uniquely named temporary file, starts the built-in LG player, checks the foreground app, waits the requested duration, restores the previous external input, and deletes its own upload. The action queues the request; inspect `presentation_active`, `presentation_queue_size` and `presentation_error` for its outcome. `lg_rs232_ip.clear_content` cancels queued/current fullscreen content and triggers restoration and cleanup. It cannot clear a toast.
+
+The normal queue limit (10), quiet hours, urgent ordering and optional display-wake setting apply. Standby synchronization is suspended during the presentation. A manual Home Assistant source/power command cancels it first. A physical source/app change is respected. Existing native LG app sessions are rejected because they cannot be reconstructed safely. Native playback is identified by the foreground app: the RS232 input read may still report HDMI during the transition and later return `e0`.
+
+Restoration/cleanup also runs on cancellation and orderly integration unload. If restoration cannot be confirmed, the file is retained to avoid deleting the currently displayed image; `presentation_error` explains this. Network loss, an unknown upload outcome, a process crash or mains loss may leave a file beginning `ha_lg_` in Content Manager. Remove such files manually after leaving native playback. The integration never sweeps or deletes existing user media. Switching manually to another file within the same LG native-player app cannot be distinguished from this presentation and is not covered by source-change detection.
+
+Direct image URL launch was accepted by LG but produced **“Wiedergabe nicht möglich”**. The upload-first path above was visually confirmed, including the return to Apple TV. WebSocket/app acknowledgements alone do not prove correct visual decoding. These actions do not add a native video player, arbitrary webpage/dashboard rendering, screenshot download, or permanent URL/boot/schedule changes. Continue using the optional content player or a custom renderer for those formats.
+
+
+## Suppress OSD during switching
+
+Enable **Suppress OSD during input/fullscreen switching** in options (default off). Before an integration-controlled source switch or native image launch, a fresh `kl ff` read determines the original OSD state. Only an enabled OSD is temporarily disabled. After a two-second settling period it is restored, including on failed/cancelled switching. An already disabled or unknown OSD is never enabled by this feature.
+
+An explicit change through the integration's OSD switch takes precedence over the temporary restoration. Concurrent transitions are serialized. `osd_restore_error` indicates an unconfirmed restoration. Native image entry and return each use the guard; `show_toast` does not. Locking the OSD may also temporarily hide other LG menus/messages. Settings made through another controller or the physical remote cannot always be distinguished from the temporary lock. A network/power failure or hard HA crash can prevent restoration; inspect the OSD switch in that case.
+
+On the tested UH5F-H, enabling OSD during native image playback is rejected. The guard remembers its own temporary lock and restores it after returning to HDMI; OSD can therefore remain suppressed for the full image duration. A pre-existing manual off state never gains this restore ownership.

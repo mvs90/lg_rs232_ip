@@ -9,6 +9,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .lg_display import LGDisplay
+from .web_manager import LGWebManager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -186,6 +187,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         power_transition_timeout=entry.options.get("power_transition_timeout", 20),
     )
 
+    lg_display.suppress_osd_during_switch = entry.options.get(
+        "suppress_osd_during_switch", False
+    )
+
     power_supply_switch_entity_id = _extract_entity_id(
         entry.options.get("power_supply_switch_entity_id")
     )
@@ -223,6 +228,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "alert_state": LGDisplayAlertState(entry.entry_id),
     }
 
+    if entry.options.get("native_web_enabled", False):
+        hass.data[DOMAIN][entry.entry_id]["web_manager"] = LGWebManager(
+            host,
+            entry.options["native_web_password"],
+            entry.options["native_web_fingerprint"],
+        )
+
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -233,6 +245,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         data = hass.data[DOMAIN].pop(entry.entry_id)
+        if web_manager := data.get("web_manager"):
+            await web_manager.async_close()
         lg_display = data.get("lg_display")
         if lg_display is not None:
             await lg_display.async_disconnect()

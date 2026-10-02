@@ -239,7 +239,7 @@ class LGDisplayInputSelect(LGDisplayBaseSelect):
         # Try to set the input, but don't fail if it times out
         try:
             set_result = await asyncio.wait_for(
-                self._lg_display.async_set_input(candidate), timeout=3.0
+                self._lg_display.async_set_input(candidate), timeout=15.0
             )
             if not set_result:
                 return None

@@ -51,6 +51,9 @@ def player():
     display.async_power_on = AsyncMock(return_value=True)
     display.async_send_remote_key = AsyncMock(return_value=True)
     display.async_power_off = AsyncMock(return_value=True)
+    display.async_suppress_osd_for_switch = Mock(return_value=AsyncMock())
+    display.osd_restore_error = False
+    display.async_restore_pending_osd = AsyncMock()
     p = LGDisplayMediaPlayer(hass, entry, display, "Display", "test")
     p.hass = hass
     p.entity_id = "media_player.display"

@@ -1,6 +1,6 @@
 # LG UH5F-H: reusable integration reference
 
-Research date: 2026-10-02. Based on read-only queries to an owner's panel and official LG documentation. This is a model-family reference, not a claim that every firmware implements every documented feature. Private addresses, serial numbers, credentials and session cookies are excluded.
+Research date: 2026-10-02. Based on read-only inventory, authorized reversible presentation tests and official LG documentation. This is a model-family reference, not a claim that every firmware implements every documented feature. Private addresses, serial numbers, credentials and session cookies are excluded.
 
 ## Identity and evidence
 
@@ -9,7 +9,7 @@ Research date: 2026-10-02. Based on read-only queries to an owner's panel and of
 | Exact model returned by panel | **75UH5F-HJ** | `fv`, decoded hexadecimal ASCII |
 | Product family | 75UH5F-H, 75-inch UHD Signage | LG product page and returned model |
 | Software | **04.13.50**, raw `041350` | `fz`; this is not the webOS platform version |
-| Platform generation | webOS Signage 4.x | LG product sheet says 4.0; another regional sheet says 4.1. Exact installed platform version is not yet read from the panel. |
+| Installed platform | **webOS 4.0.1-136**, goldilocks-genepi | Authenticated platform info; regional product sheets use varying generation labels |
 | Control protocol | LG RS232 commands over TCP, port **9761**, Set ID **01** | Successful matching acknowledgements |
 | Web management | HTTPS **3737** redirects to **3777**, title “Content Manager / LG Signage” | Observed HTTP response and application HTML |
 | Consumer TV endpoints | TCP 3000/3001 refused; 80/443 refused | One-time connection checks, not proof that these can never exist |
@@ -93,26 +93,48 @@ DPM could provide another device-local response after signal loss; use the new o
 
 With `tr=02`, restoring the smart plug makes the display turn on. This matters for startup sequencing and automatic-wake blocking. No supply interruption was tested.
 
-## Direct content and notifications
+## Authenticated platform inventory
 
-| Approach | Evidence | Remaining work |
+The owner's authorized Mobile URL login succeeded. The separate settings administrator default did not authenticate this web interface. No password was changed or reset.
+
+- webOS **4.0.1-136**, codename **goldilocks-genepi**; software **04.13.50**, MICOM **V1.02.0**, bootloader **4.03.67**.
+- HTTPS **3777**: Content Manager; HTTPS **3737**: Control Manager. Both presented the same device certificate. Before login, Control Manager redirects to the login page.
+- Input apps: `com.webos.app.hdmi1` = HDMI1, `hdmi2` = HDMI2, `hdmi3` = HDMI3/OPS/DVI, `hdmi4` = DisplayPort. These are app identifiers, not additional physical HDMI sockets.
+- Observed HDMI1 video: 3840×2160, 60 Hz, progressive, 16:9, SDR. This describes the captured session, not all supported signal formats.
+- Web capability flags include photo, transition, ratio, Control Manager, virtual controller and Play via URL; no fan control/check-screen capability. Such flags alone are not a functional acceptance test.
+- Play via URL was off with an empty URL. No persistent URL, schedule, reboot, boot mode or password setting was changed.
+
+## Direct content and notifications: confirmed results
+
+| Feature | Hardware evidence | Integration |
 |---|---|---|
-| Existing linked player | Implemented in v1.2.0 | Configure a player that supports the desired media formats |
-| Native Content Manager | App reachable; LG documents files, playlists, templates and scheduling | Authenticate, inspect capabilities, test one temporary asset and restore input |
-| Native Play via URL | LG-documented browser feature and Control Manager setting | Inspect authenticated interface; verify rendering and transient launch without changing boot behaviour |
-| Saved internal media (`sn a8`) | Listed in LG command guide | Determine an existing asset's valid ID/name; never guess or start every item |
-| Multi Screen / PIP (`xc`) | Documented, model-specific | Check input combinations and layout; PIP is not an arbitrary text overlay |
-| Overlay over live HDMI | No verified public remote API yet | A Signage app/renderer with confirmed HDMI composition support or a suitable external compositor |
+| Native text overlay over HDMI | `sendToast` accepted; owner saw the text over Apple TV, HDMI stayed active | `show_toast`; LG controls duration |
+| Native fullscreen PNG from internal storage | Owner confirmed image and return to Apple TV; unique test file deleted successfully | `show_native_image`; upload, timed display, foreground check, restore, delete |
+| Native image with HTTP URL as `src` | Launch acknowledged, but panel showed “Wiedergabe nicht möglich” | Not used; upload first |
+| Foreground detection | `getForegroundAppInfo` identifies `com.webos.app.dsmp`; `xb` can still report HDMI during transition, then `e0` | Never infer native player ownership from `xb` alone |
+| Screenshot | Capture command returned a temporary path, but downloading it returned HTTP 404 | Not implemented or claimed as working |
+| Play via URL / browser / dashboards | Setting visible; transient safe rendering not verified | Not changed; use external player/custom renderer |
+| Multi Screen / PIP | LG-documented, input/layout dependent; not hardware-tested | Not exposed as arbitrary text composition |
 
-The public web UI's JavaScript shows session login, CAPTCHA and internal application/media routes. These are observed implementation details, **not a supported public API contract**. No authenticated media or control endpoint has yet been validated. Do not ship a backend that merely guesses those calls.
+### Observed internal web protocol
 
-LG's URL feature can save an automatic launch URL and offers a reboot action. A notification must not rewrite boot configuration or reboot the panel for every message. Prefer a preconfigured renderer with transient show/clear sessions and input restoration. Web browser generation, codecs, TLS and authentication constrain which Home Assistant dashboards and media actually work.
+This is derived from the panel's own frontend and authenticated bounded tests. It is **not a supported public API contract**, not the consumer webOS SSAP API, and may change with firmware. v1.4 keeps it optional with certificate pinning and dedicated device cookies.
 
-## Web login
+1. On 3777, check `/login/checkLoginStatus`, get `/login/captcha`, then the web UI's accessible representation at `/login/captchaText`. POST `/login/login` JSON with `passwd` and `captcha`. Authentication returns `data.result`; retain session cookies. A rejected login must not cause credential guessing or reset.
+2. On 3737, open `/socket.io/?EIO=3&transport=websocket` with the same session. Engine.IO 3 / Socket.IO 2 sends `0{...}` then `40`; answer ping `2` with pong `3`. Send `42["api",{"command":"getForegroundAppInfo","eventID":1}]`; callback is `getForegroundAppInfo1` with `appId` and `returnValue`.
+3. Text: command `sendToast` plus `message`; success arrives as `42["return",{"result":true,"from":"toast"}]`. No duration/clear contract was established. Alert/scroll commands exist in frontend code but are not yet verified for safe cleanup.
+4. Image upload: POST multipart field `file` to `/file/contentManager` on 3777. Confirm `data.result` and the exact generated path under `/mnt/lg/appstore/signage/`. The integration only generates PNG/JPEG UUID names prefixed `ha_lg_`.
+5. Play: PUT `/content/play/dsmp` with query parameter `reqParam` containing JSON `{"id":"com.webos.app.dsmp","params":{"type":"image","src":"/mnt/lg/appstore/signage/OWNED.png"}}`. Success is `data.payload.returnValue`. Read the whole HTTP body: a single stream read may return only a fragment. Wait for the native player to enter foreground; launch can be delayed.
+6. Restore the saved external input using RS232/IP `xb`, then verify an external input app is in foreground. Only remove the owned asset once leaving playback is confirmed. Respect a user's different foreground app.
+7. Delete: DELETE `/content` with `reqParam` JSON `{"path":[{"deviceId":"INTERNAL_STORAGE_SIGNAGE","subDeviceId":"","itemPath":"/mnt/lg/appstore/signage/OWNED.png","type":"image"}]}`. Verify `data.payload.returnValue`. Do not enumerate/delete unrelated media.
 
-On the **LG remote**, press **Home**, choose **Mobile URL**, and read the web address and initial web password. The guide distinguishes this from the settings/admin default. The initial web password is no longer displayed after it has been changed. Do not reset credentials to collect an inventory.
+`/content/list` can list MEDIA records (including `fileName`, `fullPath`, `mediaType`, `udn`). Filtering on `fileName` was rejected because no matching database index exists; the integration avoids that dependency. Private inventory results, serial numbers, passwords, cookies and certificate fingerprints are excluded from this repository.
 
-The live web UI requests a CAPTCHA. An authorized attempt with the documented admin default was rejected; the separate web credential is still needed. Browser access also needs the owner to accept the panel's local certificate warning. For an eventual integration, provide explicit certificate trust/pinning rather than silently disabling TLS verification globally.
+## Web login and trust
+
+On the **LG remote**, press **Home → Mobile URL** and read the web address and initial web password. LG distinguishes it from the settings/admin default. The initial web password is no longer displayed after it has been changed. Do not reset credentials to collect an inventory.
+
+The production client pins the SHA-256 device certificate on both web ports. Obtain its fingerprint from browser certificate details or `tools/read_web_certificate.py`, then configure it with the web password. Browser certificate trust is separate from integration certificate pinning. The login CAPTCHA flow was explicitly authorized by the owner and exercised through the UI's own accessible challenge representation. No authentication checks are bypassed.
 
 ## Improvements implemented from these findings
 
@@ -123,15 +145,26 @@ The live web UI requests a CAPTCHA. An authorized attempt with the documented ad
 - Fixed frame assembly for replies whose command letter is `x`, verified against the actual picture-mode reply.
 - Removed the undocumented abnormal-state query, unused speculative command catalogues and heuristic operating-time parser.
 
-These changes are covered by automated tests. Identity and status reads are checked on the actual panel; setting writes, power cycles, physical HomeKit interaction and native content playback have not been tested on it.
+These changes are covered by automated tests. Identity and status reads are checked on the actual panel; power cycles and physical HomeKit interaction have not been tested on it. Native text overlays and fullscreen image/return were visually confirmed; the production client also passed upload/play/foreground/restore/delete checks.
 
 ## Useful next extensions, in priority order
 
-1. **Native fullscreen renderer:** authenticate once, inspect the built-in media/URL interfaces, validate a small temporary image, then reuse the presentation queue and restoration contract. Avoid modifying permanent schedules.
+1. **Additional native media formats:** test a bounded local video with documented codec constraints and restoration. Keep arbitrary URLs, dashboards and persistent schedules separate from notifications.
 2. **Hardware standby acceptance sequence:** capture `ka`, `xb`, `sv 02`, `sv 03` during Apple TV playing, paused, normal standby and erroneous idle. Verify wake via remote after each relevant PM setting.
 3. **Capability profiles:** identify model/firmware at setup, hide unavailable choices and distinguish explicit NG from transient no-response. Use recorded fixtures for each family.
 4. **Blank-screen mode with retained audio/network:** expose verified screen mute as a deliberate action and restore it; do not confuse it with mains-safe standby.
 5. **Thermal and operating-hours alerts:** build HA automations from the existing temperature/hour sensors. Thresholds must come from the exact model's operating limits, not an invented generic warning temperature.
 6. **Multi-input mapping:** independently associate HDMI inputs with player/remote entities, retaining one HomeKit TV. Current integration supports one linked player plus one content target.
 7. **Brightness automation:** prefer HA time/sun-based backlight control. The ambient-light status query was rejected, so do not rely on a claimed light sensor without further evidence.
-8. **Native overlays:** a separate development track requiring verified Signage APIs and a panel-side app/composition test. A successful Content Manager login alone does not prove overlay support.
+8. **Richer overlays:** basic native text is confirmed. Scrolling text, modal alerts and layout control need individual duration/clear/ownership tests before exposure.
+
+
+## OSD suppression during transitions
+
+The LG webOS 4 guide calls `kl` **OSD Lock**: `00` locks/hides OSD; `01` unlocks/enables it. This is separate from remote/key lock (`km`). The existing OSD Select entity's enabled state therefore corresponds to `kl=01`.
+
+The optional transition guard reads `kl ff` without cache, suppresses only a confirmed enabled OSD, and restores only its own temporary change after a two-second settling interval. It covers RS232 input switches and native-player launch. Initially disabled/unknown OSD is untouched. Explicit HA OSD-switch intent supersedes the temporary restore. See the feature guide for concurrent-controller and hard-crash limits.
+
+Live OSD test: `kl ff` initially returned `01`, disabling returned `00`, and a read during the native image confirmed `00`. The panel rejected restoring `kl 01` during DSMP playback. Therefore the integration retains ownership of its temporary lock until returning to an external input and retries there. It must not mistake that owned temporary off state for the user's pre-existing off preference. A newer explicit HA OSD-switch request clears this ownership.
+
+The final guarded hardware test confirmed **OSD 01 → 00 during native playback → 01 after HDMI return**, with the temporary image deleted and no pending restore error. The owner also confirmed that no OSD information appeared during that switch.

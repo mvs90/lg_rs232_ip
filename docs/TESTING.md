@@ -31,3 +31,10 @@ The automated suite runs against Home Assistant 2025.3.4 (Python 3.13) and 2026.
 ## UH5F-H hardware readback (2026-10-02)
 
 The updated integration read 75UH5F-HJ, software 04.13.50, picture mode 1, signal present, panel state 0, PM mode 5 and DPM disabled from the panel. This validates readback and decoding only. No setting writes, source changes or power cycles were performed. A repeated inventory exposed the leading-x response framing bug and the corrected picture-mode read was verified on the real device. See [device reference](devices/LG-UH5F-H.md) for the baseline and remaining acceptance sequence.
+
+
+Native web acceptance (v1.4): tests cover certificate pin validation, login failure, fragmented/bounded responses, no automatic mutation retry, PNG/JPEG validation, owned asset paths, native toast policy, upload/launch cancellation, physical source changes, restoration failure and optional wake/standby restoration. On 75UH5F-HJ the owner confirmed text over HDMI and fullscreen/return; the production client was then checked with upload, foreground detection, source restoration and deletion. Direct HTTP image playback failed despite a positive launch acknowledgement.
+
+For another model/firmware, opt in only after checking the certificate and normal login. Test one disposable image while watching the panel, then verify return and deletion. Test power/socket/Apple TV/HomeKit flows separately; the native presentation check does not validate those physical interactions. A manual change within the same native player app is an acknowledged ownership limitation.
+
+OSD acceptance on the same panel: readback on → off during native image → on after HDMI return; the owner visually confirmed no OSD banner during the transition. Automated tests also preserve initially disabled/unknown OSD and a newer manual HA OSD change.

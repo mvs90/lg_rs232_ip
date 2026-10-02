@@ -51,6 +51,8 @@ Neue Aktionen:
 | `lg_rs232_ip.show_content` | Medien zeitweise anzeigen und zum vorherigen Eingang zurückkehren |
 | `lg_rs232_ip.clear_content` | Anzeige abbrechen und Warteschlange leeren |
 | `lg_rs232_ip.show_notification` | Meldung über ein konfiguriertes Anzeige-Skript ausgeben |
+| `lg_rs232_ip.show_toast` | Native Textmeldung über dem aktuellen LG-Bild |
+| `lg_rs232_ip.show_native_image` | PNG/JPEG temporär im Vollbild mit Rückkehr zum vorherigen Eingang |
 | `lg_rs232_ip.set_sound_mode` | Sonos-Nachtmodus oder Sprachverbesserung |
 | `lg_rs232_ip.announce` | Audio-Durchsage auf einem unterstützten Soundsystem |
 
@@ -58,10 +60,27 @@ Temporäre Inhalte und Meldungen dürfen das ausgeschaltete Display standardmä�
 
 Während der Anzeige greift die gekoppelte Standby-Automatik nicht. Bei Abbruch oder Ablauf wird der vorherige Eingang wiederhergestellt, sofern er nicht zwischenzeitlich extern geändert wurde. Eine zuvor laufende Apple-TV-Wiedergabe wird nicht rekonstruiert; für unterbrechungsarme Anzeigen ist ein separater Inhaltsplayer sinnvoll. Normales `play_media` bleibt eine ausdrückliche Wiedergabeanforderung und darf das Display einschalten.
 
-**LG-Überblendungen sind weiterhin nicht nativ implementiert.** `show_notification` benötigt ein funktionsfähiges Anzeige-Skript, das `show` und `clear` samt Sitzungs-ID verarbeitet. Ohne dieses Skript wird die Aktion mit einer klaren Fehlermeldung abgelehnt. Die UH5C-Modell-/Firmware-spezifische Anbindung steht noch aus. Ein beliebiger Medienplayer kann außerdem nicht automatisch Webseiten/Dashboards anzeigen.
+**Seit v1.4 sind native Textüberblendungen und Vollbilder am 75UH5F-HJ bestätigt.** In den Integrationsoptionen den nativen Webzugriff aktivieren, das separate LG-Mobile-URL-Passwort und den SHA-256-Fingerabdruck des Display-Zertifikats eintragen. Das Passwort ist über die LG-Fernbedienung unter **Home → Mobile URL** abrufbar; ein leeres Passwortfeld behält das gespeicherte Passwort bei.
+
+`show_toast` blendet Text über dem laufenden Bild ein. Das Display muss eingeschaltet sein; Dauer und Layout bestimmt LG. `show_native_image` lädt PNG/JPEG (maximal 5 MiB) zuerst in den internen LG-Speicher, zeigt es für die gewünschte Dauer, kehrt zum vorherigen Eingang zurück und löscht die eigene temporäre Datei. Direktes Starten einer Bild-URL führte am Testgerät zu „Wiedergabe nicht möglich“. Ruhezeiten, Warteschlange und die standardmäßig deaktivierte Aufweckoption gelten auch hier. `clear_content` beendet Vollbilder; LG-Toasts können damit nicht vorzeitig gelöscht werden.
+
+Die Wiedergabeaktion bestätigt zunächst die Aufnahme in die Warteschlange. Fehler stehen im Attribut `presentation_error`. Bei unklarer Wiederherstellung bleibt die Datei vorsichtshalber erhalten; verwaiste Dateien mit `ha_lg_` im Content Manager nach Verlassen der Wiedergabe entfernen. Nach einem Absturz oder Netzwerkverlust ist automatische Bereinigung nicht garantiert. Ein manueller Wechsel zu einem anderen Inhalt innerhalb derselben LG-Wiedergabe-App ist nicht erkennbar.
+
+`show_notification` bleibt für eigene Anzeige-Skripte mit `show`/`clear` und Sitzungs-ID verfügbar. Webseiten, Videos und Dashboards benötigen weiterhin einen passenden Medienplayer oder Renderer. Die native Schnittstelle ist eine interne LG-Webschnittstelle und auf anderen Firmware-/Modellversionen separat zu prüfen. [Konfiguration und Beispiele](FEATURES.md#native-lg-text-overlays-and-fullscreen-images-v14).
 
 [Alle Optionen, Beispiele und die Schnittstelle für Anzeige-Skripte](FEATURES.md).
 
 ## Geräteprüfung und Wissensbasis
 
-Das geprüfte Display identifiziert sich als **75UH5F-HJ**, Software **04.13.50**. Die [Gerätereferenz](devices/LG-UH5F-H.md) enthält LG-Quellen, bestätigte Abfragen, Energiezustände und die offenen Schritte für native Inhalte. Neu sind optionale Sensoren für HDMI-Signal, tatsächlichen Bildschirmzustand und PM-Modus sowie eine DPM-Zeitauswahl. Der ältere DPM-Schalter aktiviert nun eine Minute. Es werden keine Einstellungen automatisch geändert. Firmware- und Modellsensoren sowie Bildmodus-/Sprachzuordnungen wurden korrigiert. Das bisherige, nicht dokumentierte Abnormal-State-Signal wird nicht mehr angelegt.
+Das geprüfte Display identifiziert sich als **75UH5F-HJ**, Software **04.13.50**. Die [Gerätereferenz](devices/LG-UH5F-H.md) enthält LG-Quellen, bestätigte Abfragen, Energiezustände und die bestätigten nativen Anzeigewege. Neu sind optionale Sensoren für HDMI-Signal, tatsächlichen Bildschirmzustand und PM-Modus sowie eine DPM-Zeitauswahl. Der ältere DPM-Schalter aktiviert nun eine Minute. Es werden keine Einstellungen automatisch geändert. Firmware- und Modellsensoren sowie Bildmodus-/Sprachzuordnungen wurden korrigiert. Das bisherige, nicht dokumentierte Abnormal-State-Signal wird nicht mehr angelegt.
+
+
+## OSD bei Umschaltung unterdrücken
+
+Die Option **„OSD während Quellen-/Vollbildumschaltung unterdrücken“** ist standardmäßig aus. Aktiviert liest sie vor jeder Quellenumschaltung den aktuellen OSD-Zustand frisch vom Display. Nur ein zuvor eingeschaltetes OSD wird vorübergehend ausgeschaltet und nach einer zweisekündigen Beruhigungszeit wieder eingeschaltet. Ein schon manuell ausgeschaltetes oder nicht lesbares OSD wird nicht verändert.
+
+Das gilt für Quellenwechsel über diese Integration sowie Start und Rückkehr nativer Vollbilder. Bei Abbruch oder fehlgeschlagener Umschaltung läuft die Wiederherstellung ebenfalls. Eine zwischenzeitliche Bedienung des OSD-Schalters in Home Assistant hat Vorrang. Schlägt die Wiederherstellung fehl, zeigt `osd_restore_error` das an. Während der Unterdrückung wirken gegebenenfalls auch andere LG-Menüs/Einblendungen nicht; native Toasts werden selbst nicht mit dieser Option unterdrückt.
+
+Direkte Änderungen durch andere Programme oder die Fernbedienung lassen sich nicht immer von der temporären Deaktivierung unterscheiden. Netzwerk-/Stromausfall oder ein harter HA-Absturz können die Wiederherstellung verhindern; dann den OSD-Schalter gezielt prüfen. Die Option ändert keine dauerhafte Benutzerpräferenz bei normal abgeschlossener Umschaltung.
+
+Beim geprüften UH5F-H lässt sich das OSD während der nativen Bildanzeige nicht wieder einschalten. Die Integration merkt sich deshalb ihre eigene temporäre Sperre und stellt das OSD nach der Rückkehr zu HDMI wieder her. Es kann während des gesamten Vollbilds unterdrückt bleiben. Ein bereits vorher manuell ausgeschaltetes OSD erhält diese Wiederherstellungsmarkierung nicht.

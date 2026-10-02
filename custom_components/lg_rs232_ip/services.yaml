@@ -34,7 +34,7 @@ show_content:
       default: normal
 show_notification:
   name: Show notification
-  description: Requires a configured renderer script. Native LG overlays are not implemented.
+  description: Requires a configured renderer script. For native LG text overlays use show_toast.
   target:
     entity:
       domain: media_player
@@ -138,3 +138,40 @@ announce:
           min: 0
           max: 100
       default: 40
+
+show_toast:
+  name: Show native LG text overlay
+  description: Display text over the current picture. Requires native web access and an awake panel. LG controls the duration.
+  target:
+    entity:
+      domain: media_player
+      integration: lg_rs232_ip
+  fields:
+    message:
+      name: Message (1–1000 characters)
+      required: true
+      selector:
+        text: {}
+    priority: *id003
+show_native_image:
+  name: Show native LG fullscreen image
+  description: Upload a temporary PNG/JPEG (up to 5 MiB), show it, restore the external input and delete the upload. Requires native web access.
+  target:
+    entity:
+      domain: media_player
+      integration: lg_rs232_ip
+  fields:
+    media_id:
+      name: Image URL or media-source ID
+      required: true
+      selector:
+        text: {}
+    duration:
+      name: Duration (seconds)
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 3600
+          mode: box
+    priority: *id003
