@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.0
+
+- Native MP4 video presentations: bounded 50 MiB upload, foreground verification, timed restoration and owned-file cleanup.
+- Website presentations through verified Play via URL input E3, without reboot. Preserve prior URL configuration, respect user changes and journal recovery across HA restarts.
+- HTTP(S) HLS/browser-video streams through short-lived tokenized HA-hosted HTML video pages; muted autoplay by default. No transcoding, DRM or native RTSP support.
+- Shared queue, quiet hours, wake policy, cancellation and OSD handling for images, videos, websites and streams. New actions documented with HA examples and LG/Sonos compatibility limits.
+- Hardware checks confirmed MP4, HTML and HLS rendering; direct network video through DSMP was acknowledged but did not play, so is not used.
+
 ## 1.5.0
 
 - Real LG boot-logo switch (`sn a3`) with exact acknowledgement validation and fresh readback; no automatic reboot or wake.

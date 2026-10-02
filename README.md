@@ -90,3 +90,7 @@ Protocol reference: [LG RS232 command guide, Status check](https://www.lg.com/us
 ## Verified device research
 
 The hardware inventory and authenticated playback tests identify **75UH5F-HJ**, software **04.13.50**. See the [reusable model reference](docs/devices/LG-UH5F-H.md) for official LG sources, confirmed commands, energy settings, content/notification options and remaining acceptance tests. Private installation details are not published.
+
+## Native videos, streams and websites
+
+From v1.6.0, use `lg_rs232_ip.show_native_video` for MP4 files up to 50 MiB, `lg_rs232_ip.show_stream` for HTTP(S) HLS/browser-compatible video, and `lg_rs232_ip.show_website` for websites. All require optional native LG web access. Presentations return after the configured duration; `clear_content` cancels them. Website settings are restored conditionally, with recovery after HA restart. [Setup, examples and compatibility limits](docs/NATIVE-MEDIA.md).

@@ -419,8 +419,13 @@ class ExtendedControls(NativePresentations):
             while self._presentation_queue and not self._ha_stopping:
                 request = self._presentation_queue.popleft()
                 try:
-                    if request["kind"] == "native_image":
-                        await self._async_present_native_image(request)
+                    if request["kind"] in {
+                        "native_image",
+                        "native_video",
+                        "native_website",
+                        "native_stream",
+                    }:
+                        await self._async_present_native(request)
                     else:
                         await self._async_present_one(request)
                 except asyncio.CancelledError:

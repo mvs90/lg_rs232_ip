@@ -39,7 +39,8 @@ async def _read_limited(response, limit=262144):
 class LGWebManager:
     """One private cookie jar, serialized requests and no replay of mutations."""
 
-    def __init__(self, host: str, password: str, fingerprint: str):
+    def __init__(self, host: str, password: str, fingerprint: str, url_store=None):
+        self._url_store = url_store
         self._host = host
         self._password = password
         self._ssl = aiohttp.Fingerprint(
@@ -73,6 +74,9 @@ class LGWebManager:
                 json=body,
                 ssl=self._ssl,
                 allow_redirects=False,
+                timeout=aiohttp.ClientTimeout(
+                    total=120 if path == "/file/contentManager" else 20
+                ),
             ) as response:
                 if response.status != 200:
                     raise LGWebError(
@@ -158,6 +162,8 @@ class LGWebManager:
                             ["api", {"command": command, "eventID": 1, **params}]
                         )
                     )
+                    if event is None:
+                        return None
                     while True:
                         message = await ws.receive()
                         if message.type != aiohttp.WSMsgType.TEXT:
@@ -214,9 +220,17 @@ class LGWebManager:
             suffix, content_type = ".jpg", "image/jpeg"
         else:
             raise LGWebError("Native images must be PNG or JPEG")
+        return await self._async_upload_media(image, suffix, content_type)
+
+    async def async_upload_video(self, video: bytes) -> dict:
+        if not 12 <= len(video) <= 50 * 1024 * 1024 or video[4:8] != b"ftyp":
+            raise LGWebError("Native videos must be MP4 files up to 50 MiB")
+        return await self._async_upload_media(video, ".mp4", "video/mp4")
+
+    async def _async_upload_media(self, content, suffix, content_type):
         name = f"ha_lg_{uuid.uuid4().hex}{suffix}"
         form = aiohttp.FormData()
-        form.add_field("file", image, filename=name, content_type=content_type)
+        form.add_field("file", content, filename=name, content_type=content_type)
         async with self._lock:
             await self._login()
             result = await self._json("POST", "/file/contentManager", data=form)
@@ -229,11 +243,18 @@ class LGWebManager:
                 ):
                     raise LGWebError("LG returned an unexpected upload location")
             except (TypeError, KeyError):
-                raise LGWebError("LG did not confirm the image upload") from None
+                raise LGWebError("LG did not confirm the media upload") from None
             return {"name": name, "path": path}
 
     async def async_play_image(self, asset: dict):
         self._validate_asset(asset)
+        await self._async_launch_native("image", asset["path"])
+
+    async def async_play_video(self, asset):
+        self._validate_asset(asset)
+        await self._async_launch_native("video", asset["path"])
+
+    async def _async_launch_native(self, media_type, source):
         async with self._lock:
             await self._login()
             result = await self._json(
@@ -241,14 +262,14 @@ class LGWebManager:
                 "/content/play/dsmp",
                 params={
                     "id": "com.webos.app.dsmp",
-                    "params": {"type": "image", "src": asset["path"]},
+                    "params": {"type": media_type, "src": source},
                 },
             )
             if (
                 not isinstance(result, dict)
                 or result.get("payload", {}).get("returnValue") is not True
             ):
-                raise LGWebError("LG did not confirm image playback")
+                raise LGWebError("LG did not confirm media playback")
         # ACK means launch accepted. Verify that the native player really entered foreground.
         for _ in range(5):
             if await self.async_foreground_app() == "com.webos.app.dsmp":
@@ -260,7 +281,7 @@ class LGWebManager:
     def _validate_asset(asset):
         name = asset.get("name", "")
         if (
-            not re.fullmatch(r"ha_lg_[0-9a-f]{32}\.(?:png|jpg)", name)
+            not re.fullmatch(r"ha_lg_[0-9a-f]{32}\.(?:png|jpg|mp4)", name)
             or asset.get("path") != f"/mnt/lg/appstore/signage/{name}"
         ):
             raise LGWebError("Refusing to operate on a non-owned media path")
@@ -278,7 +299,9 @@ class LGWebManager:
                             "deviceId": "INTERNAL_STORAGE_SIGNAGE",
                             "subDeviceId": "",
                             "itemPath": asset["path"],
-                            "type": "image",
+                            "type": "video"
+                            if asset["name"].endswith(".mp4")
+                            else "image",
                         }
                     ]
                 },
@@ -287,7 +310,65 @@ class LGWebManager:
                 not isinstance(result, dict)
                 or result.get("payload", {}).get("returnValue") is not True
             ):
-                raise LGWebError("LG could not delete the temporary image")
+                raise LGWebError("LG could not delete the temporary media")
+
+    @staticmethod
+    def validate_url(value):
+        try:
+            url = URL(value)
+            if (
+                url.scheme not in {"http", "https"}
+                or not url.host
+                or url.user is not None
+            ):
+                raise ValueError
+            if len(value) > 4096 or any(ord(c) < 32 for c in value):
+                raise ValueError
+            return str(url)
+        except (ValueError, TypeError):
+            raise LGWebError(
+                "Use an HTTP(S) URL without embedded credentials"
+            ) from None
+
+    async def async_save_url_restore(self, previous, temporary):
+        if self._url_store is not None:
+            await self._url_store.async_save(
+                {"previous": previous, "temporary": temporary}
+            )
+
+    async def async_clear_url_restore(self):
+        if self._url_store is not None:
+            await self._url_store.async_remove()
+
+    async def async_recover_url_settings(self):
+        """Recover an interrupted URL change only if its value is still ours."""
+        if self._url_store is None:
+            return
+        saved = await self._url_store.async_load()
+        if saved is None:
+            return
+        if await self.async_get_url_settings() == saved["temporary"]:
+            await self.async_set_url_settings(saved["previous"])
+        await self.async_clear_url_restore()
+
+    async def async_get_url_settings(self):
+        async with self._lock:
+            result = await self._api("getPlayViaUrl", "getPlayViaUrl")
+            if result.get("playViaUrlMode") not in {"on", "off"} or not isinstance(
+                result.get("playViaUrl"), str
+            ):
+                raise LGWebError("Cannot read LG URL loader configuration")
+            return {key: result[key] for key in ("playViaUrlMode", "playViaUrl")}
+
+    async def async_set_url_settings(self, settings):
+        # This firmware sends no setter callback. Verify with readback, never replay.
+        async with self._lock:
+            await self._api("setPlayViaUrl", None, **settings)
+        for _ in range(5):
+            if await self.async_get_url_settings() == settings:
+                return
+            await asyncio.sleep(0.2)
+        raise LGWebError("LG URL loader change was not confirmed")
 
     async def async_capture(self, height: int = 720) -> bytes:
         """Capture a real panel frame; download only the returned same-device path."""

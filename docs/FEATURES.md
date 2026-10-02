@@ -230,3 +230,7 @@ show_state: true
 `camera.turn_off` pauses image collection and clears the cached frame; `camera.turn_on` resumes it. These actions never change display power. Restart/reload restores the options' configured preview enablement. The collector never wakes an off display and skips capture when power cannot be confirmed. Concurrent dashboards share the same rate-limited, in-memory frame. The configured interval is the collection rate; dashboard rendering may introduce additional delay.
 
 Attributes expose `last_capture`, `refresh_interval`, `capture_height` and `preview_error`. Failed captures discard the old frame instead of presenting it as current, and retry on the next scheduled interval. No screenshot is stored to disk or included in diagnostics by the camera. HA's own camera permissions and standard `camera.snapshot` action still apply. Screenshots may contain whatever is currently visible on the display; availability/black frames depend on firmware, source and content. There is no attempt to bypass content-protection restrictions.
+
+## Native video, websites and streams (1.6)
+
+MP4 uploads, Play via URL websites without reboot, and tokenized HA-hosted HTML video for HLS/HTTP streams extend the native presentation queue. Conditional input/URL restoration, persistent URL recovery and bounded owned-file cleanup are covered by tests. [Actions, examples and exact limits](NATIVE-MEDIA.md).

@@ -73,11 +73,61 @@ class NativePresentations:
             )
         )
 
+    async def async_show_native_video(self, media_id, duration=60, priority="normal"):
+        self._require_web_manager()
+        await self._enqueue_presentation(
+            dict(
+                kind="native_video",
+                media_id=media_id,
+                duration=duration,
+                priority=priority,
+            )
+        )
+
+    async def async_show_website(self, url, duration=60, priority="normal"):
+        web = self._require_web_manager()
+        try:
+            url = web.validate_url(url)
+        except LGWebError as err:
+            raise ServiceValidationError(str(err)) from None
+        await self._enqueue_presentation(
+            dict(
+                kind="native_website",
+                media_id=url,
+                duration=duration,
+                priority=priority,
+            )
+        )
+
+    async def async_show_stream(
+        self, media_id, duration=300, priority="normal", muted=True
+    ):
+        self._require_web_manager()
+        await self._enqueue_presentation(
+            dict(
+                kind="native_stream",
+                media_id=media_id,
+                duration=duration,
+                priority=priority,
+                muted=muted,
+            )
+        )
+
+    async def _async_download_native_video(self, media_id):
+        return await self._async_download_native_media(
+            media_id, "video", 50 * 1024 * 1024, 120
+        )
+
     async def _async_download_native_image(self, media_id):
+        return await self._async_download_native_media(
+            media_id, "image", MAX_IMAGE_BYTES, 20
+        )
+
+    async def _async_download_native_media(self, media_id, media_type, limit, timeout):
         # Never give an image server the LG credentials or its session cookies.
         try:
             media_id, _ = await self._async_resolve_media(
-                media_id, "image", self.entity_id
+                media_id, media_type, self.entity_id
             )
             url = URL(media_id)
             if (
@@ -88,28 +138,30 @@ class NativePresentations:
                 raise ValueError
             session = async_get_clientsession(self.hass)
             async with session.get(
-                url, timeout=aiohttp.ClientTimeout(total=20)
+                url, timeout=aiohttp.ClientTimeout(total=timeout)
             ) as response:
                 response.raise_for_status()
-                if (
-                    response.content_length
-                    and response.content_length > MAX_IMAGE_BYTES
-                ):
+                if response.content_length and response.content_length > limit:
                     raise ValueError
                 image = bytearray()
                 async for chunk in response.content.iter_chunked(65536):
                     image.extend(chunk)
-                    if len(image) > MAX_IMAGE_BYTES:
+                    if len(image) > limit:
                         raise ValueError
                 return bytes(image)
         except Exception:
             # HA signed URLs and upstream exception strings must not enter diagnostics.
             raise HomeAssistantError(
-                "Cannot load image; use an accessible image up to 5 MiB"
+                f"Cannot load {media_type}; use accessible media up to {limit // (1024 * 1024)} MiB"
             ) from None
 
-    async def _async_present_native_image(self, request):
+    async def _async_present_native(self, request):
         web = self._require_web_manager()
+        video = request["kind"] == "native_video"
+        website = request["kind"] in {"native_website", "native_stream"}
+        owned_app = "com.webos.app.browser" if website else NATIVE_APP
+        old_url = new_url = None
+        remove_page = None
         asset = None
         snapshot = None
         launch_attempted = False
@@ -119,7 +171,33 @@ class NativePresentations:
         self._presentation_error = None
         try:
             self._check_presentation_policy(request["priority"])
-            image = await self._async_download_native_image(request["media_id"])
+            if website:
+                source = request["media_id"]
+                if request["kind"] == "native_stream":
+                    from .stream_page import create_stream_page
+
+                    try:
+                        source, _ = await self._async_resolve_media(
+                            source, "video", self.entity_id
+                        )
+                        source = web.validate_url(source)
+                        source, remove_page = create_stream_page(
+                            self.hass, source, request["duration"], request["muted"]
+                        )
+                    except Exception:
+                        raise HomeAssistantError(
+                            "Cannot prepare stream; configure an LG-accessible Home Assistant URL and HTTP(S) media source"
+                        ) from None
+                new_url = {
+                    "playViaUrlMode": "on",
+                    "playViaUrl": web.validate_url(source),
+                }
+            else:
+                image = await (
+                    self._async_download_native_video(request["media_id"])
+                    if video
+                    else self._async_download_native_image(request["media_id"])
+                )
             async with self._control_lock:
                 self._check_presentation_policy(request["priority"])
                 power = await self._lg_display.async_get_power_status(use_cache=False)
@@ -146,7 +224,7 @@ class NativePresentations:
                 if not power:
                     woke = True
                     await self._async_ensure_display_on_after_power_restore(
-                        "native image"
+                        "native media"
                     )
                     if (
                         await self._lg_display.async_get_power_status(use_cache=False)
@@ -163,10 +241,22 @@ class NativePresentations:
                 initial_app = await web.async_foreground_app()
                 if initial_app not in EXTERNAL_APPS:
                     raise HomeAssistantError(
-                        "Native images require an external input; cannot restore an existing LG app session"
+                        "Native media require an external input; cannot restore an existing LG app session"
                     )
                 # Shield bounded upload/launch writes from half-completed cancellation.
-                asset, cancelled = await settle_mutation(web.async_upload_image(image))
+                if website:
+                    await web.async_recover_url_settings()
+                    old_url = await web.async_get_url_settings()
+                    await web.async_save_url_restore(old_url, new_url)
+                    _, cancelled = await settle_mutation(
+                        web.async_set_url_settings(new_url)
+                    )
+                else:
+                    asset, cancelled = await settle_mutation(
+                        web.async_upload_video(image)
+                        if video
+                        else web.async_upload_image(image)
+                    )
                 if cancelled:
                     raise asyncio.CancelledError
                 # A physical source change during upload must not be overwritten.
@@ -175,11 +265,21 @@ class NativePresentations:
                         "Display app changed during upload; presentation cancelled"
                     )
                 launch_attempted = True
-                async with self._lg_display.async_suppress_osd_for_switch():
-                    _, cancelled = await settle_mutation(web.async_play_image(asset))
-                    launch_confirmed = True
-                    if cancelled:
-                        raise asyncio.CancelledError
+                if website:
+                    # async_set_input already owns the OSD transition lock.
+                    _, cancelled = await settle_mutation(
+                        self._async_launch_website(web)
+                    )
+                else:
+                    async with self._lg_display.async_suppress_osd_for_switch():
+                        _, cancelled = await settle_mutation(
+                            web.async_play_video(asset)
+                            if video
+                            else web.async_play_image(asset)
+                        )
+                launch_confirmed = True
+                if cancelled:
+                    raise asyncio.CancelledError
                 self.async_write_ha_state()
             await asyncio.sleep(request["duration"])
         finally:
@@ -207,9 +307,11 @@ class NativePresentations:
                                 app = await web.async_foreground_app()
                                 if app != initial_app:
                                     break
-                        owns_screen = launch_attempted and app == NATIVE_APP
+                        owns_screen = launch_attempted and app == owned_app
+                        if website and owns_screen:
+                            owns_screen = await web.async_get_url_settings() == new_url
                         can_delete = current_power is False or (
-                            launch_confirmed and app is not None and app != NATIVE_APP
+                            launch_confirmed and app is not None and app != owned_app
                         )
                         if owns_screen or (
                             woke and app == initial_app and initial_app in EXTERNAL_APPS
@@ -269,11 +371,32 @@ class NativePresentations:
                             await web.async_delete_image(asset)
                         elif asset:
                             raise HomeAssistantError(
-                                "Temporary LG image retained because restoration could not be confirmed; remove ha_lg_ files in Content Manager after leaving playback"
+                                "Temporary LG media retained because restoration could not be confirmed; remove ha_lg_ files in Content Manager after leaving playback"
                             )
                     except Exception as err:
                         self._presentation_error = str(err)
+                    try:
+                        if (
+                            old_url is not None
+                            and await web.async_get_url_settings() == new_url
+                        ):
+                            await web.async_set_url_settings(old_url)
+                        if old_url is not None:
+                            await web.async_clear_url_restore()
+                    except Exception:
+                        self._presentation_error = "Could not restore LG URL loader settings; check Play via URL on the display"
+                    if remove_page:
+                        remove_page()
                     await self._lg_display.async_restore_pending_osd()
                     self._presentation_active = False
                     self._standby_guard.reset()
                     self.async_write_ha_state()
+
+    async def _async_launch_website(self, web):
+        if not await self._lg_display.async_set_input(0xE3):
+            raise HomeAssistantError("LG rejected Play via URL input")
+        for _ in range(10):
+            if await web.async_foreground_app() == "com.webos.app.browser":
+                return
+            await asyncio.sleep(0.4)
+        raise HomeAssistantError("LG website browser did not enter foreground")

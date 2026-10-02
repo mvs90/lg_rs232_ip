@@ -68,7 +68,7 @@ async def test_toast_no_wake_and_quiet_hours(native):
 @pytest.mark.asyncio
 async def test_native_restores_even_though_rs232_still_reports_hdmi(native):
     player, web = native
-    await player._async_present_native_image(REQUEST)
+    await player._async_present_native(REQUEST)
     player._lg_display.async_set_input.assert_awaited_once_with(0x90)
     web.async_delete_image.assert_awaited_once_with(ASSET)
     assert not player._presentation_active
@@ -79,7 +79,7 @@ async def test_native_restores_even_though_rs232_still_reports_hdmi(native):
 async def test_native_respects_physical_source_change(native):
     player, web = native
     web.async_foreground_app.side_effect = [HDMI, HDMI, "com.webos.app.hdmi2"]
-    await player._async_present_native_image(REQUEST)
+    await player._async_present_native(REQUEST)
     player._lg_display.async_set_input.assert_not_awaited()
     web.async_delete_image.assert_awaited_once_with(ASSET)
 
@@ -89,7 +89,7 @@ async def test_native_cancels_if_source_changed_during_upload(native):
     player, web = native
     web.async_foreground_app.side_effect = [HDMI, "com.webos.app.hdmi2"]
     with pytest.raises(HomeAssistantError, match="changed"):
-        await player._async_present_native_image(REQUEST)
+        await player._async_present_native(REQUEST)
     web.async_play_image.assert_not_awaited()
     web.async_delete_image.assert_awaited_once_with(ASSET)
     player._lg_display.async_set_input.assert_not_awaited()
@@ -100,7 +100,7 @@ async def test_native_will_not_disrupt_existing_native_content(native):
     player, web = native
     web.async_foreground_app.side_effect = [DSMP]
     with pytest.raises(HomeAssistantError, match="external input"):
-        await player._async_present_native_image(REQUEST)
+        await player._async_present_native(REQUEST)
     web.async_upload_image.assert_not_awaited()
 
 
@@ -108,7 +108,7 @@ async def test_native_will_not_disrupt_existing_native_content(native):
 async def test_native_retains_image_if_restoration_fails(native):
     player, web = native
     player._lg_display.async_set_input.return_value = False
-    await player._async_present_native_image(REQUEST)
+    await player._async_present_native(REQUEST)
     web.async_delete_image.assert_not_awaited()
     assert "retained" in player._presentation_error
     assert not player._presentation_active
@@ -119,7 +119,7 @@ async def test_launch_failure_still_restores_and_cleans(native):
     player, web = native
     web.async_play_image.side_effect = LGWebError("launch not confirmed")
     with pytest.raises(LGWebError):
-        await player._async_present_native_image(REQUEST)
+        await player._async_present_native(REQUEST)
     player._lg_display.async_set_input.assert_awaited_once_with(0x90)
     web.async_delete_image.assert_awaited_once_with(ASSET)
 
@@ -135,7 +135,7 @@ async def test_cancel_during_upload_waits_for_result_and_deletes(native):
         return ASSET
 
     web.async_upload_image.side_effect = upload
-    task = asyncio.create_task(player._async_present_native_image(REQUEST))
+    task = asyncio.create_task(player._async_present_native(REQUEST))
     await started.wait()
     task.cancel()
     finish.set()
@@ -156,7 +156,7 @@ async def test_cancel_during_play_waits_then_restores(native):
         await finish.wait()
 
     web.async_play_image.side_effect = play
-    task = asyncio.create_task(player._async_present_native_image(REQUEST))
+    task = asyncio.create_task(player._async_present_native(REQUEST))
     await started.wait()
     task.cancel()
     finish.set()
@@ -171,7 +171,7 @@ async def test_native_off_by_default_does_not_upload(native):
     player, web = native
     player._lg_display.async_get_power_status.return_value = False
     with pytest.raises(HomeAssistantError, match="wake is disabled"):
-        await player._async_present_native_image(REQUEST)
+        await player._async_present_native(REQUEST)
     web.async_upload_image.assert_not_awaited()
 
 
@@ -184,7 +184,7 @@ async def test_native_optional_wake_restores_confirmed_standby(native):
     from unittest.mock import Mock
 
     player._schedule_power_supply_off = Mock()
-    await player._async_present_native_image(REQUEST)
+    await player._async_present_native(REQUEST)
     player._lg_display.async_power_off.assert_awaited_once()
     player._schedule_power_supply_off.assert_called_once()
     web.async_delete_image.assert_awaited_once_with(ASSET)
@@ -263,3 +263,114 @@ async def test_repeated_clear_does_not_interrupt_upload_cleanup(native):
     await asyncio.gather(first, second)
     web.async_delete_image.assert_awaited_once_with(ASSET)
     assert not player._presentation_active
+
+
+@pytest.mark.asyncio
+async def test_video_uses_owned_upload_and_restoration(native):
+    player, web = native
+    asset = {
+        "name": "ha_lg_" + "b" * 32 + ".mp4",
+        "path": "/mnt/lg/appstore/signage/ha_lg_" + "b" * 32 + ".mp4",
+    }
+    player._async_download_native_video = AsyncMock(return_value=b"video")
+    web.async_upload_video.return_value = asset
+    await player._async_present_native({**REQUEST, "kind": "native_video"})
+    web.async_play_video.assert_awaited_once_with(asset)
+    web.async_delete_image.assert_awaited_once_with(asset)
+    web.async_upload_image.assert_not_awaited()
+    player._lg_display.async_set_input.assert_awaited_once_with(0x90)
+
+
+def setup_website(native):
+    from custom_components.lg_rs232_ip.web_manager import LGWebManager
+
+    player, web = native
+    web.validate_url = LGWebManager.validate_url
+    old = {"playViaUrlMode": "off", "playViaUrl": "https://previous.test/"}
+    new = {"playViaUrlMode": "on", "playViaUrl": "https://example.test/"}
+    web.async_get_url_settings.side_effect = [old, new, new]
+    web.async_foreground_app.side_effect = [
+        HDMI,
+        HDMI,
+        "com.webos.app.browser",
+        "com.webos.app.browser",
+        HDMI,
+    ]
+    return player, web, old, new
+
+
+@pytest.mark.asyncio
+async def test_website_restores_prior_url_and_input(native):
+    player, web, old, new = setup_website(native)
+    await player._async_present_native(
+        {**REQUEST, "kind": "native_website", "media_id": new["playViaUrl"]}
+    )
+    assert [c.args[0] for c in web.async_set_url_settings.await_args_list] == [new, old]
+    assert [c.args[0] for c in player._lg_display.async_set_input.await_args_list] == [
+        0xE3,
+        0x90,
+    ]
+    web.async_delete_image.assert_not_awaited()
+    # async_set_input owns the real non-reentrant OSD lock: no outer acquisition.
+    player._lg_display.async_suppress_osd_for_switch.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_website_does_not_override_user_changed_url(native):
+    player, web, old, new = setup_website(native)
+    changed = {"playViaUrlMode": "on", "playViaUrl": "https://user.test/"}
+    web.async_get_url_settings.side_effect = [old, changed, changed]
+    await player._async_present_native(
+        {**REQUEST, "kind": "native_website", "media_id": new["playViaUrl"]}
+    )
+    web.async_set_url_settings.assert_awaited_once_with(new)
+    player._lg_display.async_set_input.assert_awaited_once_with(0xE3)
+
+
+@pytest.mark.asyncio
+async def test_website_cancelled_during_setting_restores_without_launch(native):
+    player, web, old, new = setup_website(native)
+    web.async_get_url_settings.side_effect = [old, new]
+    started = asyncio.Event()
+    finish = asyncio.Event()
+
+    async def setting(value):
+        if value == new:
+            started.set()
+            await finish.wait()
+
+    web.async_set_url_settings.side_effect = setting
+    task = asyncio.create_task(
+        player._async_present_native(
+            {**REQUEST, "kind": "native_website", "media_id": new["playViaUrl"]}
+        )
+    )
+    await started.wait()
+    task.cancel()
+    finish.set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert web.async_set_url_settings.await_args.args == (old,)
+    player._lg_display.async_set_input.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_stream_page_removed_on_failed_preparation(native):
+    from unittest.mock import Mock
+
+    player, web, old, new = setup_website(native)
+    remove = Mock()
+    player._async_resolve_media = AsyncMock(
+        return_value=("https://example.test/live.m3u8", "video")
+    )
+    player._lg_display.async_get_power_status.return_value = None
+    with patch(
+        "custom_components.lg_rs232_ip.stream_page.create_stream_page",
+        return_value=("http://ha.test/page", remove),
+    ):
+        with pytest.raises(HomeAssistantError, match="unknown"):
+            await player._async_present_native(
+                {**REQUEST, "kind": "native_stream", "muted": True}
+            )
+    remove.assert_called_once()
+    web.async_set_url_settings.assert_not_awaited()

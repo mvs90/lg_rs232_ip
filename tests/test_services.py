@@ -60,6 +60,27 @@ async def test_real_entity_services_target_registered_display(tmp_path):
             )
         assert hass.services.has_service("lg_rs232_ip", "announce")
         assert hass.services.has_service("lg_rs232_ip", "show_native_image")
+        for service in ("show_native_video", "show_stream", "show_website"):
+            assert hass.services.has_service("lg_rs232_ip", service)
+        player.async_show_native_video = AsyncMock()
+        player.async_show_stream = AsyncMock()
+        player.async_show_website = AsyncMock()
+        for service, field in (
+            ("show_native_video", "media_id"),
+            ("show_stream", "media_id"),
+            ("show_website", "url"),
+        ):
+            await hass.services.async_call(
+                "lg_rs232_ip",
+                service,
+                {
+                    "entity_id": player.entity_id,
+                    field: "https://example.test/content",
+                    "duration": 30,
+                },
+                blocking=True,
+            )
+            getattr(player, "async_" + service).assert_awaited_once()
         web = AsyncMock()
         hass.data["lg_rs232_ip"]["display"]["web_manager"] = web
         display.async_get_power_status = AsyncMock(return_value=True)

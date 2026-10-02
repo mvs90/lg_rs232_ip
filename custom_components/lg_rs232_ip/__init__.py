@@ -7,6 +7,7 @@ from typing import Any, Callable
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.storage import Store
 
 from .lg_display import LGDisplay
 from .web_manager import LGWebManager
@@ -234,7 +235,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             host,
             entry.options["native_web_password"],
             entry.options["native_web_fingerprint"],
+            url_store=Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.url_restore"),
         )
+        try:
+            await hass.data[DOMAIN][entry.entry_id][
+                "web_manager"
+            ].async_recover_url_settings()
+        except Exception:
+            _LOGGER.warning(
+                "LG URL loader recovery pending; retry before the next website/stream presentation"
+            )
 
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

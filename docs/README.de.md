@@ -109,3 +109,26 @@ Ein direkter Fernimport als Bootlogo ist bei diesem Gerät nicht bestätigt. Die
 **Display-Vorschau:** In den Integrationsoptionen den nativen Webzugriff und die Screenshot-Vorschau aktivieren. Intervall: **10–3600 Sekunden**, standardmäßig 30; Auflösung: **360p, 720p oder 1080p**. Alle drei Auflösungen wurden mit echtem HDMI-Inhalt getestet. Die neue Kamera „Display preview“ lässt sich als Bildkarte ins Dashboard aufnehmen. Es handelt sich um regelmäßig aktualisierte Screenshots, nicht um einen flüssigen Videostream.
 
 Die Kamera kann unabhängig vom Display ein- oder ausgeschaltet werden. Sie weckt das Display nicht; bei Aufnahmefehlern wird das alte Bild verworfen. Der Zeitstempel `last_capture` zeigt das Alter der Aufnahme. Die Vorschau speichert Bilder nur im Arbeitsspeicher. [Aktionen und Dashboard-Beispiel](FEATURES.md#boot-logo-and-custom-boot-image-v15).
+
+## Videos, Streams und Webseiten direkt auf dem LG
+
+Ab **1.6.0** stehen mit aktiviertem nativem LG-Webzugriff drei Aktionen bereit:
+
+- `lg_rs232_ip.show_native_video`: MP4-Datei aus HA-Medien oder von einer URL, maximal 50 MiB. Die Datei wird vorübergehend auf das Display geladen und anschließend gelöscht.
+- `lg_rs232_ip.show_stream`: direkte HTTP(S)-HLS- oder browsergeeignete Video-URL. HA stellt dafür eine kurzlebige Videoseite bereit; der LG muss HA und die Medienquelle erreichen können. Standardmäßig stummgeschaltet (`muted: true`).
+- `lg_rs232_ip.show_website`: Webseite über den LG-Eingang „Play via URL“, ohne Neustart.
+
+Mit `duration` (1–3600 Sekunden) wird die Anzeigedauer festgelegt. Danach erfolgt die Rückkehr zum vorherigen Eingang; `lg_rs232_ip.clear_content` bricht vorzeitig ab. Die bisherige URL-Loader-Einstellung wird gesichert und wiederhergestellt, sofern sie zwischenzeitlich niemand geändert hat. Eine Wiederherstellung nach einem HA-Neustart ist ebenfalls vorgesehen. Warteschlange, Ruhezeiten, Aufweckoption und OSD-Unterdrückung gelten wie für native Bilder.
+
+```yaml
+action: lg_rs232_ip.show_website
+target:
+  entity_id: media_player.lg_display
+data:
+  url: http://dashboard.example.local/display
+  duration: 120
+```
+
+MP4, eine einfache Webseite und ein HLS-Teststream wurden am vorhandenen Display dargestellt. Nicht jede moderne Webseite funktioniert im älteren LG-Browser. DRM-Anbieter, RTSP/RTMP und automatische Transkodierung werden nicht unterstützt; Streams benötigen direkte Medienlinks. Die Wiedergabe endet für die Integration nach der eingestellten Dauer, nicht automatisch mit dem letzten Videobild. Native LG-Tonausgabe läuft über die bestehende AX310-Verkabelung nicht automatisch zu Sonos.
+
+[Vollständige Anleitung mit Video-/Stream-Beispielen und Grenzen](NATIVE-MEDIA.md).

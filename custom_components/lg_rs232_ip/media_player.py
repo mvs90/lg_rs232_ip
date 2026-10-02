@@ -179,6 +179,43 @@ async def async_setup_entry(
             },
             "async_show_native_image",
         ),
+        "show_native_video": (
+            {
+                vol.Required("media_id"): cv.string,
+                vol.Optional("duration", default=60): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=3600)
+                ),
+                vol.Optional("priority", default="normal"): vol.In(
+                    ["normal", "urgent"]
+                ),
+            },
+            "async_show_native_video",
+        ),
+        "show_website": (
+            {
+                vol.Required("url"): cv.string,
+                vol.Optional("duration", default=60): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=3600)
+                ),
+                vol.Optional("priority", default="normal"): vol.In(
+                    ["normal", "urgent"]
+                ),
+            },
+            "async_show_website",
+        ),
+        "show_stream": (
+            {
+                vol.Required("media_id"): cv.string,
+                vol.Optional("muted", default=True): cv.boolean,
+                vol.Optional("duration", default=300): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=3600)
+                ),
+                vol.Optional("priority", default="normal"): vol.In(
+                    ["normal", "urgent"]
+                ),
+            },
+            "async_show_stream",
+        ),
         "prepare_boot_image": (
             {
                 vol.Required("media_id"): cv.string,

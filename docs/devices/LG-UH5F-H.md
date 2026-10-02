@@ -185,3 +185,16 @@ The final guarded hardware test confirmed **OSD 01 → 00 during native playback
 - Download that exact validated path immediately from authenticated **HTTPS 3737**, using the same pinned device certificate and cookies. Port 3777 returns HTTP 404, explaining the earlier unsuccessful probe. Do not treat returned paths as arbitrary URLs or filesystem paths.
 - The client returned valid JPEGs at requested heights 360/720/1080. Visual inspection confirmed real HDMI pixels. The frontend's `captureRefresh` interval is 10 seconds. No continuous-video stream was established; v1.5 offers rate-limited screenshots instead.
 - Screenshot captures only remain in RAM in the integration. Private development captures are excluded from version control. Boot logo preparation and camera collection do not modify input, OSD or panel power.
+
+## Native video / website / HLS verification (2026-10-02)
+
+- A generated 640×360 H.264/yuv420p MP4 was uploaded to owned internal storage, played by DSMP and confirmed through a captured frame. HDMI1 restoration and temporary-file deletion succeeded.
+- Passing an HTTP MP4 URL directly to `/content/play/dsmp` returned a launch acknowledgement but made no source fetch and left HDMI1 active. No remote-video capability is inferred from that acknowledgement.
+- `getPlayViaUrl` initially reported mode off and an empty URL. `setPlayViaUrl` writes successfully but gives no setter callback on this firmware; subsequent getter readback confirmed the setting.
+- Setting a local test URL and selecting documented input `E3` opened `com.webos.app.browser`, requested the HTML page and rendered it. No reboot was needed. A generic browser launch through the DSMP endpoint had not opened it.
+- A native HTML `video` element with muted autoplay fetched a local HLS playlist and its MPEG-TS segments; a captured frame confirmed rendered video. This test used a short HLS playlist, not a commercial live/DRM provider.
+- Both browser probes restored the initial URL setting and HDMI1. Captures stay private. The production implementation preserves original URL settings and journals pending recovery in HA storage.
+
+See [native media actions](../NATIVE-MEDIA.md) for user-facing examples and compatibility limits. A browser fullscreen hint appeared in an exploratory capture; do not promise suppression of every browser-owned message merely from the input OSD option.
+
+Final controller round-trip checks also ran both website/HLS and native MP4 with `suppress_osd_during_switch` enabled. Both completed without `presentation_error`, returned to HDMI1, and restored the originally enabled OSD; URL mode was off with its original empty value afterward.
