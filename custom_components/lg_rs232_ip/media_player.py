@@ -197,6 +197,7 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             "presentation_active": self.controller.presentation_active,
             "presentation_queue_size": len(self.controller._presentation_queue),
             "presentation_error": self.controller._presentation_error,
+            "osd_restore_error": self.controller._lg_display.osd_restore_error,
             "signal_present": self.controller.signal,
         }
 
