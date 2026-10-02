@@ -50,7 +50,7 @@ class LGDisplayPreview(Camera):
     _attr_supported_features = CameraEntityFeature.ON_OFF
     _attr_should_poll = False
     _attr_is_streaming = False
-    # Fast frame timestamps are UI telemetry, not history: avoid one recorder row per second.
+    # Fast frame timestamps are transient UI metadata, not recorded attributes.
     _unrecorded_attributes = frozenset({"last_capture"})
 
     def __init__(self, entry, display, web):
