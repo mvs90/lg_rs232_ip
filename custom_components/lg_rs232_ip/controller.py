@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from homeassistant.components.media_player import MediaPlayerState
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.helpers.event import async_track_time_interval
 from datetime import timedelta
 
@@ -30,6 +31,7 @@ class DisplayController(NativeControls):
         self._listeners = set()
         self._init_controls()
         self._poll_unsub = None
+        self._stop_unsub = None
         self._refresh_lock = asyncio.Lock()
         self.external_owner = None
 
@@ -86,6 +88,21 @@ class DisplayController(NativeControls):
         return {0xE0: "LG Player", 0xE3: "Website"}.get(input_id)
 
     async def async_start(self):
+        async def stopping(_):
+            self._stop_unsub = None  # The one-shot listener has already removed itself.
+            await self.async_close()
+            app = (
+                self.hass.data.get(DOMAIN, {})
+                .get(self._config_entry.entry_id, {})
+                .get("display_app")
+            )
+            if app:
+                await app.async_close()
+
+        self._stop_unsub = self.hass.bus.async_listen_once(
+            EVENT_HOMEASSISTANT_STOP, stopping
+        )
+
         async def tick(_):
             await self.async_refresh()
 
@@ -101,15 +118,17 @@ class DisplayController(NativeControls):
             return
         async with self._refresh_lock:
             self.power = await self._lg_display.async_get_power_status(use_cache=False)
+            app = (
+                self.hass.data.get(DOMAIN, {})
+                .get(self._config_entry.entry_id, {})
+                .get("display_app")
+            )
+            if app:
+                await app.async_maybe_recover()
             if self.power is True:
-                app = (
-                    self.hass.data.get(DOMAIN, {})
-                    .get(self._config_entry.entry_id, {})
-                    .get("display_app")
-                )
-                if app:
-                    await app.async_maybe_recover()
                 self._current_input_id = await self._lg_display.async_get_input()
+                if app and app.logical_input is not None:
+                    self._current_input_id = app.logical_input
                 self._source = self._resolve_source_name(self._current_input_id)
                 self.volume = await self._lg_display.async_get_volume()
                 raw = await self._lg_display.async_send_command("k", "e", 0xFF)
@@ -154,6 +173,13 @@ class DisplayController(NativeControls):
     async def async_select_input(self, input_id):
         await self.async_clear_content()
         async with self._control_lock:
+            app = (
+                self.hass.data.get(DOMAIN, {})
+                .get(self._config_entry.entry_id, {})
+                .get("display_app")
+            )
+            if app:
+                await app.async_pause_resident(leave=False)
             if not await self._lg_display.async_set_input(input_id):
                 raise HomeAssistantError("LG rejected input")
         await self.async_refresh()
@@ -162,5 +188,9 @@ class DisplayController(NativeControls):
         self._ha_stopping = True
         if self._poll_unsub:
             self._poll_unsub()
+            self._poll_unsub = None
+        if self._stop_unsub:
+            self._stop_unsub()
+            self._stop_unsub = None
         await self._async_cancel_presentations()
         self._listeners.clear()

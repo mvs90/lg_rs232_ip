@@ -141,7 +141,6 @@ def _display_options_form(user_input, saved_options):
     ranges = {
         "polling_interval": (1, 3600, 30),
         "preview_interval": (1, 3600, 30),
-        "preview_active_interval": (0, 10, 1),
         "display_wake_timeout": (5, 300, 60),
         "power_transition_timeout": (0, 300, 20),
     }
@@ -157,6 +156,7 @@ def _display_options_form(user_input, saved_options):
         "preview_enabled": False,
         "suppress_osd_during_switch": False,
         "display_app_enabled": False,
+        "display_app_resident": False,
     }
     if user_input is not None:
         for key, (low, high, default) in ranges.items():
@@ -167,6 +167,9 @@ def _display_options_form(user_input, saved_options):
                     if key == "preview_interval"
                     else "invalid_option_range"
                 )
+        active = values.get("preview_active_interval", 1)
+        if type(active) not in {int, float} or not (active == 0 or 0.5 <= active <= 10):
+            errors["preview_active_interval"] = "invalid_option_range"
         if not values.get("native_web_password") and saved_options.get(
             "native_web_password"
         ):
@@ -186,6 +189,11 @@ def _display_options_form(user_input, saved_options):
                 errors["display_app_base_url"] = "invalid_display_app_url"
         if values.get("display_app_mode", "si") not in {"si", "website"}:
             errors["display_app_mode"] = "invalid_display_app_mode"
+        if values.get("display_app_resident") and (
+            not values.get("display_app_enabled")
+            or values.get("display_app_mode", "si") != "si"
+        ):
+            errors["display_app_resident"] = "resident_requires_si"
         entities = values.get("display_app_entities", [])
         if (
             not isinstance(entities, list)
@@ -218,6 +226,15 @@ def _display_options_form(user_input, saved_options):
         vol.Optional(key, default=values.get(key, default)): int
         for key, (_, _, default) in ranges.items()
     }
+    schema[
+        vol.Optional(
+            "preview_active_interval", default=values.get("preview_active_interval", 1)
+        )
+    ] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=0, max=10, step=0.5, mode=selector.NumberSelectorMode.BOX
+        )
+    )
     schema.update(
         {
             vol.Optional(key, default=values.get(key, default)): bool

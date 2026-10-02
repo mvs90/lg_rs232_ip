@@ -35,20 +35,22 @@
           "preview_interval": "Normal screenshot interval (1–3600 seconds)",
           "preview_height": "Screenshot height (pixels)",
           "native_web_verify_certificate": "Verify LG HTTPS certificate",
-          "preview_active_interval": "Open preview interval (0–10 seconds; 0 = disabled)",
+          "preview_active_interval": "Open preview interval (0.5–10 seconds; 0 = disabled)",
           "display_app_enabled": "Enable display app",
           "display_app_base_url": "Home Assistant URL reachable by display (optional)",
           "display_app_mode": "Display app launch method",
-          "display_app_entities": "Display overview sensors (up to 12)"
+          "display_app_entities": "Display overview sensors (up to 12)",
+          "display_app_resident": "Keep SI app running with automatic startup"
         },
         "data_description": {
           "native_web_fingerprint": "Read from the display on save and stored for subsequent connections. An existing fingerprint is not replaced automatically.",
           "native_web_verify_certificate": "Enabled by default. Disabling verification keeps HTTPS encryption but does not verify the identity of the display.",
           "preview_active_interval": "Capture faster while the remote preview or enlarged view is open, then return to the normal interval. Default: 1 second. Set 0 to disable acceleration. Actual frame rate is limited by the display capture speed.",
-          "display_app_enabled": "Fullscreen notifications and selected sensors. Requires native LG web access. SI settings are provisioned temporarily for each presentation, then restored.",
+          "display_app_enabled": "Optional full-screen messages, HDMI overlays and PiP. A connected app supplies previews automatically; otherwise the existing LG web capture is used.",
           "display_app_base_url": "Empty: automatically use the HA network URL. It must be reachable by the display; localhost cannot work. Docker may require the host LAN address.",
           "display_app_mode": "SI tested on UH5F with webOS 4. Existing SI apps are never overwritten. Website is an alternative launcher.",
-          "display_app_entities": "Only these sensor values are shared during an active overview. No Home Assistant login is needed on the display."
+          "display_app_entities": "Only these sensor values are shared during an active overview. No Home Assistant login is needed on the display.",
+          "display_app_resident": "Optional: keep HDMI visible inside the app so messages and PiP need no relaunch. SI only; HA must be reachable at initial startup. Physical source changes pause this mode until the next wake or Resume."
         },
         "description": "Confirm the display settings before finishing setup. For the preview camera, enable native LG web access and screenshot preview and enter the Mobile URL password. Leave the fingerprint blank for automatic detection. All settings can be changed later through Configure."
       }
@@ -63,7 +65,8 @@
       "cannot_read_certificate": "Cannot read the LG HTTPS certificate. Check web access on port 3777, enter a fingerprint, or explicitly disable certificate verification.",
       "invalid_display_app_url": "Use a reachable HTTP(S) base URL without credentials, path or localhost.",
       "invalid_display_app_mode": "Select SI or website.",
-      "invalid_display_app_entities": "Select up to 12 sensor or binary sensor entities."
+      "invalid_display_app_entities": "Select up to 12 sensor or binary sensor entities.",
+      "resident_requires_si": "Enable the display app and select SI for resident mode."
     },
     "abort": {
       "already_configured": "Already configured."
@@ -96,20 +99,22 @@
           "preview_interval": "Normal screenshot interval (1–3600 seconds)",
           "preview_height": "Screenshot height (pixels)",
           "native_web_verify_certificate": "Verify LG HTTPS certificate",
-          "preview_active_interval": "Open preview interval (0–10 seconds; 0 = disabled)",
+          "preview_active_interval": "Open preview interval (0.5–10 seconds; 0 = disabled)",
           "display_app_enabled": "Enable display app",
           "display_app_base_url": "Home Assistant URL reachable by display (optional)",
           "display_app_mode": "Display app launch method",
-          "display_app_entities": "Display overview sensors (up to 12)"
+          "display_app_entities": "Display overview sensors (up to 12)",
+          "display_app_resident": "Keep SI app running with automatic startup"
         },
         "data_description": {
           "native_web_fingerprint": "Read from the display on save and stored for subsequent connections. An existing fingerprint is not replaced automatically.",
           "native_web_verify_certificate": "Enabled by default. Disabling verification keeps HTTPS encryption but does not verify the identity of the display.",
           "preview_active_interval": "Capture faster while the remote preview or enlarged view is open, then return to the normal interval. Default: 1 second. Set 0 to disable acceleration. Actual frame rate is limited by the display capture speed.",
-          "display_app_enabled": "Fullscreen notifications and selected sensors. Requires native LG web access. SI settings are provisioned temporarily for each presentation, then restored.",
+          "display_app_enabled": "Optional full-screen messages, HDMI overlays and PiP. A connected app supplies previews automatically; otherwise the existing LG web capture is used.",
           "display_app_base_url": "Empty: automatically use the HA network URL. It must be reachable by the display; localhost cannot work. Docker may require the host LAN address.",
           "display_app_mode": "SI tested on UH5F with webOS 4. Existing SI apps are never overwritten. Website is an alternative launcher.",
-          "display_app_entities": "Only these sensor values are shared during an active overview. No Home Assistant login is needed on the display."
+          "display_app_entities": "Only these sensor values are shared during an active overview. No Home Assistant login is needed on the display.",
+          "display_app_resident": "Optional: keep HDMI visible inside the app so messages and PiP need no relaunch. SI only; HA must be reachable at initial startup. Physical source changes pause this mode until the next wake or Resume."
         }
       }
     },
@@ -122,14 +127,15 @@
       "cannot_read_certificate": "Cannot read the LG HTTPS certificate. Check web access on port 3777, enter a fingerprint, or explicitly disable certificate verification.",
       "invalid_display_app_url": "Use a reachable HTTP(S) base URL without credentials, path or localhost.",
       "invalid_display_app_mode": "Select SI or website.",
-      "invalid_display_app_entities": "Select up to 12 sensor or binary sensor entities."
+      "invalid_display_app_entities": "Select up to 12 sensor or binary sensor entities.",
+      "resident_requires_si": "Enable the display app and select SI for resident mode."
     }
   },
   "title": "LG Professional Display",
   "selector": {
     "display_app_mode": {
       "options": {
-        "si": "SI app (temporary)",
+        "si": "SI app",
         "website": "Website (Play via URL)"
       }
     }
@@ -144,6 +150,9 @@
       },
       "display_app_dashboard": {
         "name": "Show sensor overview"
+      },
+      "resume_display_app": {
+        "name": "Resume display app"
       }
     },
     "sensor": {

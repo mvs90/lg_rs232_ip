@@ -35,20 +35,22 @@
           "preview_interval": "Normales Screenshot-Intervall (1–3600 Sekunden)",
           "preview_height": "Screenshot-Höhe (Pixel)",
           "native_web_verify_certificate": "LG-HTTPS-Zertifikat prüfen",
-          "preview_active_interval": "Intervall bei geöffneter Vorschau (0–10 Sekunden; 0 = aus)",
+          "preview_active_interval": "Intervall bei geöffneter Vorschau (0,5–10 Sekunden; 0 = aus)",
           "display_app_enabled": "Display-App aktivieren",
           "display_app_base_url": "Home-Assistant-Adresse für das Display (optional)",
           "display_app_mode": "Startmethode der Display-App",
-          "display_app_entities": "Sensoren für die Display-Übersicht (maximal 12)"
+          "display_app_entities": "Sensoren für die Display-Übersicht (maximal 12)",
+          "display_app_resident": "SI-App dauerhaft mit Autostart betreiben"
         },
         "data_description": {
           "native_web_fingerprint": "Wird beim Speichern vom Display gelesen und für spätere Verbindungen gespeichert. Ein vorhandener Abdruck wird nicht automatisch ersetzt.",
           "native_web_verify_certificate": "Standardmäßig aktiv. Ohne Prüfung bleibt HTTPS verschlüsselt, die Identität des Displays wird jedoch nicht geprüft.",
           "preview_active_interval": "Bei sichtbarer Fernbedienung oder geöffneter Großansicht schneller aufnehmen, danach zum normalen Intervall zurückkehren. Standard: 1 Sekunde. 0 deaktiviert die Beschleunigung. Die Aufnahmegeschwindigkeit des Displays begrenzt die tatsächliche Bildrate.",
-          "display_app_enabled": "Vollbildmeldungen und ausgewählte Sensoren. Benötigt den nativen LG-Webzugang. SI-Einstellungen werden automatisch nur für die Anzeige gesetzt und danach wiederhergestellt.",
+          "display_app_enabled": "Optionale Vollbildmeldungen, HDMI-Overlays und PiP. Bei verbundener App wird die Vorschau automatisch über die App abgerufen; sonst über den bisherigen LG-Webzugriff.",
           "display_app_base_url": "Leer: Home-Assistant-Netzwerkadresse automatisch verwenden. Das Display muss diese Adresse erreichen können; localhost funktioniert nicht. Bei Docker gegebenenfalls die LAN-Adresse des Hosts eintragen.",
           "display_app_mode": "SI wurde auf UH5F mit webOS 4 getestet. Vorhandene SI-Apps werden nicht überschrieben. Website ist eine alternative Startmethode.",
-          "display_app_entities": "Nur diese Sensorwerte werden während einer aktiven Übersicht für das Display freigegeben. Keine Home-Assistant-Anmeldung auf dem Display nötig."
+          "display_app_entities": "Nur diese Sensorwerte werden während einer aktiven Übersicht für das Display freigegeben. Keine Home-Assistant-Anmeldung auf dem Display nötig.",
+          "display_app_resident": "Optional: HDMI bleibt in der App sichtbar. Meldungen und PiP benötigen dann keinen erneuten App-Start. Nur SI; beim ersten Start muss Home Assistant erreichbar sein. Physische Quellenwechsel pausieren den Betrieb bis zum nächsten Einschalten oder Fortsetzen."
         },
         "description": "Hier die Display-Einstellungen bestätigen. Für die Vorschaukamera den nativen LG-Webzugriff und die Screenshot-Vorschau aktivieren sowie das Mobile-URL-Passwort eintragen. Der Zertifikat-Fingerabdruck wird automatisch ermittelt, wenn das Feld leer bleibt. Alle Einstellungen lassen sich später über Konfigurieren ändern."
       }
@@ -63,7 +65,8 @@
       "cannot_read_certificate": "Das LG-HTTPS-Zertifikat konnte nicht gelesen werden. Webzugriff auf Port 3777 prüfen, einen Abdruck eintragen oder die Zertifikatsprüfung ausdrücklich ausschalten.",
       "invalid_display_app_url": "HTTP(S)-Adresse ohne Anmeldedaten, Pfad oder localhost verwenden.",
       "invalid_display_app_mode": "SI oder Website auswählen.",
-      "invalid_display_app_entities": "Maximal 12 Sensor- oder Binärsensor-Entitäten auswählen."
+      "invalid_display_app_entities": "Maximal 12 Sensor- oder Binärsensor-Entitäten auswählen.",
+      "resident_requires_si": "Für den Dauerbetrieb die Display-App aktivieren und SI auswählen."
     },
     "abort": {
       "already_configured": "Bereits eingerichtet."
@@ -96,20 +99,22 @@
           "preview_interval": "Normales Screenshot-Intervall (1–3600 Sekunden)",
           "preview_height": "Screenshot-Höhe (Pixel)",
           "native_web_verify_certificate": "LG-HTTPS-Zertifikat prüfen",
-          "preview_active_interval": "Intervall bei geöffneter Vorschau (0–10 Sekunden; 0 = aus)",
+          "preview_active_interval": "Intervall bei geöffneter Vorschau (0,5–10 Sekunden; 0 = aus)",
           "display_app_enabled": "Display-App aktivieren",
           "display_app_base_url": "Home-Assistant-Adresse für das Display (optional)",
           "display_app_mode": "Startmethode der Display-App",
-          "display_app_entities": "Sensoren für die Display-Übersicht (maximal 12)"
+          "display_app_entities": "Sensoren für die Display-Übersicht (maximal 12)",
+          "display_app_resident": "SI-App dauerhaft mit Autostart betreiben"
         },
         "data_description": {
           "native_web_fingerprint": "Wird beim Speichern vom Display gelesen und für spätere Verbindungen gespeichert. Ein vorhandener Abdruck wird nicht automatisch ersetzt.",
           "native_web_verify_certificate": "Standardmäßig aktiv. Ohne Prüfung bleibt HTTPS verschlüsselt, die Identität des Displays wird jedoch nicht geprüft.",
           "preview_active_interval": "Bei sichtbarer Fernbedienung oder geöffneter Großansicht schneller aufnehmen, danach zum normalen Intervall zurückkehren. Standard: 1 Sekunde. 0 deaktiviert die Beschleunigung. Die Aufnahmegeschwindigkeit des Displays begrenzt die tatsächliche Bildrate.",
-          "display_app_enabled": "Vollbildmeldungen und ausgewählte Sensoren. Benötigt den nativen LG-Webzugang. SI-Einstellungen werden automatisch nur für die Anzeige gesetzt und danach wiederhergestellt.",
+          "display_app_enabled": "Optionale Vollbildmeldungen, HDMI-Overlays und PiP. Bei verbundener App wird die Vorschau automatisch über die App abgerufen; sonst über den bisherigen LG-Webzugriff.",
           "display_app_base_url": "Leer: Home-Assistant-Netzwerkadresse automatisch verwenden. Das Display muss diese Adresse erreichen können; localhost funktioniert nicht. Bei Docker gegebenenfalls die LAN-Adresse des Hosts eintragen.",
           "display_app_mode": "SI wurde auf UH5F mit webOS 4 getestet. Vorhandene SI-Apps werden nicht überschrieben. Website ist eine alternative Startmethode.",
-          "display_app_entities": "Nur diese Sensorwerte werden während einer aktiven Übersicht für das Display freigegeben. Keine Home-Assistant-Anmeldung auf dem Display nötig."
+          "display_app_entities": "Nur diese Sensorwerte werden während einer aktiven Übersicht für das Display freigegeben. Keine Home-Assistant-Anmeldung auf dem Display nötig.",
+          "display_app_resident": "Optional: HDMI bleibt in der App sichtbar. Meldungen und PiP benötigen dann keinen erneuten App-Start. Nur SI; beim ersten Start muss Home Assistant erreichbar sein. Physische Quellenwechsel pausieren den Betrieb bis zum nächsten Einschalten oder Fortsetzen."
         }
       }
     },
@@ -122,14 +127,15 @@
       "cannot_read_certificate": "Das LG-HTTPS-Zertifikat konnte nicht gelesen werden. Webzugriff auf Port 3777 prüfen, einen Abdruck eintragen oder die Zertifikatsprüfung ausdrücklich ausschalten.",
       "invalid_display_app_url": "HTTP(S)-Adresse ohne Anmeldedaten, Pfad oder localhost verwenden.",
       "invalid_display_app_mode": "SI oder Website auswählen.",
-      "invalid_display_app_entities": "Maximal 12 Sensor- oder Binärsensor-Entitäten auswählen."
+      "invalid_display_app_entities": "Maximal 12 Sensor- oder Binärsensor-Entitäten auswählen.",
+      "resident_requires_si": "Für den Dauerbetrieb die Display-App aktivieren und SI auswählen."
     }
   },
   "title": "LG Professional Display",
   "selector": {
     "display_app_mode": {
       "options": {
-        "si": "SI-App (temporär)",
+        "si": "SI-App",
         "website": "Website (Play via URL)"
       }
     }
@@ -144,6 +150,9 @@
       },
       "display_app_dashboard": {
         "name": "Sensorübersicht anzeigen"
+      },
+      "resume_display_app": {
+        "name": "Display-App fortsetzen"
       }
     },
     "sensor": {

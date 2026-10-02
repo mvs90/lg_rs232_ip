@@ -1,5 +1,26 @@
 # Release acceptance — 2026-10-02
 
+## LG 2.4.0: optional resident app and automatic camera routing
+
+**240 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 48 browser tests pass across Chromium and WebKit.**
+
+Resident mode is an explicit opt-in, separate from temporary SI presentations. Fresh app version/visibility/HDMI heartbeats select the existing-app path; a stopped or disabled app cannot receive requests. New tests cover idle without a presentation lease, no-launch overlay/PiP routing, standby/wake, transient web failures, source-change pause/resume, AV source mapping/leases, originally enabled and manually disabled OSD, SI restoration, requested-frame authentication/validation, long-poll wakeup, capture backoff, camera fallback and HA stop cleanup. Browser tests cover unchanged HDMI elements through layouts, expiry/offline cleanup and binary JPEG upload/error handling.
+
+On the physical **75UH5F-HJ / 04.13.50 / webOS 4.0.1-136**, using **HA 2026.9.4**:
+
+- Enabled resident mode through the real HA options flow; the app connected as version 1.1.0 with HDMI ready.
+- Repeated 4-second overlay, PiP and full-screen messages stayed in `commercial.signage.signageapplauncher` and completed without presentation errors. The full checks, including camera/foreground reads, took approximately 5.3–5.6 seconds. Fresh camera frames used backend `app` and showed the actual composed screen; HDMI source and signal remained correct in HA.
+- `show_toast` automatically used the app queue; cancellation cleared the message and kept the resident HDMI app.
+- Disabling the app restored ordinary HDMI1 and byte-for-byte equal original SI settings. The same camera entity switched to backend `web`. Re-enabling reconnected the app.
+- Stopped HA while a message was active. A direct panel screenshot after 17 seconds confirmed HDMI remained visible and private notification content was gone. The app reconnected after HA restarted.
+- A physical standby/wake sequence confirmed power off and subsequent resident reconnection. The initial three-second state check was too early for the panel/HA poll; the corrected acceptance waits for confirmed standby. Transient Control Manager availability during wake and stale error reporting were fixed and covered by regression tests.
+
+- With the active interval set to 0.5 seconds, seven consecutive fresh 1280×720 frame intervals measured **0.793–0.941 seconds** through the actual HA camera stream; backend was `app`. This is about 1.1–1.3 new screenshots per second in that short sample, not full-motion video.
+- A controlled display reboot reconnected the resident app after **72.5 seconds**, with the SI launcher in foreground and unchanged owned SI configuration. HA stayed available during this test; no mains interruption was used.
+- Native website playback returned to the resident SI app without a presentation error. Explicit HA HDMI selection paused resident mode, and the device-page Resume button reconnected it.
+
+The app remains hosted: loading after a cold start needs reachable HA. This is screenshot capture, not a native video encoder. These tests do not certify all CEC/HDCP/audio providers or mains-loss behaviour. Private programme captures, credentials and pairing URLs are excluded from the repository.
+
 ## LG 2.3.0: hosted SI app, HDMI overlay and PiP
 
 **218 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 44 browser tests pass across Chromium and WebKit.** New coverage includes real token-scoped HTTP routes, fragmented/oversized/invalid event requests, URL and sensor validation, expiry, restored settings after ambiguous writes/restart/cancellation, foreign-SI/input ownership, no-wake recovery, website fallback, and the actual OSD guard with initially enabled and disabled OSD. Frontend tests exercise plain-text rendering, acknowledged paint, blanking private content after connection loss, HDMI readiness before acknowledgement and remote-card actions. Browser HDMI-plane properties are simulated; hardware results below are separate.

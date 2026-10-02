@@ -51,6 +51,21 @@ class NativePresentations:
     async def async_show_toast(self, message, priority="normal"):
         web = self._require_web_manager()
         self._check_presentation_policy(priority)
+        manager = self.hass.data[DOMAIN][self._config_entry.entry_id].get("display_app")
+        if manager and manager.resident_connected is True:
+            await self._enqueue_presentation(
+                dict(
+                    kind="display_app",
+                    title="Home Assistant",
+                    message=message,
+                    duration=8,
+                    dashboard=False,
+                    priority=priority,
+                    layout="overlay",
+                    toast_fallback=True,
+                )
+            )
+            return
         async with self._control_lock:
             if (
                 await self._lg_display.async_get_power_status(use_cache=False)
@@ -189,6 +204,39 @@ class NativePresentations:
         content_id = None
         if request["kind"] == "display_app":
             manager = self.hass.data[DOMAIN][self._config_entry.entry_id]["display_app"]
+        if manager and manager.resident_connected is True:
+            try:
+                if await manager.async_present_connected(request):
+                    return
+            except HomeAssistantError:
+                if not request.get("toast_fallback"):
+                    raise
+        if request.get("toast_fallback"):
+            self._check_presentation_policy(request["priority"])
+            async with self._control_lock:
+                if (
+                    await self._lg_display.async_get_power_status(use_cache=False)
+                    is True
+                ):
+                    await web.async_toast(request["message"])
+                else:
+                    raise HomeAssistantError("Native toasts require an awake display")
+            return
+        resident_manager = self.hass.data[DOMAIN][self._config_entry.entry_id].get(
+            "display_app"
+        )
+        # Existing native media paths remain usable while resident mode is selected.
+        # Suspend HDMI-in-app, then resume after their normal guarded round trip.
+        self._check_presentation_policy(request["priority"])
+        resume_resident = bool(
+            resident_manager
+            and resident_manager.resident is True
+            and resident_manager.saved.get("resident")
+            and await self._lg_display.async_get_power_status(use_cache=False) is True
+            and await web.async_foreground_app()
+            == "commercial.signage.signageapplauncher"
+            and await resident_manager.async_owns_si()
+        )
         si = manager is not None and manager.mode == "si"
         video = request["kind"] == "native_video"
         website = request["kind"] in {"native_website", "native_stream"} or (
@@ -209,6 +257,13 @@ class NativePresentations:
         initial_app = None
         self._presentation_error = None
         try:
+            if resume_resident:
+                async with self._control_lock:
+                    _, cancelled = await settle_mutation(
+                        resident_manager.async_pause_resident()
+                    )
+                    if cancelled:
+                        raise asyncio.CancelledError
             self._check_presentation_policy(request["priority"])
             if manager:
                 content_id = manager.begin(
@@ -462,6 +517,10 @@ class NativePresentations:
                             self._presentation_error = "SI restoration pending; use Restore SI settings on the LG device page"
                     await self._lg_display.async_restore_pending_osd()
                     self._presentation_active = False
+                    if resume_resident:
+                        resident_manager.saved.pop("paused", None)
+                        await resident_manager.store.async_save(resident_manager.saved)
+                        resident_manager._resident_foreground = None
                     self.async_write_ha_state()
 
     async def _async_launch_website(self, web):

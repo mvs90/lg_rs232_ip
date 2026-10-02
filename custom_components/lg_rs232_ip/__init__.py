@@ -58,8 +58,14 @@ async def async_setup_entry(hass, entry):
         "controller": controller,
         "alert_state": LGDisplayAlertState(entry.entry_id),
     }
-    if entry.options.get("native_web_enabled", False):
-        web = data["web_manager"] = LGWebManager(
+    recovery = await Store(
+        hass, 1, f"{DOMAIN}.{entry.entry_id}.display_app"
+    ).async_load()
+    native_enabled = entry.options.get("native_web_enabled", False)
+    if native_enabled or (
+        recovery and "previous" in recovery and entry.options.get("native_web_password")
+    ):
+        web = data["web_manager" if native_enabled else "recovery_web"] = LGWebManager(
             entry.data["host"],
             entry.options["native_web_password"],
             entry.options.get("native_web_fingerprint", ""),
@@ -75,9 +81,17 @@ async def async_setup_entry(hass, entry):
         app = data["display_app"] = DisplayAppManager(hass, entry, controller, web)
         await app.async_start()
         try:
-            await app.async_restore_si()
+            if (
+                not app.resident
+                or not app.saved.get("resident")
+                or app.saved.get("installed", {}).get("fqdnAddr") != app.url()
+            ):
+                async with controller._control_lock:
+                    await app.async_recover_si()
         except Exception:
-            _LOGGER.warning("LG SI recovery pending; use Restore SI settings when awake")
+            _LOGGER.warning(
+                "LG SI recovery pending; use Restore SI settings when awake"
+            )
     if await display.async_connect() and await display.async_get_power_status() is True:
         await display.async_get_model_name()
         await display.async_get_software_version()
@@ -92,7 +106,7 @@ async def async_unload_entry(hass, entry):
         await data["controller"].async_close()
         if app := data.get("display_app"):
             await app.async_close()
-        if web := data.get("web_manager"):
+        if web := data.get("web_manager") or data.get("recovery_web"):
             await web.async_close()
         await data["lg_display"].async_disconnect()
         hass.data[DOMAIN].pop(entry.entry_id)

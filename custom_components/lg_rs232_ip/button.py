@@ -14,6 +14,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
     keys = ["restore_si"]
     if manager.enabled:
         keys += ["test_display_app", "display_app_dashboard"]
+        if manager.resident:
+            keys += ["resume_display_app"]
     async_add_entities([DisplayAppButton(manager, entry, key) for key in keys])
 
 
@@ -32,6 +34,8 @@ class DisplayAppButton(ButtonEntity):
     async def async_press(self):
         if self.key == "restore_si":
             await self.manager.async_restore_si()
+        elif self.key == "resume_display_app":
+            await self.manager.async_resume()
         else:
             await self.manager.controller.async_show_display_app(
                 title="Home Assistant",

@@ -287,7 +287,7 @@ async def test_stored_pin_is_not_automatically_replaced(flow):
     assert result["data"]["native_web_fingerprint"] == "ab" * 32
 
 
-@pytest.mark.parametrize("active", [0, 1, 10])
+@pytest.mark.parametrize("active", [0, 0.5, 1, 1.5, 10])
 def test_preview_allows_one_second_and_active_interval_boundaries(active):
     from custom_components.lg_rs232_ip.config_flow import _display_options_form
 
@@ -299,7 +299,7 @@ def test_preview_allows_one_second_and_active_interval_boundaries(active):
     assert values["preview_active_interval"] == active
 
 
-@pytest.mark.parametrize("active", [-1, 11, True, 0.5])
+@pytest.mark.parametrize("active", [-1, 11, True, 0.1, float("nan")])
 def test_preview_rejects_invalid_active_interval(active):
     from custom_components.lg_rs232_ip.config_flow import _display_options_form
 

@@ -220,3 +220,36 @@ webOS can retain a launched SI page in memory after returning to HDMI. Changing 
 The public SDK also describes privileged functions such as `changeLogoImage` and `restartApplication`; presence in the SDK or presence of `PalmServiceBridge` is **not** proof that every call is permitted in this hosted app. They have not been added as unrestricted Luna command passthrough. Existing USB boot-image workflow remains unchanged.
 
 SI settings enable this app path. SuperSign server settings configure LG's separate management products; Crestron settings target Crestron control systems. Neither was changed. HDMI-in-app is a useful basis for a future resident app but this release does not claim continuous standby/CEC/HDCP/audio acceptance.
+
+## Direct app screenshots — hardware investigation, 2026-10-02
+
+This feasibility probe preceded the optional resident mode and automatically selected app camera backend in 2.4. The measurements below isolate the platform calls; production acceptance is recorded separately in RELEASE-TESTS. Version 2.3.0 used only Control Manager capture/download and timed app presentations.
+
+The public LG CLI's SCAP `Signage.captureScreen` implementation calls the platform bridge with:
+
+```javascript
+var bridge = new PalmServiceBridge();
+bridge.onservicecallback = function (raw) {
+  var result = JSON.parse(raw);
+  // Validate returnValue, encoding, size and JPEG bytes before accepting data.
+};
+bridge.call(
+  "luna://com.webos.service.commercial.signage.storageservice/captureScreen",
+  JSON.stringify({save: false, width: 1280, height: 720})
+);
+```
+
+On this panel, an ordinary hosted SI app successfully received `returnValue: true`, `encoding: "base64"`, `size` and `data`. The reported size matched the Base64 string length, not the decoded JPEG size. Three decoded 1280×720 images measured approximately 46–52 kB. Visual inspection confirmed the **HDMI programme and the app overlay together**, not just HTML or a black video plane. `save: false` avoids requesting a saved capture file. A 128×72 thumbnail also succeeded. The newer wrapper route `luna://com.webos.service.commercial.scapadapter/captureScreen` succeeded as well.
+
+| Path | Samples | Observed duration |
+|---|---|---|
+| Existing authenticated Control Manager capture plus JPEG download, 1280×720 | 3 | 754–836 ms |
+| Direct app `storageservice/captureScreen`, 1280×720 | 3 | 573–605 ms |
+| Direct app capture, 128×72 | 1 | 368 ms |
+| Direct app `scapadapter/captureScreen`, 1280×720 | 1 | 647 ms |
+
+These are short sequential measurements with no competing HA camera requests. The existing-path timing includes the network download; app timing measures invocation to platform callback and **excludes the subsequent upload to HA**. The different programme frames and small sample count do not establish a sustained frame rate, a fixed percentage improvement or lower CPU use. They do establish that the app can obtain real HDMI pixels without the separate authenticated temporary-file download. An efficient implementation can send bounded binary JPEGs into the existing shared camera cache and capture only as quickly as viewers and the panel need, with the existing web path as fallback.
+
+The runtime exposes `MediaRecorder` and canvas `captureStream`, but the external HDMI video element has **no `captureStream` method**. API presence on a canvas does not demonstrate access to the native HDMI video plane or a hardware encoder. No native HDMI H.264/WebRTC/RTSP capture route was found in the inspected SCAP wrappers or verified on the device. Feeding periodic screenshots into a video container would not increase the underlying capture rate. This test does not establish capture compatibility with all protected-content providers.
+
+The local HA test container was stopped during the short probe to release the shared RS232 connection and prevent competing capture requests. The same production OSD transition guard covered both app launch and return. Final readback confirmed original HDMI1, identical original SI settings and original OSD enabled. HA 2026.9.4 was restarted and the LG and UniFi integrations returned to loaded state. No display reboot or permanent autostart change was made; screenshots and pairing URLs remain private.

@@ -18,10 +18,10 @@ from homeassistant.helpers.storage import Store
 from yarl import URL
 
 from .const import DOMAIN
+from .resident_app import ResidentApp, SI_APP_ID
 from .web_manager import LGWebError
 
-APP_VERSION = "1.0.0"
-SI_APP_ID = "commercial.signage.signageapplauncher"
+APP_VERSION = "1.1.0"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -56,7 +56,7 @@ def validate_base_url(value):
         ) from None
 
 
-class DisplayAppManager:
+class DisplayAppManager(ResidentApp):
     """No HA login on the panel: its token permits only its own presentation."""
 
     def __init__(self, hass, entry, controller, web_manager):
@@ -75,6 +75,15 @@ class DisplayAppManager:
         self.last_error = None
         self._rendered = asyncio.Event()
         self.closed = False
+        self.client_visible = False
+        self.client_hdmi = False
+        self.capture_capable = False
+        self._capture_retry = 0.0
+        self._capture = None
+        self._capture_future = None
+        self._revision = 0
+        self._changed = asyncio.Event()
+        self._init_resident()
 
     async def async_start(self):
         self.saved = await self.store.async_load() or {}
@@ -95,6 +104,72 @@ class DisplayAppManager:
         self.closed = True
         self.content = None
         self._rendered.set()
+        self.changed()
+        if self._capture_future and not self._capture_future.done():
+            self._capture_future.set_result(None)
+
+    @property
+    def connected(self):
+        return bool(
+            self.enabled
+            and not self.closed
+            and self.client_visible
+            and self.client_version == APP_VERSION
+            and self.last_seen
+            and time.monotonic() - self.last_seen < 12
+        )
+
+    def changed(self):
+        self._revision += 1
+        self._changed.set()
+
+    async def async_state(self, revision):
+        if str(self._revision) == revision and not self.closed:
+            self._changed.clear()
+            try:
+                await asyncio.wait_for(self._changed.wait(), 2)
+            except TimeoutError:
+                pass
+        return self.state()
+
+    async def async_capture(self, height):
+        if (
+            not self.connected
+            or not self.capture_capable
+            or time.monotonic() < self._capture_retry
+            or self._capture is not None
+        ):
+            return None
+        identifier = secrets.token_hex(16)
+        future = self._capture_future = asyncio.get_running_loop().create_future()
+        self._capture = {"id": identifier, "height": height}
+        self.changed()
+        try:
+            result = await asyncio.wait_for(asyncio.shield(future), 3)
+            if result is None:
+                self._capture_retry = time.monotonic() + 30
+            return result
+        except TimeoutError:
+            self._capture_retry = time.monotonic() + 30
+            return None
+        finally:
+            if not future.done():
+                future.cancel()
+            self._capture = self._capture_future = None
+            self.changed()
+
+    def accept_frame(self, identifier, image):
+        if (
+            not self.connected
+            or not self._capture
+            or self._capture["id"] != identifier
+            or not self._capture_future
+            or self._capture_future.done()
+        ):
+            raise ValueError
+        if not image.startswith(b"\xff\xd8\xff") or not image.endswith(b"\xff\xd9"):
+            raise ValueError
+        self._capture_future.set_result(image)
 
     @property
     def status(self):
@@ -102,7 +177,7 @@ class DisplayAppManager:
             return "disabled"
         if self.last_error:
             return "error"
-        if self.last_seen and time.monotonic() - self.last_seen < 20:
+        if self.connected:
             return "connected"
         return "configured" if self.saved.get("installed") else "ready"
 
@@ -110,11 +185,15 @@ class DisplayAppManager:
     def attributes(self):
         return {
             "launch_mode": self.mode,
+            "resident_enabled": self.resident,
+            "resident_connected": self.resident_connected,
+            "resident_paused": bool(self.saved.get("paused")),
+            "capture_capable": self.connected and self.capture_capable,
             "app_version": APP_VERSION,
             "client_version": self.client_version,
             "platform_bridge_present": self.client_has_bridge,
             "si_configured": bool(self.saved.get("installed")),
-            "si_restore_pending": "previous" in self.saved,
+            "si_restore_pending": "previous" in self.saved and not self.resident,
             "last_error": self.last_error,
         }
 
@@ -143,7 +222,7 @@ class DisplayAppManager:
                 "Stop the current presentation before changing SI settings"
             )
 
-    async def async_prepare_si(self, original_app, original_power):
+    async def async_prepare_si(self, original_app, original_power, *, resident=False):
         """Called under the controller lock. SI changes last for one presentation."""
         if "previous" in self.saved:
             await self.async_recover_si()
@@ -161,12 +240,22 @@ class DisplayAppManager:
             "fqdnAddr": address,
             "secureConnection": "on" if address.startswith("https:") else "off",
         }
+        original_input = None
+        if resident:
+            original_input = await self.controller._lg_display.async_get_input(
+                use_cache=False
+            )
+            if original_input is None:
+                raise HomeAssistantError("Cannot preserve input for resident app")
         self.saved.update(
             previous=previous,
             attempted=desired,
             original_app=original_app,
             original_power=original_power,
         )
+        if resident:
+            self.saved["resident"] = True
+            self.saved["original_input"] = original_input
         await self.store.async_save(self.saved)
         try:
             await self.web.async_set_si_settings(desired)
@@ -222,6 +311,9 @@ class DisplayAppManager:
             "attempted",
             "original_app",
             "original_power",
+            "original_input",
+            "resident",
+            "auto_retry",
         ):
             self.saved.pop(key, None)
         await self.store.async_save(self.saved)
@@ -234,12 +326,17 @@ class DisplayAppManager:
 
         async with self.controller._control_lock:
             self._require_idle_awake()
+            if self.resident:
+                self.saved["paused"] = True
             _, cancelled = await settle_mutation(self.async_recover_si())
             if cancelled:
                 raise asyncio.CancelledError
 
     async def async_maybe_recover(self):
         """Retry after a sleeping/disconnected display returns, without waking it."""
+        if self.resident:
+            await self.async_maintain_resident()
+            return
         if (
             "previous" not in self.saved
             or self.controller._control_lock.locked()
@@ -277,12 +374,14 @@ class DisplayAppManager:
             "hdmi": None,
             "expires": time.monotonic() + duration + 360,
         }
+        self.changed()
         return self.content["id"]
 
     def end(self, identifier):
         if self.content and self.content["id"] == identifier:
             self.content = None
             self._rendered.set()
+            self.changed()
 
     async def wait_rendered(self, identifier):
         try:
@@ -302,9 +401,15 @@ class DisplayAppManager:
             raise HomeAssistantError("Display app presentation failed or was cancelled")
 
     def state(self):
+        base = {
+            "version": APP_VERSION,
+            "revision": self._revision,
+            "idle_hdmi": self.idle_hdmi(),
+            "capture": self._capture,
+        }
         content = self.content
         if not content or content["expires"] <= time.monotonic():
-            return {"version": APP_VERSION, "content": None}
+            return {**base, "content": None}
         payload = {
             key: content[key]
             for key in ("id", "title", "message", "duration", "layout", "hdmi")
@@ -328,7 +433,7 @@ class DisplayAppManager:
                             )[:30],
                         }
                     )
-        return {"version": APP_VERSION, "content": payload}
+        return {**base, "content": payload}
 
     def event(self, value):
         if not isinstance(value, dict) or value.get("type") not in {
@@ -336,6 +441,7 @@ class DisplayAppManager:
             "heartbeat",
             "rendered",
             "error",
+            "capture_error",
         }:
             raise ValueError
         if value["type"] == "hello":
@@ -344,7 +450,18 @@ class DisplayAppManager:
                 raise ValueError
             self.client_version = version
             self.client_has_bridge = value.get("bridge") is True
+        if value["type"] in {"hello", "heartbeat"}:
+            self.client_visible = value.get("visible") is True
+            self.client_hdmi = value.get("hdmi_ready") is True
+            self.capture_capable = value.get("capture") is True
         self.last_seen = time.monotonic()
+        if (
+            value["type"] == "capture_error"
+            and self._capture
+            and value.get("id") == self._capture["id"]
+        ):
+            if self._capture_future and not self._capture_future.done():
+                self._capture_future.set_result(None)
         content = self.content
         if content and value.get("id") == content["id"]:
             if value["type"] == "error":
@@ -388,7 +505,9 @@ class DisplayAppView(HomeAssistantView):
             "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src ext:; frame-ancestors 'none'",
         }
         if resource == "state":
-            return web.json_response(manager.state(), headers=headers)
+            return web.json_response(
+                await manager.async_state(request.query.get("since")), headers=headers
+            )
         mime = {
             "index.html": "text/html",
             "app.js": "application/javascript",
@@ -402,6 +521,24 @@ class DisplayAppView(HomeAssistantView):
 
     async def post(self, request, entry_id, token, resource):
         manager = self._manager(request, entry_id, token)
+        if resource == "frame":
+            identifier = request.query.get("id")
+            if not manager._capture or manager._capture["id"] != identifier:
+                raise web.HTTPConflict()
+            raw = bytearray()
+            async for chunk in request.content.iter_chunked(65536):
+                raw.extend(chunk)
+                if len(raw) > 5 * 1024 * 1024:
+                    raise web.HTTPRequestEntityTooLarge(
+                        max_size=5 * 1024 * 1024, actual_size=len(raw)
+                    )
+            try:
+                manager.accept_frame(identifier, bytes(raw))
+            except ValueError:
+                raise web.HTTPBadRequest() from None
+            return web.json_response(
+                {"ok": True}, headers={"Cache-Control": "no-store"}
+            )
         if resource != "event":
             raise web.HTTPNotFound()
         raw = bytearray()

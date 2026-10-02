@@ -407,3 +407,23 @@ async def test_unload_cancels_pending_capture_and_never_rearms_timer(preview):
     assert entity._refresh_task is None
     assert entity._timer_unsub is None
     assert entity._image is None
+
+
+@pytest.mark.asyncio
+async def test_camera_dynamically_selects_app_and_falls_back_without_reconfiguration(
+    preview,
+):
+    entity, display, web = preview
+    app = entity._app = AsyncMock()
+    app.async_capture.return_value = b"app-frame"
+    assert await entity.async_camera_image() == b"app-frame"
+    assert entity.extra_state_attributes["capture_backend"] == "app"
+    web.async_capture.assert_not_awaited()
+    app.async_capture.return_value = None
+    entity._next_capture = 0
+    assert await entity.async_camera_image() == b"real-frame"
+    assert entity.extra_state_attributes["capture_backend"] == "web"
+    app.async_capture.return_value = b"reconnected-app-frame"
+    entity._next_capture = 0
+    assert await entity.async_camera_image() == b"reconnected-app-frame"
+    assert web.async_capture.await_count == 1

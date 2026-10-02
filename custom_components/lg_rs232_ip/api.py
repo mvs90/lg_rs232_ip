@@ -66,6 +66,10 @@ class DisplayAPI:
         )
 
     async def async_get_input(self, *, use_cache=True):
+        if self.ready:
+            app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
+            if app and app.logical_input is not None:
+                return app.logical_input
         return (
             await self.display.async_get_input(use_cache=use_cache)
             if self.ready
@@ -90,6 +94,12 @@ class DisplayAPI:
         async with controller._control_lock:
             if controller.presentation_active:
                 raise HomeAssistantError("LG native presentation is active")
+            app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
+            if app and method == "async_set_input":
+                # AV selects its HDMI source on wake; keep a matching resident plane.
+                if app.logical_input == args[0]:
+                    return True
+                await app.async_pause_resident(leave=False)
             return await getattr(self.display, method)(*args)
 
     async def async_power_on(self):
@@ -123,6 +133,11 @@ class DisplayAPI:
         async with controller._control_lock:
             if controller.presentation_active or controller.external_owner is not None:
                 raise HomeAssistantError("Display is busy with another presentation")
+            app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
+            if app and app.resident_connected:
+                await app.async_pause_resident()
+                app.saved["resume_after_external"] = True
+                await app.store.async_save(app.saved)
             token = secrets.token_hex(16)
             controller.external_owner = token
             return token
@@ -130,6 +145,9 @@ class DisplayAPI:
     async def async_end_external_presentation(self, token):
         if self.ready and self.controller.external_owner == token:
             self.controller.external_owner = None
+            app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
+            if app and app.saved.pop("resume_after_external", False):
+                await app.async_resume()
 
     async def async_clear_content(self):
         await self.controller.async_clear_content()

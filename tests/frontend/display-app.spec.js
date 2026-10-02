@@ -9,7 +9,7 @@ async function mount(page, state) {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (name === 'state') {
       if (state.offline) return route.fulfill({status: 503, body: ''});
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.0.0', content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.1.0', revision: 1, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, content: state.content})});
     }
     if (name === 'event') {
       const event = route.request().postDataJSON(); events.push(event);
@@ -61,4 +61,64 @@ test('HDMI plane is required before overlay acknowledgement and supports PiP lay
   state.content.layout = 'pip';
   await expect(page.locator('body')).toHaveClass('pip');
   await expect(page.locator('#hdmi-slot video')).toHaveCount(1);
+});
+
+test('resident idle, overlay, PiP and expired/offline message retain the same HDMI element', async ({page}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', {get: () => 3840});
+    Object.defineProperty(HTMLVideoElement.prototype, 'videoHeight', {get: () => 2160});
+    Object.defineProperty(HTMLVideoElement.prototype, 'error', {get: () => null});
+  });
+  const state = {content: null, idle_hdmi: 'ext://hdmi:1'};
+  await mount(page, state);
+  await expect(page.locator('body')).toHaveClass('hdmi');
+  await page.evaluate(() => {window.originalHDMI = document.querySelector('video');});
+  state.content = {...content(), layout:'overlay'};
+  await expect(page.locator('body')).toHaveClass('overlay');
+  state.content = {...content(), layout:'pip'};
+  await expect(page.locator('body')).toHaveClass('pip');
+  state.content = null;
+  await expect(page.locator('body')).toHaveClass('hdmi');
+  expect(await page.evaluate(() => document.querySelector('video') === window.originalHDMI)).toBe(true);
+  state.content = {...content(), layout:'overlay'};
+  await expect(page.locator('body')).toHaveClass('overlay');
+  state.offline = true;
+  await page.clock.install(); await page.clock.fastForward(16000);
+  await expect(page.locator('body')).toHaveClass('hdmi');
+  expect(await page.evaluate(() => document.querySelector('video') === window.originalHDMI)).toBe(true);
+  await expect(page.locator('#message')).toHaveText('');
+});
+
+test('app uploads one binary screenshot for a ticket and reports capture failures', async ({page}) => {
+  await page.addInitScript(() => {
+    window.captureCalls = 0;
+    window.PalmServiceBridge = function() {
+      this.call = () => {
+        window.captureCalls++;
+        this.onservicecallback(JSON.stringify({returnValue:true, encoding:'base64', data:btoa('\xff\xd8\xffimage\xff\xd9')}));
+      };
+      this.cancel = () => {};
+    };
+  });
+  let uploads = [];
+  const state = {content:null, capture:null};
+  const events = await mount(page, state);
+  // Route registered last takes precedence over the generic fixture route.
+  await page.route('http://display-app.test/frame?*', async route => {
+    uploads.push(route.request().postDataBuffer());
+    await route.fulfill({contentType:'application/json',body:'{"ok":true}'});
+  });
+  state.capture = {id:'two',height:720};
+  await expect.poll(() => uploads.length).toBe(1);
+  expect(uploads[0].equals(Buffer.from([255,216,255,...Buffer.from('image'),255,217]))).toBe(true);
+  await page.waitForTimeout(300);
+  expect(uploads.length).toBe(1);
+  await page.evaluate(() => {
+    window.PalmServiceBridge = function() {
+      this.call = () => this.onservicecallback(JSON.stringify({returnValue:false}));
+      this.cancel = () => {};
+    };
+  });
+  state.capture = {id:'failure',height:720};
+  await expect.poll(() => events.some(e => e.type === 'capture_error' && e.id === 'failure')).toBe(true);
 });

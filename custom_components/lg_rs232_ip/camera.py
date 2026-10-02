@@ -9,6 +9,7 @@ import time
 from aiohttp import web as aiohttp_web
 from homeassistant.components.camera import Camera, CameraEntityFeature
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
@@ -38,7 +39,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
     if entry.options.get("preview_enabled", False) and data.get("web_manager"):
         async_add_entities(
-            [LGDisplayPreview(entry, data["lg_display"], data["web_manager"])]
+            [
+                LGDisplayPreview(
+                    entry,
+                    data["lg_display"],
+                    data["web_manager"],
+                    data.get("display_app"),
+                )
+            ]
         )
 
 
@@ -53,12 +61,14 @@ class LGDisplayPreview(Camera):
     # Fast frame timestamps are transient UI metadata, not recorded attributes.
     _unrecorded_attributes = frozenset({"last_capture"})
 
-    def __init__(self, entry, display, web):
+    def __init__(self, entry, display, web, app=None):
         super().__init__()
         self._attr_unique_id = f"{entry.entry_id}_preview"
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, entry.entry_id)})
         self._display = display
         self._web = web
+        self._app = app
+        self._backend = "web"
         self._interval = entry.options.get("preview_interval", 30)
         self._active_interval = entry.options.get("preview_active_interval", 1)
         self._height = int(entry.options.get("preview_height", "720"))
@@ -75,6 +85,7 @@ class LGDisplayPreview(Camera):
         self._removed = False
         self._refresh_task = None
         self._timer_unsub = None
+        self._stop_unsub = None
         self._attr_available = True
         self.content_type = "image/jpeg"
 
@@ -86,6 +97,9 @@ class LGDisplayPreview(Camera):
 
     async def async_added_to_hass(self):
         await super().async_added_to_hass()
+        self._stop_unsub = self.hass.bus.async_listen_once(
+            EVENT_HOMEASSISTANT_STOP, self._async_stop
+        )
         await self.async_update()
 
     def _cancel_timer(self):
@@ -143,7 +157,10 @@ class LGDisplayPreview(Camera):
                 self._error = "display_off" if power is False else "power_unknown"
                 self._attr_available = power is False
                 return
-            image = await self._web.async_capture(self._height)
+            image = await self._app.async_capture(self._height) if self._app else None
+            self._backend = "app" if image is not None else "web"
+            if image is None:
+                image = await self._web.async_capture(self._height)
             if (
                 not self._removed
                 and self._attr_is_on
@@ -238,6 +255,7 @@ class LGDisplayPreview(Camera):
     def extra_state_attributes(self):
         return {
             "integration_domain": DOMAIN,
+            "capture_backend": self._backend,
             "preview_mode": "periodic_screenshot",
             "collection_enabled": self._attr_is_on,
             "refresh_interval": self._interval,
@@ -266,7 +284,11 @@ class LGDisplayPreview(Camera):
         self._failures = 0
         await self.async_update()
 
-    async def async_will_remove_from_hass(self):
+    async def _async_stop(self, _event=None):
+        if self._stop_unsub:
+            if _event is None:
+                self._stop_unsub()
+            self._stop_unsub = None
         self._removed = True
         self._generation += 1
         self._cancel_timer()
@@ -274,4 +296,7 @@ class LGDisplayPreview(Camera):
             self._refresh_task.cancel()
             await asyncio.gather(self._refresh_task, return_exceptions=True)
         self._image = None
+
+    async def async_will_remove_from_hass(self):
+        await self._async_stop()
         await super().async_will_remove_from_hass()

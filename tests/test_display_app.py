@@ -445,3 +445,332 @@ async def test_display_app_website_fallback_restores_url_and_hdmi(si_presentatio
     manager.async_prepare_si.assert_not_awaited()
     manager.wait_rendered.assert_awaited_once()
     manager.end.assert_called_once()
+
+
+def connect_app(app):
+    from custom_components.lg_rs232_ip.display_app import APP_VERSION
+
+    app.event(
+        {
+            "type": "hello",
+            "version": APP_VERSION,
+            "bridge": True,
+            "visible": True,
+            "hdmi_ready": True,
+            "capture": True,
+        }
+    )
+
+
+async def resident_app(app):
+    app.resident = True
+
+    async def write(settings):
+        app.web.async_get_si_settings.return_value = settings
+
+    async def launch(identifier):
+        app.web.async_foreground_app.return_value = identifier
+
+    app.web.async_set_si_settings.side_effect = write
+    app.web.async_launch_app.side_effect = launch
+    await app.async_maintain_resident()
+    connect_app(app)
+    return app
+
+
+async def test_resident_idle_autostarts_once_and_never_blocks_standby(app):
+    await resident_app(app)
+    assert app.resident_connected and app.logical_input == 0x90
+    assert app.state()["idle_hdmi"] == "ext://hdmi:1"
+    assert not app.controller.presentation_active
+    await app.async_maintain_resident()
+    app.web.async_launch_app.assert_awaited_once_with(SI_APP_ID)
+    app.controller._lg_display.async_get_power_status.return_value = False
+    await app.async_maintain_resident()
+    assert not app.connected and app.logical_input is None
+    app.controller._lg_display.async_power_on.assert_not_awaited()
+    app.controller._lg_display.async_get_power_status.return_value = True
+    app.web.async_foreground_app.return_value = HDMI
+    await app.async_maintain_resident()
+    assert app.web.async_launch_app.await_count == 2
+
+
+async def test_resident_physical_input_change_pauses_until_resume(app):
+    await resident_app(app)
+    app.web.async_foreground_app.return_value = "com.webos.app.hdmi2"
+    await app.async_maintain_resident()
+    assert app.saved["paused"] and not app.resident_connected
+    await app.async_maintain_resident()
+    assert app.web.async_launch_app.await_count == 1
+    # Resume only reclaims the configured HDMI source, never another source.
+    await app.async_resume()
+    assert app.saved["paused"]
+    app.web.async_foreground_app.return_value = HDMI
+    await app.async_resume()
+    assert not app.saved.get("paused")
+    assert app.web.async_launch_app.await_count == 2
+
+
+async def test_resident_lost_heartbeat_falls_back_and_retries_with_backoff(app):
+    await resident_app(app)
+    app.last_seen = 0
+    app._resident_started -= 31
+    await app.async_maintain_resident()
+    assert app.web.async_foreground_app.return_value == HDMI
+    assert app.saved["auto_retry"]
+    count = app.web.async_launch_app.await_count
+    await app.async_maintain_resident()
+    assert app.web.async_launch_app.await_count == count
+    app._resident_retry = 0
+    await app.async_maintain_resident()
+    assert app.web.async_foreground_app.return_value == SI_APP_ID
+
+
+async def test_connected_resident_presentation_has_no_launch_input_or_si_write(app):
+    await resident_app(app)
+    app.web.reset_mock()
+
+    async def rendered(identifier):
+        app.event({"type": "rendered", "id": identifier})
+
+    app.wait_rendered = AsyncMock(side_effect=rendered)
+    assert await app.async_present_connected(APP_REQUEST)
+    assert not app.controller.presentation_active and app.content is None
+    assert app.state()["idle_hdmi"] == "ext://hdmi:1"
+    app.web.async_launch_app.assert_not_awaited()
+    app.web.async_set_si_settings.assert_not_awaited()
+    app.controller._lg_display.async_set_input.assert_not_awaited()
+
+
+async def test_resident_disable_restores_owned_si_and_hdmi(app):
+    await resident_app(app)
+    app.resident = False
+    app.enabled = False
+    await app.async_restore_si()
+    assert app.web.async_foreground_app.return_value == HDMI
+    assert app.web.async_get_si_settings.return_value == ORIGINAL
+    assert "previous" not in app.saved
+    assert not app.connected
+
+
+async def test_capture_requires_active_current_client_and_rejects_stale_frame(app):
+    assert await app.async_capture(720) is None
+    connect_app(app)
+    task = asyncio.create_task(app.async_capture(720))
+    await asyncio.sleep(0)
+    ticket = app.state()["capture"]
+    assert ticket["height"] == 720
+    with pytest.raises(ValueError):
+        app.accept_frame("old-request", b"\xff\xd8\xffjpeg\xff\xd9")
+    with pytest.raises(ValueError):
+        app.accept_frame(ticket["id"], b"not-an-image")
+    assert await app.async_capture(720) is None  # bounded to one outstanding request
+    app.accept_frame(ticket["id"], b"\xff\xd8\xffjpeg\xff\xd9")
+    assert await task == b"\xff\xd8\xffjpeg\xff\xd9"
+    assert app.state()["capture"] is None
+    app.event({"type": "heartbeat", "visible": False})
+    assert await app.async_capture(720) is None
+
+
+async def test_capture_failure_backoff_and_close_release_waiter(app):
+    connect_app(app)
+    task = asyncio.create_task(app.async_capture(720))
+    await asyncio.sleep(0)
+    app.event({"type": "capture_error", "id": app._capture["id"]})
+    assert await task is None
+    assert await app.async_capture(720) is None
+    app._capture_retry = 0
+    task = asyncio.create_task(app.async_capture(720))
+    await asyncio.sleep(0)
+    await app.async_close()
+    assert await task is None
+
+
+async def test_camera_request_wakes_waiting_app_poll_and_frame_route_is_scoped(app):
+    connect_app(app)
+    http = web.Application()
+    view = DisplayAppView(app.hass)
+    view.register(app.hass, http, http.router)
+    base = f"/api/lg_rs232_ip/display_app/test/{app.token}"
+    async with TestClient(TestServer(http)) as client:
+        assert (
+            await client.post(base + "/frame?id=unsolicited", data=b"jpeg")
+        ).status == 409
+        poll = asyncio.create_task(app.async_state(str(app._revision)))
+        await asyncio.sleep(0)
+        capture = asyncio.create_task(app.async_capture(720))
+        ticket = (await asyncio.wait_for(poll, 1))["capture"]
+        wrong = base.replace(app.token, "wrong")
+        assert (
+            await client.post(wrong + "/frame?id=" + ticket["id"], data=b"jpeg")
+        ).status == 404
+        response = await client.post(
+            base + "/frame?id=" + ticket["id"], data=b"\xff\xd8\xffjpeg\xff\xd9"
+        )
+        assert response.status == 200
+        assert await capture == b"\xff\xd8\xffjpeg\xff\xd9"
+
+
+async def test_dynamic_toast_uses_app_when_connected_and_native_on_disconnect(app):
+    await resident_app(app)
+    player = app.controller
+    player.hass.data["lg_rs232_ip"]["test"].update(display_app=app, web_manager=app.web)
+    player._enqueue_presentation = AsyncMock()
+    await player.async_show_toast("hello")
+    request = player._enqueue_presentation.await_args.args[0]
+    assert request["toast_fallback"] and request["layout"] == "overlay"
+    app.last_seen = 0
+    await player._async_present_native(request)
+    app.web.async_toast.assert_awaited_once_with("hello")
+
+
+async def test_resident_wake_grace_and_transient_web_failure_recover(app):
+    await resident_app(app)
+    app.controller._lg_display.async_get_power_status.return_value = False
+    await app.async_maintain_resident()
+    assert app._resident_started == 0
+    app.controller._lg_display.async_get_power_status.return_value = True
+    app.web.async_foreground_app.side_effect = LGWebError("booting")
+    await app.async_maintain_resident()
+    assert app.last_error == "resident_start_failed"
+    app.web.async_foreground_app.side_effect = None
+    app.web.async_foreground_app.return_value = SI_APP_ID
+    connect_app(app)
+    await app.async_maintain_resident()
+    assert app.resident_connected and app.last_error is None
+    assert not app.saved.get("paused")
+
+
+async def test_controller_close_cancels_resident_message_without_late_refresh(app):
+    await resident_app(app)
+    controller = app.controller
+    controller.hass.data["lg_rs232_ip"]["test"].update(
+        display_app=app, web_manager=app.web
+    )
+    waiting = asyncio.Event()
+
+    async def wait(_):
+        waiting.set()
+        await asyncio.Event().wait()
+
+    app.wait_rendered = wait
+    await controller._enqueue_presentation(APP_REQUEST)
+    await waiting.wait()
+    await controller.async_close()
+    assert controller._ha_stopping and not controller.presentation_active
+    assert app.content is None
+    assert app.web.async_launch_app.await_count == 1
+
+
+async def test_resident_unknown_input_is_not_provisioned(app):
+    app.controller._lg_display.async_get_input.return_value = None
+    with pytest.raises(HomeAssistantError, match="preserve input"):
+        await app.async_prepare_si(HDMI, True, resident=True)
+    app.web.async_set_si_settings.assert_not_awaited()
+    assert "previous" not in app.saved
+
+
+async def test_av_adapter_resident_idle_does_not_block_power_and_matching_input(app):
+    from custom_components.lg_rs232_ip.api import get_display_api
+
+    await resident_app(app)
+    controller = app.controller
+    controller.hass.data["lg_rs232_ip"]["test"].update(
+        display_app=app, controller=controller
+    )
+    api = get_display_api(controller.hass, "test")
+    assert await api.async_get_input(use_cache=False) == 0x90
+    assert await api.async_set_input(0x90)
+    controller._lg_display.async_set_input.assert_not_awaited()
+    assert not api.presentation_active
+    assert await api.async_power_off()
+    controller._lg_display.async_power_off.assert_awaited_once()
+
+
+async def test_av_lease_temporarily_leaves_resident_and_resumes(app):
+    from custom_components.lg_rs232_ip.api import get_display_api
+
+    await resident_app(app)
+    controller = app.controller
+    controller.hass.data["lg_rs232_ip"]["test"].update(
+        display_app=app, controller=controller
+    )
+    api = get_display_api(controller.hass, "test")
+    token = await api.async_begin_external_presentation()
+    assert app.saved["paused"] and app.web.async_foreground_app.return_value == HDMI
+    await api.async_end_external_presentation("wrong")
+    assert controller.external_owner == token
+    await api.async_end_external_presentation(token)
+    assert controller.external_owner is None
+    assert app.web.async_foreground_app.return_value == SI_APP_ID
+
+
+@pytest.mark.parametrize("osd", [False, True])
+async def test_resident_start_and_pause_use_real_osd_guard(app, osd):
+    from custom_components.lg_rs232_ip.lg_display import LGDisplay
+
+    display = LGDisplay("display.test")
+    display.suppress_osd_during_switch = True
+    display.async_get_power_status = AsyncMock(return_value=True)
+    display.async_get_input = AsyncMock(return_value=0x90)
+    value = int(osd)
+
+    async def command(first, second, setting, **kwargs):
+        nonlocal value
+        assert (first, second) == ("k", "l")
+        if setting != 255:
+            value = setting
+        return value
+
+    display.async_send_command = AsyncMock(side_effect=command)
+    app.controller._lg_display = display
+    with patch(
+        "custom_components.lg_rs232_ip.lg_display.asyncio.sleep", new_callable=AsyncMock
+    ):
+        await resident_app(app)
+        await app.async_pause_resident()
+    writes = [
+        c.args[2]
+        for c in display.async_send_command.await_args_list
+        if c.args[2] != 255
+    ]
+    assert value == int(osd)
+    assert writes == ([0, 1, 0, 1] if osd else [])
+
+
+async def test_real_ha_stop_listener_is_not_removed_twice(player, tmp_path, caplog):
+    from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+
+    hass = HomeAssistant(str(tmp_path))
+    player.hass = hass
+    hass.data["lg_rs232_ip"] = {"test": {"controller": player}}
+    player.async_refresh = AsyncMock()
+    await player.async_start()
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
+    await hass.async_block_till_done()
+    assert player._ha_stopping and player._stop_unsub is None
+    await player.async_close()
+    await hass.async_stop(force=True)
+    assert "unknown job listener" not in caplog.text
+
+
+async def test_native_media_failure_does_not_leave_resident_permanently_paused(app):
+    await resident_app(app)
+    player = app.controller
+    player.hass.data["lg_rs232_ip"]["test"].update(display_app=app, web_manager=app.web)
+    player._async_download_native_image = AsyncMock(
+        side_effect=HomeAssistantError("download failed")
+    )
+    with pytest.raises(HomeAssistantError, match="download failed"):
+        await player._async_present_native(
+            dict(
+                kind="native_image",
+                media_id="http://test/image",
+                duration=1,
+                priority="normal",
+            )
+        )
+    assert not app.saved.get("paused")
+    assert app.web.async_foreground_app.return_value == HDMI
+    await app.async_maintain_resident()
+    assert app.web.async_foreground_app.return_value == SI_APP_ID

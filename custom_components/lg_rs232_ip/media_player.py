@@ -220,6 +220,9 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             "native_web_enabled": self.entry.options.get("native_web_enabled", False),
             "display_app_enabled": self.entry.options.get("display_app_enabled", False),
             "display_app_mode": self.entry.options.get("display_app_mode", "si"),
+            "display_app_resident": self.entry.options.get(
+                "display_app_resident", False
+            ),
             "presentation_active": self.controller.presentation_active,
             "presentation_queue_size": len(self.controller._presentation_queue),
             "presentation_error": self.controller._presentation_error,
