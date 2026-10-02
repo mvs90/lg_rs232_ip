@@ -4,6 +4,8 @@ import asyncio
 import logging
 import re
 import time
+
+from .device_profile import decode_model, decode_software, ok_payload
 from typing import Optional
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,6 +65,8 @@ class LGDisplay:
         self._power_supply_expected_off = False
         self._last_power_status: Optional[bool] = None
         self._last_power_status_at: float = 0.0
+        self.model_name: str | None = None
+        self.software_version: str | None = None
         self._query_cache = {}
         self._unsupported_until = {}
 
@@ -190,7 +194,7 @@ class LGDisplay:
 
         async with self._command_lock:
             key = (cmd1, cmd2, value, query_suffix)
-            is_query = value == READ_STATUS or bool(query_suffix)
+            is_query = value == READ_STATUS or query_suffix.strip().lower() == "ff"
             if is_query:
                 if time.monotonic() < self._unsupported_until.get(key, 0):
                     return None
@@ -224,6 +228,10 @@ class LGDisplay:
                 async with asyncio.timeout(COMMAND_TIMEOUT):
                     while True:
                         response = await self._reader.readuntil(b"x")
+                        # x can also be the command letter (dx/fx/kx). The
+                        # first delimiter is then the header, not the terminator.
+                        if response.strip().lower() == b"x":
+                            response += await self._reader.readuntil(b"x")
                         response_str = response.decode(
                             "ascii", errors="replace"
                         ).strip()
@@ -468,6 +476,34 @@ class LGDisplay:
         )
         return result
 
+    async def async_get_model_name(self) -> str | None:
+        if self.model_name is None:
+            self.model_name = decode_model(
+                await self.async_send_raw_command("f", "v", READ_STATUS)
+            )
+        return self.model_name
+
+    async def async_get_software_version(self) -> str | None:
+        # Version can change after a firmware update without recreating the entry.
+        version = decode_software(
+            await self.async_send_raw_command("f", "z", READ_STATUS)
+        )
+        if version is not None:
+            self.software_version = version
+        return version
+
+    async def async_get_subcommand(self, command: str, parameter: int) -> int | None:
+        """Read an sv/sn subcommand and validate its echoed parameter."""
+        response = await self.async_send_raw_command(
+            command[0], command[1], parameter, query_suffix=" ff"
+        )
+        payload = ok_payload(response)
+        if not payload or not re.fullmatch(r"[0-9a-fA-F]{4,}", payload):
+            return None
+        if int(payload[:2], 16) != parameter:
+            return None
+        return int(payload[2:], 16)
+
     async def async_get_picture_mode(self) -> Optional[int]:
         """Get current picture mode."""
         result = await self.async_send_command("d", "x", READ_STATUS)
@@ -493,14 +529,15 @@ class LGDisplay:
     async def async_get_dpm(self) -> Optional[bool]:
         """Get DPM power management state."""
         result = await self.async_send_command("f", "j", READ_STATUS)
-        if result is None:
+        if result not in range(8):
             return None
-        return result == 0x01
+        return result != 0x00
 
     async def async_set_dpm(self, enabled: bool) -> bool:
         """Enable or disable DPM."""
-        result = await self.async_send_command("f", "j", 0x01 if enabled else 0x00)
-        return result is not None
+        value = 0x04 if enabled else 0x00
+        result = await self.async_send_command("f", "j", value)
+        return result == value
 
     async def async_get_energy_saving(self) -> Optional[int]:
         """Get current energy saving level."""

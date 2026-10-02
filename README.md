@@ -80,3 +80,7 @@ python3.13 -m venv .venv
 See [hardware acceptance checks](docs/TESTING.md) and [contributing](CONTRIBUTING.md). No device addresses, recordings or credentials are required for automated tests.
 
 Protocol reference: [LG RS232 command guide, Status check](https://www.lg.com/us/support/products/documents/English%28US%29.pdf). Packaging follows [HACS integration requirements](https://www.hacs.dev/docs/publish/integration/); Apple Home setup follows [Home Assistant HomeKit Bridge](https://www.home-assistant.io/integrations/homekit/).
+
+## Verified device research
+
+The first read-only hardware inventory identifies **75UH5F-HJ**, software **04.13.50**. See the [reusable model reference](docs/devices/LG-UH5F-H.md) for official LG sources, confirmed commands, energy settings, content/notification options and remaining acceptance tests. Private installation details are not published.

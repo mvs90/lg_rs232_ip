@@ -61,3 +61,7 @@ Während der Anzeige greift die gekoppelte Standby-Automatik nicht. Bei Abbruch 
 **LG-Überblendungen sind weiterhin nicht nativ implementiert.** `show_notification` benötigt ein funktionsfähiges Anzeige-Skript, das `show` und `clear` samt Sitzungs-ID verarbeitet. Ohne dieses Skript wird die Aktion mit einer klaren Fehlermeldung abgelehnt. Die UH5C-Modell-/Firmware-spezifische Anbindung steht noch aus. Ein beliebiger Medienplayer kann außerdem nicht automatisch Webseiten/Dashboards anzeigen.
 
 [Alle Optionen, Beispiele und die Schnittstelle für Anzeige-Skripte](FEATURES.md).
+
+## Geräteprüfung und Wissensbasis
+
+Das geprüfte Display identifiziert sich als **75UH5F-HJ**, Software **04.13.50**. Die [Gerätereferenz](devices/LG-UH5F-H.md) enthält LG-Quellen, bestätigte Abfragen, Energiezustände und die offenen Schritte für native Inhalte. Neu sind optionale Sensoren für HDMI-Signal, tatsächlichen Bildschirmzustand und PM-Modus sowie eine DPM-Zeitauswahl. Der ältere DPM-Schalter aktiviert nun eine Minute. Es werden keine Einstellungen automatisch geändert. Firmware- und Modellsensoren sowie Bildmodus-/Sprachzuordnungen wurden korrigiert. Das bisherige, nicht dokumentierte Abnormal-State-Signal wird nicht mehr angelegt.

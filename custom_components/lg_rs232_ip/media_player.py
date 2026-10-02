@@ -469,7 +469,8 @@ class LGDisplayMediaPlayer(ExtendedControls, MediaPlayerEntity):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
+            "model": self._lg_display.model_name or "LG RS232/IP Display",
+            "sw_version": self._lg_display.software_version,
         }
 
     @property

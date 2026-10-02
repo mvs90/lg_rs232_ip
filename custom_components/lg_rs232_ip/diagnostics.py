@@ -8,7 +8,9 @@ async def async_get_config_entry_diagnostics(hass, entry):
     display = data["lg_display"]
     player = data.get("media_player")
     return {
-        "version": 1,
+        "version": 2,
+        "model": display.model_name,
+        "software_version": display.software_version,
         "connected": display.is_connected,
         "intentionally_unpowered": display.is_intentionally_unpowered,
         "recent_query_count": len(display._query_cache),

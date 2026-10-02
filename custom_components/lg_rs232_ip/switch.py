@@ -107,7 +107,6 @@ class LGDisplaySyncAutomationSwitch(LGDisplayBaseSwitch, RestoreEntity):
             "identifiers": {(DOMAIN, self._entry_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -344,7 +343,6 @@ class LGDisplayAutoSleepSwitch(LGDisplayBaseSwitch):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -406,7 +404,6 @@ class LGDisplayDpmSwitch(LGDisplayBaseSwitch):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -468,7 +465,6 @@ class LGDisplayScreenMuteSwitch(LGDisplayBaseSwitch):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -530,7 +526,6 @@ class LGDisplayRemoteLockSwitch(LGDisplayBaseSwitch):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_turn_on(self, **kwargs: Any) -> None:
@@ -592,7 +587,6 @@ class LGDisplayOsdSelectSwitch(LGDisplayBaseSwitch):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_turn_on(self, **kwargs: Any) -> None:

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.0
+
+- Read-only hardware verification of 75UH5F-HJ / 04.13.50, official LG source inventory and reusable device reference.
+- Correct model and software decoding; firmware no longer incorrectly reads Wake on LAN.
+- Optional DPM timeout selector, signal and panel-power/PM-mode sensors; documented DPM switch value and validated subcommand echoes.
+- UH5F picture labels and color-temperature range, corrected language mapping and Auto energy saving.
+- Fixed framing of replies beginning with command letter x (including picture mode), verified against the panel.
+- Removed the undocumented abnormal-state query, unused speculative command catalogues and heuristic elapsed-time parser.
+- Added an allowlisted, read-only inventory tool; per-installation data stays private.
+- Native content/overlay backend remains pending authenticated validation; no panel settings were changed.
+
 ## 1.2.0
 
 - Capability-aware playback controls, seek/repeat/shuffle and media-source/deep-link forwarding.

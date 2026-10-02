@@ -121,3 +121,22 @@ async def test_rejected_optional_query_is_temporarily_suppressed():
     assert await display.async_send_command("n", "g", 255) is None
     assert await display.async_send_command("n", "g", 255) is None
     assert writer.write.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_x_command_letter_is_not_the_frame_terminator():
+    from unittest.mock import Mock
+    display = LGDisplay("example.invalid")
+    reader = asyncio.StreamReader()
+    writer = Mock()
+    writer.drain = AsyncMock()
+    loop = asyncio.get_running_loop()
+
+    def reply(data):
+        reader.feed_data(b"x")
+        loop.call_soon(reader.feed_data, b" 01 OK01x")
+
+    writer.write.side_effect = reply
+    display._reader, display._writer, display._connected = reader, writer, True
+    assert await display.async_get_picture_mode() == 1
+    writer.write.assert_called_once_with(b"dx 01 ff\r")

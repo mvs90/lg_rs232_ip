@@ -206,7 +206,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if skip_initial_display_probe:
         _LOGGER.debug("Initial LG Display poll skipped due to powered-off supply")
     elif await lg_display.async_connect():
-        await lg_display.async_get_power_status()
+        if await lg_display.async_get_power_status() is True:
+            await lg_display.async_get_model_name()
+            await lg_display.async_get_software_version()
     else:
         _LOGGER.warning("Could not preconnect to LG Display at %s:%s", host, port)
 

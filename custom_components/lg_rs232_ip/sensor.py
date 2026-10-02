@@ -10,58 +10,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, READ_STATUS
+from .const import DOMAIN, READ_STATUS, OSD_LANGUAGES
+from .device_profile import ok_payload, PM_STATES, PM_MODES
 from .lg_display import LGDisplay
 
 _LOGGER = logging.getLogger(__name__)
 
 
 def _parse_ok_string_response(response: str) -> Optional[str]:
-    """Parse generic OK responses that contain string payloads."""
-    if not response:
-        return None
-
-    response = response.strip()
-    ok_index = response.upper().find("OK")
-    if ok_index == -1:
-        return None
-
-    payload = response[ok_index + 2 :].strip()
-    if payload.endswith("x"):
-        payload = payload[:-1].strip()
-
-    return payload or None
-
-
-def _parse_usage_time_response(response: str) -> Optional[int]:
-    """Parse the display usage time response into seconds."""
-    payload = _parse_ok_string_response(response)
-    if not payload:
-        return None
-
-    if payload.isdigit():
-        return int(payload)
-
-    if not all(c in "0123456789abcdefABCDEF" for c in payload):
-        return None
-
-    try:
-        raw_bytes = bytes.fromhex(payload)
-    except ValueError:
-        return None
-
-    ascii_digits = raw_bytes.decode("ascii", errors="ignore")
-    if ascii_digits.isdigit():
-        return int(ascii_digits)
-
-    raw_value = int.from_bytes(raw_bytes, byteorder="big")
-
-    for scale in (1_000_000, 10_000_000, 1_000_000_000):
-        seconds = raw_value / scale
-        if 0 < seconds < 315_360_000:
-            return int(seconds)
-
-    return raw_value
+    """Return a complete validated OK payload without guessing its encoding."""
+    return ok_payload(response)
 
 
 class LGDisplayBaseSensor(SensorEntity):
@@ -118,7 +76,6 @@ class LGDisplayAlertSensor(LGDisplayBaseSensor):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_added_to_hass(self) -> None:
@@ -150,8 +107,15 @@ async def async_setup_entry(
         LGDisplayElapsedTimeSensor(lg_display, data["name"], config_entry.entry_id),
         LGDisplayEnergySavingSensor(lg_display, data["name"], config_entry.entry_id),
         LGDisplayOSDLanguageSensor(lg_display, data["name"], config_entry.entry_id),
-        LGDisplayAbnormalStateSensor(lg_display, data["name"], config_entry.entry_id),
         LGDisplayRemoteLockSensor(lg_display, data["name"], config_entry.entry_id),
+        LGDisplayStatusSensor(lg_display, data["name"], config_entry.entry_id,
+                              "pm_status", "Panel Power Status", "sv", 0x03, PM_STATES),
+        LGDisplayStatusSensor(lg_display, data["name"], config_entry.entry_id,
+                              "pm_mode", "Power Management Mode", "sn", 0x0c,
+                              {v: k for k, v in PM_MODES.items()}),
+        LGDisplayStatusSensor(lg_display, data["name"], config_entry.entry_id,
+                              "signal_status", "Input Signal", "sv", 0x02,
+                              {0: "No signal", 1: "Signal present"}),
     ]
 
     async_add_entities(entities)
@@ -199,7 +163,6 @@ class LGDisplaySerialNumberSensor(LGDisplayBaseSensor):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_update(self) -> None:
@@ -256,7 +219,6 @@ class LGDisplayModelNameSensor(LGDisplayBaseSensor):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_update(self) -> None:
@@ -265,17 +227,7 @@ class LGDisplayModelNameSensor(LGDisplayBaseSensor):
         if power_status is False:
             return
 
-        # Use raw command for string responses. Some LG panels do not answer
-        # `ng` at all, so keep a sensible fallback instead of staying unknown.
-        response = await self._lg_display.async_send_raw_command("n", "g", READ_STATUS)
-        if response:
-            parsed_value = _parse_ok_string_response(response)
-            if parsed_value:
-                self._state = parsed_value
-                return
-
-        if not self._state:
-            self._state = self._name
+        self._state = await self._lg_display.async_get_model_name()
 
 
 class LGDisplayFirmwareSensor(LGDisplayBaseSensor):
@@ -320,7 +272,6 @@ class LGDisplayFirmwareSensor(LGDisplayBaseSensor):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_update(self) -> None:
@@ -330,9 +281,8 @@ class LGDisplayFirmwareSensor(LGDisplayBaseSensor):
             return
 
         # Use raw command for string responses
-        response = await self._lg_display.async_send_raw_command("f", "w", READ_STATUS)
-        if response:
-            self._state = _parse_ok_string_response(response)
+        # fw is Wake on LAN, not a firmware query.
+        self._state = await self._lg_display.async_get_software_version()
 
 
 class LGDisplayEnergySavingSensor(LGDisplayBaseSensor):
@@ -370,7 +320,6 @@ class LGDisplayEnergySavingSensor(LGDisplayBaseSensor):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_update(self) -> None:
@@ -423,7 +372,6 @@ class LGDisplaySoftwareVersionSensor(LGDisplayBaseSensor):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_update(self) -> None:
@@ -431,9 +379,7 @@ class LGDisplaySoftwareVersionSensor(LGDisplayBaseSensor):
         if power_status is False:
             return
 
-        response = await self._lg_display.async_send_raw_command("f", "z", READ_STATUS)
-        if response:
-            self._state = _parse_ok_string_response(response)
+        self._state = await self._lg_display.async_get_software_version()
 
 
 class LGDisplayOSDLanguageSensor(LGDisplayBaseSensor):
@@ -471,7 +417,6 @@ class LGDisplayOSDLanguageSensor(LGDisplayBaseSensor):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_update(self) -> None:
@@ -481,69 +426,7 @@ class LGDisplayOSDLanguageSensor(LGDisplayBaseSensor):
 
         result = await self._lg_display.async_send_command("f", "i", READ_STATUS)
         if result is not None:
-            self._state = {
-                0x00: "ENGLISH",
-                0x01: "FRENCH",
-                0x02: "GERMAN",
-                0x03: "SPANISH",
-                0x04: "ITALIAN",
-                0x05: "PORTUGUESE",
-                0x06: "CHINESE",
-                0x07: "JAPANESE",
-                0x08: "KOREAN",
-                0x09: "RUSSIAN",
-            }.get(result, f"UNKNOWN ({result})")
-
-
-class LGDisplayAbnormalStateSensor(LGDisplayBaseSensor):
-    """Abnormal state sensor for LG Display."""
-
-    def __init__(self, lg_display: LGDisplay, name: str, unique_id: str) -> None:
-        self._lg_display = lg_display
-        self._name = name
-        self._unique_id = unique_id
-        self._state: Optional[str] = None
-
-    @property
-    def scan_interval(self) -> timedelta:
-        return timedelta(seconds=30)
-
-    @property
-    def unique_id(self) -> str:
-        return f"{self._unique_id}_abnormal_state"
-
-    @property
-    def name(self) -> str:
-        return "Abnormal State"
-
-    @property
-    def state(self) -> Optional[str]:
-        return self._state
-
-    @property
-    def available(self) -> bool:
-        return self._lg_display.is_available
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return {
-            "identifiers": {(DOMAIN, self._unique_id)},
-            "name": self._name,
-            "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
-        }
-
-    async def async_update(self) -> None:
-        power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
-            return
-
-        result = await self._lg_display.async_send_command("k", "z", READ_STATUS)
-        if result is not None:
-            self._state = {
-                0x00: "NORMAL",
-                0x01: "ABNORMAL",
-            }.get(result, f"UNKNOWN ({result})")
+            self._state = OSD_LANGUAGES.get(result, f"UNKNOWN ({result})")
 
 
 class LGDisplayRemoteLockSensor(LGDisplayBaseSensor):
@@ -581,7 +464,6 @@ class LGDisplayRemoteLockSensor(LGDisplayBaseSensor):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_update(self) -> None:
@@ -644,7 +526,6 @@ class LGDisplayTemperatureSensor(LGDisplayBaseSensor):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_update(self) -> None:
@@ -705,7 +586,6 @@ class LGDisplayElapsedTimeSensor(LGDisplayBaseSensor):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_update(self) -> None:
@@ -717,3 +597,25 @@ class LGDisplayElapsedTimeSensor(LGDisplayBaseSensor):
         result = await self._lg_display.async_send_command("d", "l", READ_STATUS)
         if result is not None:
             self._state = int(result)
+
+
+class LGDisplayStatusSensor(LGDisplayBaseSensor):
+    """Opt-in status sensor backed by an echoed LG subcommand."""
+
+    def __init__(self, display, name, unique_id, key, label, command, parameter, values):
+        self._lg_display = display
+        self._attr_unique_id = f"{unique_id}_{key}"
+        self._attr_name = label
+        self._command = command
+        self._parameter = parameter
+        self._values = values
+        self._attr_native_value = None
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, unique_id)})
+
+    @property
+    def available(self):
+        return self._lg_display.is_available and self._attr_native_value is not None
+
+    async def async_update(self):
+        value = await self._lg_display.async_get_subcommand(self._command, self._parameter)
+        self._attr_native_value = self._values.get(value)

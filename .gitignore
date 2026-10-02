@@ -10,3 +10,6 @@ __pycache__/
 .env
 secrets.yaml
 lg_display_test_results_*.json
+
+# Private per-installation inventories and session data
+/local/

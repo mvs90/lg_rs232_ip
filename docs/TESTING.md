@@ -27,3 +27,7 @@ Automated tests use synthetic state objects and a local TCP server. They cannot 
 18. If using a power sensor, measure display-only standby consumption; verify stale/invalid measurements never count as evidence.
 
 The automated suite runs against Home Assistant 2025.3.4 (Python 3.13) and 2026.9.4 (Python 3.14), including real HA entity-service routing and a local TCP server. This does not certify on-device rendering, tvOS behaviour or specific Sonos firmware.
+
+## UH5F-H hardware readback (2026-10-02)
+
+The updated integration read 75UH5F-HJ, software 04.13.50, picture mode 1, signal present, panel state 0, PM mode 5 and DPM disabled from the panel. This validates readback and decoding only. No setting writes, source changes or power cycles were performed. A repeated inventory exposed the leading-x response framing bug and the corrected picture-mode read was verified on the real device. See [device reference](devices/LG-UH5F-H.md) for the baseline and remaining acceptance sequence.

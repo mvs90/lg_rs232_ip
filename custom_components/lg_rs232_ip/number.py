@@ -12,6 +12,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, READ_STATUS
 from .lg_display import LGDisplay
+from .device_profile import is_uh5f
+from homeassistant.exceptions import HomeAssistantError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -91,7 +93,6 @@ class LGDisplayBrightnessNumber(LGDisplayBaseNumber):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_set_native_value(self, value: float) -> None:
@@ -157,7 +158,6 @@ class LGDisplayVolumeNumber(LGDisplayBaseNumber):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_set_native_value(self, value: float) -> None:
@@ -216,7 +216,6 @@ class LGDisplayBacklightNumber(LGDisplayBaseNumber):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_set_native_value(self, value: float) -> None:
@@ -270,7 +269,6 @@ class LGDisplayContrastNumber(LGDisplayBaseNumber):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_set_native_value(self, value: float) -> None:
@@ -324,7 +322,6 @@ class LGDisplayColorNumber(LGDisplayBaseNumber):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_set_native_value(self, value: float) -> None:
@@ -378,7 +375,6 @@ class LGDisplaySharpnessNumber(LGDisplayBaseNumber):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_set_native_value(self, value: float) -> None:
@@ -431,7 +427,6 @@ class LGDisplayTintNumber(LGDisplayBaseNumber):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_set_native_value(self, value: float) -> None:
@@ -462,8 +457,8 @@ class LGDisplayColorTemperatureNumber(LGDisplayBaseNumber):
         self._name = name
         self._unique_id = unique_id
         self._attr_native_value: Optional[int] = None
-        self._attr_native_min_value = 0
-        self._attr_native_max_value = 255
+        self._attr_native_min_value = 0x70 if is_uh5f(lg_display.model_name) else 0
+        self._attr_native_max_value = 0xD2 if is_uh5f(lg_display.model_name) else 255
         self._attr_native_step = 1
 
     @property
@@ -484,7 +479,6 @@ class LGDisplayColorTemperatureNumber(LGDisplayBaseNumber):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_set_native_value(self, value: float) -> None:
@@ -493,6 +487,8 @@ class LGDisplayColorTemperatureNumber(LGDisplayBaseNumber):
             return
 
         color_temperature_value = int(value)
+        if not self.native_min_value <= color_temperature_value <= self.native_max_value:
+            raise HomeAssistantError("Color temperature value is outside this model's range")
         if await self._lg_display.async_set_color_temperature(color_temperature_value):
             self._attr_native_value = color_temperature_value
             self.async_write_ha_state()
@@ -537,7 +533,6 @@ class LGDisplayIsmMethodNumber(LGDisplayBaseNumber):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_set_native_value(self, value: float) -> None:
@@ -590,7 +585,6 @@ class LGDisplayAspectRatioNumber(LGDisplayBaseNumber):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_set_native_value(self, value: float) -> None:

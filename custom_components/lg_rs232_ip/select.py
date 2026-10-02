@@ -22,6 +22,8 @@ from .const import (
     SOUND_MODES,
 )
 from .lg_display import LGDisplay
+from .device_profile import DPM_DELAYS, SIGNAGE_PICTURE_MODES, is_uh5f
+from homeassistant.exceptions import HomeAssistantError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,6 +75,7 @@ async def async_setup_entry(
         ),
     ]
 
+    entities.append(LGDisplayDpmDelaySelect(lg_display, data["name"], config_entry.entry_id))
     async_add_entities(entities)
 
 
@@ -116,7 +119,6 @@ class LGDisplayInputSelect(LGDisplayBaseSelect):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     @property
@@ -333,6 +335,10 @@ class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
         self._current_mode: Optional[str] = None
 
     @property
+    def _modes(self):
+        return SIGNAGE_PICTURE_MODES if is_uh5f(self._lg_display.model_name) else PICTURE_MODES
+
+    @property
     def unique_id(self) -> str:
         return f"{self._unique_id}_picture_mode"
 
@@ -342,7 +348,7 @@ class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
 
     @property
     def options(self) -> list[str]:
-        return list(PICTURE_MODES.keys())
+        return list(self._modes.keys())
 
     @property
     def current_option(self) -> Optional[str]:
@@ -368,7 +374,7 @@ class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
         if mode_value is None:
             return
 
-        for name, value in PICTURE_MODES.items():
+        for name, value in self._modes.items():
             if value == mode_value:
                 self._current_mode = name
                 return
@@ -376,7 +382,7 @@ class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
         self._current_mode = f"0x{mode_value:02x}"
 
     async def async_select_option(self, option: str) -> None:
-        if option not in PICTURE_MODES:
+        if option not in self._modes:
             _LOGGER.warning("Attempted to select unsupported picture mode: %s", option)
             return
 
@@ -385,7 +391,7 @@ class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
             _LOGGER.info("Display is off; ignoring picture mode change %s", option)
             return
 
-        if await self._lg_display.async_set_picture_mode(PICTURE_MODES[option]):
+        if await self._lg_display.async_set_picture_mode(self._modes[option]):
             self._current_mode = option
             self.async_write_ha_state()
         else:
@@ -431,7 +437,6 @@ class LGDisplayEnergySavingSelect(LGDisplayBaseSelect):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_added_to_hass(self) -> None:
@@ -511,7 +516,6 @@ class LGDisplaySoundModeSelect(LGDisplayBaseSelect):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_added_to_hass(self) -> None:
@@ -590,7 +594,6 @@ class LGDisplayOSDLanguageSelect(LGDisplayBaseSelect):
             "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "manufacturer": "LG",
-            "model": "LG RS232/IP Display",
         }
 
     async def async_added_to_hass(self) -> None:
@@ -626,3 +629,33 @@ class LGDisplayOSDLanguageSelect(LGDisplayBaseSelect):
             self.async_write_ha_state()
         else:
             _LOGGER.error("Failed to set OSD language to %s", option)
+
+
+class LGDisplayDpmDelaySelect(LGDisplayBaseSelect):
+    """Hardware DPM timeout; the legacy switch enables the one-minute setting."""
+
+    def __init__(self, display, name, unique_id):
+        self._lg_display = display
+        self._attr_name = "DPM Delay"
+        self._attr_unique_id = f"{unique_id}_dpm_delay"
+        self._attr_options = list(DPM_DELAYS)
+        self._attr_current_option = None
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, unique_id)})
+
+    @property
+    def available(self):
+        return self._lg_display.is_available and self._attr_current_option is not None
+
+    async def async_update(self):
+        result = await self._lg_display.async_send_command("f", "j", 0xff)
+        self._attr_current_option = next((k for k, v in DPM_DELAYS.items() if v == result), None)
+
+    async def async_select_option(self, option):
+        if option not in DPM_DELAYS:
+            raise HomeAssistantError("Unsupported DPM timeout")
+        value = DPM_DELAYS[option]
+        result = await self._lg_display.async_send_command("f", "j", value)
+        if result != value:
+            raise HomeAssistantError("Display did not confirm the DPM timeout")
+        self._attr_current_option = option
+        self.async_write_ha_state()
