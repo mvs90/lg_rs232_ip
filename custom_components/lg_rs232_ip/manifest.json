@@ -1,0 +1,14 @@
+{
+  "domain": "lg_rs232_ip",
+  "name": "LG Display RS232/IP",
+  "codeowners": [
+    "@mvs90"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/mvs90/lg_rs232_ip",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/mvs90/lg_rs232_ip/issues",
+  "requirements": [],
+  "version": "1.1.0"
+}

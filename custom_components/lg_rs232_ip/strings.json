@@ -1,0 +1,62 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up LG Display RS232/IP",
+        "description": "Enter the IP address and port of your LG Display",
+        "data": {
+          "host": "IP Address",
+          "port": "Port",
+          "name": "Device Name"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the display. Please check the IP address and port.",
+      "invalid_pending_range": "Value must be between 0 and 60 seconds",
+      "invalid_polling_range": "Polling interval must be between 1 and 3600 seconds",
+      "invalid_transition_timeout_range": "Power transition timeout must be between 0 and 300 seconds",
+      "invalid_power_supply_off_delay_range": "Power supply off delay must be between 0 and 300 seconds"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "LG Display Options",
+        "data": {
+          "polling_interval": "Polling Interval (seconds)",
+          "power_transition_mode": "Power Transition Mode",
+          "power_transition_timeout": "Power Transition Timeout (seconds)",
+          "linked_media_player_entity_id": "Linked Media Player Entity",
+          "linked_media_player_input": "Linked Media Player HDMI Input",
+          "show_input_hdmi1": "Show HDMI 1 in Source List",
+          "show_input_hdmi2": "Show HDMI 2 in Source List",
+          "show_input_hdmi3": "Show HDMI 3 in Source List",
+          "show_linked_app_sources": "Show Linked App Sources",
+          "visible_linked_media_sources": "Visible Linked App Sources",
+          "input_name_hdmi1": "Media Player HDMI 1 Name",
+          "input_name_hdmi2": "Media Player HDMI 2 Name",
+          "input_name_hdmi3": "Media Player HDMI 3 Name",
+          "power_supply_switch_entity_id": "Power Supply Switch Entity",
+          "linked_volume_media_player_entity_id": "Linked Volume Media Player Entity",
+          "linked_volume_sync_mode": "Linked Volume Sync Mode",
+          "media_player_pending_power_seconds": "Media Player Pending Power Seconds",
+          "media_player_pending_source_seconds": "Media Player Pending Source Seconds",
+          "power_supply_off_delay_seconds": "Power Supply Off Delay Seconds",
+          "standby_signal_check": "Check HDMI signal on the display",
+          "standby_no_signal_seconds": "No-signal shutdown delay (seconds; 0 disables)",
+          "standby_idle_seconds": "Idle fallback when signal is unknown (seconds; 0 disables)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the display. Please check the IP address and port.",
+      "invalid_pending_range": "Value must be between 0 and 60 seconds",
+      "invalid_polling_range": "Polling interval must be between 1 and 3600 seconds",
+      "invalid_transition_timeout_range": "Power transition timeout must be between 0 and 300 seconds",
+      "invalid_power_supply_off_delay_range": "Power supply off delay must be between 0 and 300 seconds",
+      "invalid_standby_timeout": "Enter 0 or 30–86400 seconds.",
+      "self_reference": "Do not link an entity belonging to this integration."
+    }
+  }
+}
