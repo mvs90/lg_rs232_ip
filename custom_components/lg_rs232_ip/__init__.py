@@ -2,6 +2,7 @@
 
 import logging
 from homeassistant.const import Platform
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.storage import Store
 from .const import DOMAIN
 from .lg_display import LGDisplay
@@ -10,6 +11,7 @@ from .controller import DisplayController
 from .alerts import LGDisplayAlertState
 
 _LOGGER = logging.getLogger(__name__)
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 PLATFORMS = [
     Platform.MEDIA_PLAYER,
     Platform.SWITCH,
