@@ -20,6 +20,7 @@ PLATFORMS = [
     Platform.SENSOR,
     Platform.NUMBER,
     Platform.MEDIA_PLAYER,
+    Platform.CAMERA,
 ]
 
 

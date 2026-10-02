@@ -66,7 +66,10 @@
           "native_web_enabled": "Nativen LG-Webzugriff aktivieren (UH5F-H getestet)",
           "native_web_password": "LG-Mobile-URL-Passwort (leer = gespeichertes behalten)",
           "native_web_fingerprint": "SHA-256-Fingerabdruck des LG-HTTPS-Zertifikats",
-          "suppress_osd_during_switch": "OSD während Quellen-/Vollbildumschaltung unterdrücken"
+          "suppress_osd_during_switch": "OSD während Quellen-/Vollbildumschaltung unterdrücken",
+          "preview_enabled": "Display-Vorschau durch Screenshots aktivieren",
+          "preview_interval": "Screenshot-Intervall (10–3600 Sekunden)",
+          "preview_height": "Screenshot-Höhe (Pixel)"
         }
       }
     },
@@ -80,7 +83,9 @@
       "self_reference": "Keine Entität dieser Integration auswählen.",
       "invalid_option_range": "Wert außerhalb des erlaubten Bereichs.",
       "invalid_time": "Uhrzeit als HH:MM eingeben.",
-      "invalid_native_web_settings": "Web-Passwort und gültigen SHA-256-Zertifikat-Fingerabdruck mit 64 Hex-Zeichen angeben."
+      "invalid_native_web_settings": "Web-Passwort und gültigen SHA-256-Zertifikat-Fingerabdruck mit 64 Hex-Zeichen angeben.",
+      "preview_requires_web": "Für die Vorschau muss der native LG-Webzugriff aktiviert sein.",
+      "invalid_preview_interval": "Das Screenshot-Intervall muss zwischen 10 und 3600 Sekunden liegen."
     }
   }
 }

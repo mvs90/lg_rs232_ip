@@ -66,7 +66,10 @@
           "native_web_enabled": "Enable native LG web access (tested on UH5F-H)",
           "native_web_password": "LG Mobile URL password (blank keeps saved password)",
           "native_web_fingerprint": "LG HTTPS certificate SHA-256 fingerprint",
-          "suppress_osd_during_switch": "Suppress OSD during input/fullscreen switching"
+          "suppress_osd_during_switch": "Suppress OSD during input/fullscreen switching",
+          "preview_enabled": "Enable display preview through screenshots",
+          "preview_interval": "Screenshot interval (10–3600 seconds)",
+          "preview_height": "Screenshot height (pixels)"
         }
       }
     },
@@ -80,7 +83,9 @@
       "self_reference": "Do not link an entity belonging to this integration.",
       "invalid_option_range": "Value outside the permitted range.",
       "invalid_time": "Enter a time as HH:MM.",
-      "invalid_native_web_settings": "Provide the web password and a valid 64-hex-character SHA-256 certificate fingerprint."
+      "invalid_native_web_settings": "Provide the web password and a valid 64-hex-character SHA-256 certificate fingerprint.",
+      "preview_requires_web": "Enable native LG web access before enabling preview.",
+      "invalid_preview_interval": "Screenshot interval must be between 10 and 3600 seconds."
     }
   }
 }

@@ -50,6 +50,7 @@ async def async_setup_entry(
             LGDisplayScreenMuteSwitch(lg_display, data["name"], config_entry.entry_id),
             LGDisplayRemoteLockSwitch(lg_display, data["name"], config_entry.entry_id),
             LGDisplayOsdSelectSwitch(lg_display, data["name"], config_entry.entry_id),
+            LGDisplayBootLogoSwitch(lg_display, data["name"], config_entry.entry_id),
         ]
     )
 
@@ -607,3 +608,44 @@ class LGDisplayOsdSelectSwitch(LGDisplayBaseSwitch):
         result = await self._lg_display.async_get_osd_select()
         if result is not None:
             self._is_on = result
+
+
+class LGDisplayBootLogoSwitch(LGDisplayBaseSwitch):
+    """The real persistent LG boot-logo setting, not a post-start overlay."""
+
+    _attr_entity_registry_enabled_default = True
+    _attr_name = "Boot logo"
+    _attr_icon = "mdi:image-outline"
+
+    def __init__(self, display, name, entry_id):
+        self._display = display
+        self._attr_unique_id = f"{entry_id}_boot_logo"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, entry_id)})
+        self._attr_is_on = None
+        self._attr_available = False
+
+    async def async_update(self):
+        if await self._display.async_get_power_status() is not True:
+            self._attr_available = False
+            return
+        value = await self._display.async_get_boot_logo()
+        self._attr_available = value is not None
+        self._attr_is_on = value
+
+    async def _async_set(self, enabled):
+        from homeassistant.exceptions import HomeAssistantError
+
+        if await self._display.async_get_power_status(use_cache=False) is not True:
+            raise HomeAssistantError("Display must be awake to change its boot logo")
+        if not await self._display.async_set_boot_logo(enabled):
+            raise HomeAssistantError("LG rejected the boot-logo setting")
+        await self.async_update()
+        self.async_write_ha_state()
+        if self._attr_is_on is not enabled:
+            raise HomeAssistantError("LG boot-logo setting was not confirmed")
+
+    async def async_turn_on(self, **kwargs):
+        await self._async_set(True)
+
+    async def async_turn_off(self, **kwargs):
+        await self._async_set(False)

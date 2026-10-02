@@ -23,7 +23,7 @@ from homeassistant.const import (
     STATE_PAUSED,
     STATE_PLAYING,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, SupportsResponse
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import (
@@ -179,6 +179,13 @@ async def async_setup_entry(
             },
             "async_show_native_image",
         ),
+        "prepare_boot_image": (
+            {
+                vol.Required("media_id"): cv.string,
+                vol.Optional("media_directory", default="local"): cv.string,
+            },
+            "async_prepare_boot_image",
+        ),
         "clear_content": ({}, "async_clear_content"),
         "set_sound_mode": (
             {
@@ -199,7 +206,14 @@ async def async_setup_entry(
         ),
     }
     for service, (schema, method) in services.items():
-        platform.async_register_entity_service(service, schema, method)
+        platform.async_register_entity_service(
+            service,
+            schema,
+            method,
+            supports_response=SupportsResponse.OPTIONAL
+            if service == "prepare_boot_image"
+            else SupportsResponse.NONE,
+        )
 
 
 class LGDisplayMediaPlayer(ExtendedControls, MediaPlayerEntity):

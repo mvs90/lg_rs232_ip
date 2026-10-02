@@ -77,3 +77,13 @@ async def test_native_password_not_prefilled_and_preserved(flow):
         )
     assert result["data"]["native_web_password"] == "test-secret"
     assert result["data"]["native_web_fingerprint"] == "ab" * 32
+
+
+@pytest.mark.asyncio
+async def test_preview_needs_web_access_and_bounded_interval(flow):
+    with patch("homeassistant.helpers.entity_registry.async_get"):
+        result = await flow.async_step_init(
+            {"preview_enabled": True, "preview_interval": 1}
+        )
+    assert result["errors"]["preview_enabled"] == "preview_requires_web"
+    assert result["errors"]["preview_interval"] == "invalid_preview_interval"

@@ -156,3 +156,55 @@ async def test_json_response_can_be_fragmented_and_is_bounded(web):
     response.content.iter_chunked = lambda _: async_chunks([b"x" * 262145])
     with pytest.raises(LGWebError, match="size limit"):
         await web._json("GET", "/login/checkLoginStatus")
+
+
+@pytest.mark.asyncio
+async def test_capture_download_uses_control_port_pin_and_no_redirects(web):
+    web._api = AsyncMock(return_value="/tmp/capture12345.jpg")
+    image = b"\xff\xd8\xffjpeg\xff\xd9"
+    response = Mock(status=200)
+    response.content.iter_chunked = lambda _: async_chunks([image[:4], image[4:]])
+    context = AsyncMock()
+    context.__aenter__.return_value = response
+    web._session = Mock()
+    web._session.get.return_value = context
+    assert await web.async_capture() == image
+    url = web._session.get.call_args.args[0]
+    assert url.port == 3737
+    assert url.path == "/tmp/capture12345.jpg"
+    assert web._session.get.call_args.kwargs == {
+        "ssl": web._ssl,
+        "allow_redirects": False,
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "path",
+    [
+        "https://other.test/image.jpg",
+        "/tmp/../private.jpg",
+        "/tmp/capture123.jpg?secret=1",
+        "",
+        {"returnValue": False},
+    ],
+)
+async def test_capture_path_cannot_escape_device_or_read_arbitrary_file(web, path):
+    web._api = AsyncMock(return_value=path)
+    web._session = Mock()
+    with pytest.raises(LGWebError, match="capture path"):
+        await web.async_capture()
+    web._session.get.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_capture_rejects_html_login_page(web):
+    web._api = AsyncMock(return_value="/tmp/capture123.jpg")
+    response = Mock(status=200)
+    response.content.iter_chunked = lambda _: async_chunks([b"<html>Login</html>"])
+    context = AsyncMock()
+    context.__aenter__.return_value = response
+    web._session = Mock()
+    web._session.get.return_value = context
+    with pytest.raises(LGWebError, match="invalid JPEG"):
+        await web.async_capture()

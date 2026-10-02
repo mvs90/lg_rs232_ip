@@ -2,7 +2,7 @@
 
 Control an LG professional signage display locally from Home Assistant.
 
-**Version 1.4 adds native LG text overlays and temporary fullscreen images, verified on 75UH5F-HJ / webOS 4.0.1. [Setup and examples](docs/FEATURES.md#native-lg-text-overlays-and-fullscreen-images-v14).**
+**Version 1.5 adds a boot-logo switch, a periodic screenshot camera and custom boot-image preparation for USB import. Native text/fullscreen actions remain available. Verified on 75UH5F-HJ / webOS 4.0.1. [Setup and examples](docs/FEATURES.md#boot-logo-and-custom-boot-image-v15).**
 
  Optionally combine the display, an existing media player (such as Apple TV), and a sound system into **one TV media-player entity** for dashboards and Apple Home.
 

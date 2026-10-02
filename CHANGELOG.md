@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.0
+
+- Real LG boot-logo switch (`sn a3`) with exact acknowledgement validation and fresh readback; no automatic reboot or wake.
+- Optional display-preview camera using native JPEG captures, with 10–3600 second intervals and 360p/720p/1080p resolution. Captures come from HTTPS 3737; the earlier 3777 download returned 404.
+- Preview on/off controls collection only. Concurrent viewers share one throttled request; failed captures clear stale images; off/unknown panel power does not trigger a capture or wake.
+- `prepare_boot_image` generates a metadata-free 1920×1080 baseline JPEG in HA Media and returns USB import instructions. Direct remote boot-logo installation is **not verified or claimed**; the documented LG USB import remains necessary.
+- Expanded device reference and hardware acceptance results. Screenshot bytes and original installation details remain private.
+
 ## 1.4.0
 
 - Optional OSD suppression during input/native-image transitions, preserving an initially disabled OSD and giving explicit HA OSD changes precedence. Fresh state reads, cancellation cleanup and restoration diagnostics.

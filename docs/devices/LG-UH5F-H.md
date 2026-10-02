@@ -112,7 +112,7 @@ The owner's authorized Mobile URL login succeeded. The separate settings adminis
 | Native fullscreen PNG from internal storage | Owner confirmed image and return to Apple TV; unique test file deleted successfully | `show_native_image`; upload, timed display, foreground check, restore, delete |
 | Native image with HTTP URL as `src` | Launch acknowledged, but panel showed “Wiedergabe nicht möglich” | Not used; upload first |
 | Foreground detection | `getForegroundAppInfo` identifies `com.webos.app.dsmp`; `xb` can still report HDMI during transition, then `e0` | Never infer native player ownership from `xb` alone |
-| Screenshot | Capture command returned a temporary path, but downloading it returned HTTP 404 | Not implemented or claimed as working |
+| Screenshot | Capture JPEG path downloads on **3737**, not 3777. Valid images confirmed at 640×360, 1280×720, 1920×1080 with HDMI content | v1.5 periodic preview camera |
 | Play via URL / browser / dashboards | Setting visible; transient safe rendering not verified | Not changed; use external player/custom renderer |
 | Multi Screen / PIP | LG-documented, input/layout dependent; not hardware-tested | Not exposed as arbitrary text composition |
 
@@ -168,3 +168,14 @@ The optional transition guard reads `kl ff` without cache, suppresses only a con
 Live OSD test: `kl ff` initially returned `01`, disabling returned `00`, and a read during the native image confirmed `00`. The panel rejected restoring `kl 01` during DSMP playback. Therefore the integration retains ownership of its temporary lock until returning to an external input and retries there. It must not mistake that owned temporary off state for the user's pre-existing off preference. A newer explicit HA OSD-switch request clears this ownership.
 
 The final guarded hardware test confirmed **OSD 01 → 00 during native playback → 01 after HDMI return**, with the temporary image deleted and no pending restore error. The owner also confirmed that no OSD information appeared during that switch.
+
+
+## Boot logo and capture follow-up (v1.5)
+
+- `sn 01 a3 ff` returned `n 01 OKa301x`. A reversible setting test confirmed `sn 01 a3 00`, readback off, restore `sn 01 a3 01`, readback on. Original state restored; no reboot/power cycle was performed.
+- LG's guide page 26 documents USB `LG_MONITOR`/`lg_monitor`, BMP/JPG, and **1920×1080 maximum boot-logo image** for UHD panels. A UH5F no-signal image can be 3840×2160; do not confuse these limits.
+- Inspected Content Manager and Control Manager frontend code exposed no verified boot-image import route. The integration prepares a USB-ready JPEG in HA Media rather than claiming that an ordinary content upload installs a boot logo.
+- Capture command: `42["api",{"command":"capture","height":720,"eventID":1}]`. The callback `capture1` contains a **string**, e.g. `/tmp/captureTIMESTAMP.jpg`, rather than the usual result dictionary.
+- Download that exact validated path immediately from authenticated **HTTPS 3737**, using the same pinned device certificate and cookies. Port 3777 returns HTTP 404, explaining the earlier unsuccessful probe. Do not treat returned paths as arbitrary URLs or filesystem paths.
+- The client returned valid JPEGs at requested heights 360/720/1080. Visual inspection confirmed real HDMI pixels. The frontend's `captureRefresh` interval is 10 seconds. No continuous-video stream was established; v1.5 offers rate-limited screenshots instead.
+- Screenshot captures only remain in RAM in the integration. Private development captures are excluded from version control. Boot logo preparation and camera collection do not modify input, OSD or panel power.

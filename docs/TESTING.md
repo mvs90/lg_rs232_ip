@@ -38,3 +38,6 @@ Native web acceptance (v1.4): tests cover certificate pin validation, login fail
 For another model/firmware, opt in only after checking the certificate and normal login. Test one disposable image while watching the panel, then verify return and deletion. Test power/socket/Apple TV/HomeKit flows separately; the native presentation check does not validate those physical interactions. A manual change within the same native player app is an acknowledged ownership limitation.
 
 OSD acceptance on the same panel: readback on → off during native image → on after HDMI return; the owner visually confirmed no OSD banner during the transition. Automated tests also preserve initially disabled/unknown OSD and a newer manual HA OSD change.
+
+
+v1.5 acceptance: `sn a3` boot-logo off/readback/on/readback restored the original state without reboot. Native JPEG capture and actual dimensions were verified at 360p, 720p and 1080p over HTTPS 3737. Visual inspection showed the running HDMI content. Boot-image file generation is tested for correct dimensions/format, metadata removal, byte/pixel limits, scoped atomic writes and symlink rejection. USB import and a physical boot with a custom image have not been performed. Camera tests cover rate limiting across viewers, off/unknown power, stale-frame removal, collection pause and late-result suppression.

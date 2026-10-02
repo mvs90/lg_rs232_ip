@@ -84,3 +84,16 @@ Das gilt für Quellenwechsel über diese Integration sowie Start und Rückkehr n
 Direkte Änderungen durch andere Programme oder die Fernbedienung lassen sich nicht immer von der temporären Deaktivierung unterscheiden. Netzwerk-/Stromausfall oder ein harter HA-Absturz können die Wiederherstellung verhindern; dann den OSD-Schalter gezielt prüfen. Die Option ändert keine dauerhafte Benutzerpräferenz bei normal abgeschlossener Umschaltung.
 
 Beim geprüften UH5F-H lässt sich das OSD während der nativen Bildanzeige nicht wieder einschalten. Die Integration merkt sich deshalb ihre eigene temporäre Sperre und stellt das OSD nach der Rückkehr zu HDMI wieder her. Es kann während des gesamten Vollbilds unterdrückt bleiben. Ein bereits vorher manuell ausgeschaltetes OSD erhält diese Wiederherstellungsmarkierung nicht.
+
+
+## Bootlogo und Vorschau ab Version 1.5
+
+**Bootlogo:** Der neue Schalter „Boot logo“ schaltet das echte LG-Startlogo ein oder aus. Der Zustand wird nach dem Schreiben erneut gelesen. Das Display wird dabei weder eingeschaltet noch neu gestartet. Ausschalten und Wiederherstellen wurden am Gerät bestätigt.
+
+**Eigenes Startbild:** Die Aktion `lg_rs232_ip.prepare_boot_image` nimmt eine Bild-URL oder eine Datei aus HA-Medien entgegen und erstellt eine passende 1920×1080-JPEG-Datei. PNG/JPEG/BMP bis 5 MiB und 20 Megapixel sind erlaubt; das Seitenverhältnis bleibt erhalten, freie Flächen werden schwarz gefüllt. Die Datei liegt danach unter „Medien → Meine Medien → lg_rs232_ip → Eintrags-ID → LG_MONITOR → bootlogo.jpg“.
+
+Ein direkter Fernimport als Bootlogo ist bei diesem Gerät nicht bestätigt. Die vorbereitete Datei muss noch auf einen USB-Stick in den Ordner `LG_MONITOR` kopiert und am LG unter „Allgemein → Erweiterte Einstellungen → Hintergrundbild → Startlogo“ importiert werden. Die Aktion meldet ausdrücklich `installed_on_display: false`; ein normaler Content-Manager-Upload würde das Startlogo nicht ersetzen.
+
+**Display-Vorschau:** In den Integrationsoptionen den nativen Webzugriff und die Screenshot-Vorschau aktivieren. Intervall: **10–3600 Sekunden**, standardmäßig 30; Auflösung: **360p, 720p oder 1080p**. Alle drei Auflösungen wurden mit echtem HDMI-Inhalt getestet. Die neue Kamera „Display preview“ lässt sich als Bildkarte ins Dashboard aufnehmen. Es handelt sich um regelmäßig aktualisierte Screenshots, nicht um einen flüssigen Videostream.
+
+Die Kamera kann unabhängig vom Display ein- oder ausgeschaltet werden. Sie weckt das Display nicht; bei Aufnahmefehlern wird das alte Bild verworfen. Der Zeitstempel `last_capture` zeigt das Alter der Aufnahme. Die Vorschau speichert Bilder nur im Arbeitsspeicher. [Aktionen und Dashboard-Beispiel](FEATURES.md#boot-logo-and-custom-boot-image-v15).

@@ -70,5 +70,19 @@ async def test_real_entity_services_target_registered_display(tmp_path):
             blocking=True,
         )
         web.async_toast.assert_awaited_once_with("Hello")
+        player.async_prepare_boot_image = AsyncMock(
+            return_value={"installed_on_display": False}
+        )
+        response = await hass.services.async_call(
+            "lg_rs232_ip",
+            "prepare_boot_image",
+            {
+                "entity_id": player.entity_id,
+                "media_id": "media-source://media_source/local/logo.png",
+            },
+            blocking=True,
+            return_response=True,
+        )
+        assert response[player.entity_id]["installed_on_display"] is False
     finally:
         await hass.async_stop(force=True)

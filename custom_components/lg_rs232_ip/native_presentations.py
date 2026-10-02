@@ -43,6 +43,11 @@ class NativePresentations:
             raise HomeAssistantError("Integration is stopping")
         return self._web_manager
 
+    async def async_prepare_boot_image(self, media_id, media_directory="local"):
+        from .boot_image import async_prepare_boot_image
+
+        return await async_prepare_boot_image(self, media_id, media_directory)
+
     async def async_show_toast(self, message, priority="normal"):
         web = self._require_web_manager()
         self._check_presentation_policy(priority)
@@ -100,7 +105,7 @@ class NativePresentations:
         except Exception:
             # HA signed URLs and upstream exception strings must not enter diagnostics.
             raise HomeAssistantError(
-                "Cannot load native image; use an accessible PNG/JPEG up to 5 MiB"
+                "Cannot load image; use an accessible image up to 5 MiB"
             ) from None
 
     async def _async_present_native_image(self, request):

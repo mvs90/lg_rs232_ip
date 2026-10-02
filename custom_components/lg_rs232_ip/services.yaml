@@ -175,3 +175,22 @@ show_native_image:
           max: 3600
           mode: box
     priority: *id003
+
+prepare_boot_image:
+  name: Prepare custom boot image for USB import
+  description: Create a 1920x1080 JPEG in Home Assistant Media. Download and copy it to LG_MONITOR on USB, then import it on the display. Does not install remotely or reboot.
+  target:
+    entity:
+      domain: media_player
+      integration: lg_rs232_ip
+  fields:
+    media_id:
+      name: Source image URL or media-source ID
+      required: true
+      selector:
+        text: {}
+    media_directory:
+      name: Home Assistant media directory key
+      default: local
+      selector:
+        text: {}

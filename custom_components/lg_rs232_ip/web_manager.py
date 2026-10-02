@@ -183,6 +183,8 @@ class LGWebManager:
                                     return value
                             elif reply[0] == event + "1":
                                 value = reply[1]
+                                if event == "capture" and isinstance(value, str):
+                                    return value
                                 if (
                                     not isinstance(value, dict)
                                     or value.get("returnValue") is False
@@ -286,3 +288,31 @@ class LGWebManager:
                 or result.get("payload", {}).get("returnValue") is not True
             ):
                 raise LGWebError("LG could not delete the temporary image")
+
+    async def async_capture(self, height: int = 720) -> bytes:
+        """Capture a real panel frame; download only the returned same-device path."""
+        if height not in (360, 720, 1080):
+            raise LGWebError("Unsupported capture resolution")
+        async with self._lock:
+            path = await self._api("capture", "capture", height=height)
+            if not isinstance(path, str) or not re.fullmatch(
+                r"/tmp/capture[0-9]+\.jpg", path
+            ):
+                raise LGWebError("LG did not return a valid capture path")
+            try:
+                # Capture paths are served by Control Manager, NOT Content Manager.
+                async with self._session.get(
+                    self._url(3737, path),
+                    ssl=self._ssl,
+                    allow_redirects=False,
+                ) as response:
+                    if response.status != 200:
+                        raise LGWebError("LG screenshot is unavailable")
+                    image = await _read_limited(response, 5 * 1024 * 1024)
+                    if not image.startswith(b"\xff\xd8\xff") or not image.endswith(
+                        b"\xff\xd9"
+                    ):
+                        raise LGWebError("LG returned an invalid JPEG screenshot")
+                    return image
+            except (aiohttp.ClientError, TimeoutError):
+                raise LGWebError("LG screenshot download failed") from None

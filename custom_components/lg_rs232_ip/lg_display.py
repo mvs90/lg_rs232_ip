@@ -499,10 +499,12 @@ class LGDisplay:
             self.software_version = version
         return version
 
-    async def async_get_subcommand(self, command: str, parameter: int) -> int | None:
+    async def async_get_subcommand(
+        self, command: str, parameter: int, *, use_cache: bool = True
+    ) -> int | None:
         """Read an sv/sn subcommand and validate its echoed parameter."""
         response = await self.async_send_raw_command(
-            command[0], command[1], parameter, query_suffix=" ff"
+            command[0], command[1], parameter, query_suffix=" ff", use_cache=use_cache
         )
         payload = ok_payload(response)
         if not payload or not re.fullmatch(r"[0-9a-fA-F]{4,}", payload):
@@ -510,6 +512,20 @@ class LGDisplay:
         if int(payload[:2], 16) != parameter:
             return None
         return int(payload[2:], 16)
+
+    async def async_get_boot_logo(self) -> bool | None:
+        value = await self.async_get_subcommand("sn", 0xA3, use_cache=False)
+        return bool(value) if value in (0, 1) else None
+
+    async def async_set_boot_logo(self, enabled: bool) -> bool:
+        response = await self.async_send_raw_command(
+            "s",
+            "n",
+            0xA3,
+            query_suffix=f" {int(enabled):02x}",
+            use_cache=False,
+        )
+        return (ok_payload(response) or "").lower() == f"a3{int(enabled):02x}"
 
     async def async_get_picture_mode(self) -> Optional[int]:
         """Get current picture mode."""

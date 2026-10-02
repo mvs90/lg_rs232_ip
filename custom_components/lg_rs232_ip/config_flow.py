@@ -158,6 +158,7 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
         values = dict(self._config_entry.options if user_input is None else user_input)
         ranges = {
             "polling_interval": (1, 3600, 60, "invalid_polling_range"),
+            "preview_interval": (10, 3600, 30, "invalid_preview_interval"),
             "display_wake_timeout": (5, 300, 60, "invalid_option_range"),
             "power_supply_startup_delay": (0, 120, 0, "invalid_option_range"),
             "standby_power_threshold": (0, 1000, 0, "invalid_option_range"),
@@ -194,6 +195,10 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
                     "native_web_password"
                 ):
                     values["native_web_password"] = saved_password
+            if values.get("preview_enabled", False) and not values.get(
+                "native_web_enabled", False
+            ):
+                errors["preview_enabled"] = "preview_requires_web"
             if values.get("native_web_enabled", False):
                 if not values.get("native_web_password"):
                     errors["native_web_password"] = "invalid_native_web_settings"
@@ -247,6 +252,7 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
             "notification_wake_display": False,
             "quiet_hours_enabled": False,
             "native_web_enabled": False,
+            "preview_enabled": False,
             "suppress_osd_during_switch": False,
             "sonos_select_tv_source": False,
         }.items():
@@ -260,6 +266,7 @@ class LGDisplayOptionsFlow(config_entries.OptionsFlow):
                 )
             )
         for key, default, choices in (
+            ("preview_height", "720", ["360", "720", "1080"]),
             ("linked_media_player_input", "HDMI 1", list(INPUT_SOURCES)),
             ("content_player_input", "HDMI 2", list(INPUT_SOURCES)),
             ("linked_remote_power_mode", "generic", ["generic", "apple_tv"]),
