@@ -12,16 +12,18 @@ import time
 
 from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
+from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.network import get_url
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers.event import async_track_state_change_event
 from yarl import URL
 
 from .const import DOMAIN
 from .resident_app import ResidentApp, SI_APP_ID
 from .web_manager import LGWebError
 
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -83,6 +85,7 @@ class DisplayAppManager(ResidentApp):
         self._capture_future = None
         self._revision = 0
         self._changed = asyncio.Event()
+        self._sensor_unsub = None
         self._init_resident()
 
     async def async_start(self):
@@ -99,9 +102,23 @@ class DisplayAppManager(ResidentApp):
                     for name in ("index.html", "app.js", "app.css")
                 }
             )
+            entities = self.entry.options.get("display_app_entities", [])[:12]
+            if entities:
+
+                @callback
+                def sensor_changed(_):
+                    if self.content and self.content["dashboard"]:
+                        self.changed()
+
+                self._sensor_unsub = async_track_state_change_event(
+                    self.hass, entities, sensor_changed
+                )
 
     async def async_close(self):
         self.closed = True
+        if self._sensor_unsub:
+            self._sensor_unsub()
+            self._sensor_unsub = None
         self.content = None
         self._rendered.set()
         self.changed()
@@ -127,7 +144,7 @@ class DisplayAppManager(ResidentApp):
         if str(self._revision) == revision and not self.closed:
             self._changed.clear()
             try:
-                await asyncio.wait_for(self._changed.wait(), 2)
+                await asyncio.wait_for(self._changed.wait(), 25)
             except TimeoutError:
                 pass
         return self.state()
@@ -189,6 +206,7 @@ class DisplayAppManager(ResidentApp):
             "resident_connected": self.resident_connected,
             "resident_paused": bool(self.saved.get("paused")),
             "capture_capable": self.connected and self.capture_capable,
+            "hdmi_signal_ready": self.client_hdmi if self.connected else False,
             "app_version": APP_VERSION,
             "client_version": self.client_version,
             "platform_bridge_present": self.client_has_bridge,
@@ -299,7 +317,7 @@ class DisplayAppManager(ResidentApp):
                     "SI settings changed outside Home Assistant; restoration stopped"
                 )
             if await self.web.async_foreground_app() == SI_APP_ID:
-                original = self.saved.get("original_app")
+                original = self.selected_app
                 if original not in {f"com.webos.app.hdmi{i}" for i in range(1, 5)}:
                     raise HomeAssistantError("Original HDMI input is unknown")
                 async with self.controller._lg_display.async_suppress_osd_for_switch():
@@ -312,6 +330,8 @@ class DisplayAppManager(ResidentApp):
             "original_app",
             "original_power",
             "original_input",
+            "selected_input",
+            "selected_app",
             "resident",
             "auto_retry",
         ):
@@ -332,10 +352,10 @@ class DisplayAppManager(ResidentApp):
             if cancelled:
                 raise asyncio.CancelledError
 
-    async def async_maybe_recover(self):
+    async def async_maybe_recover(self, *, power="query"):
         """Retry after a sleeping/disconnected display returns, without waking it."""
         if self.resident:
-            await self.async_maintain_resident()
+            await self.async_maintain_resident(power=power)
             return
         if (
             "previous" not in self.saved
@@ -406,6 +426,7 @@ class DisplayAppManager(ResidentApp):
             "revision": self._revision,
             "idle_hdmi": self.idle_hdmi(),
             "capture": self._capture,
+            "input_request": self._input_request,
         }
         content = self.content
         if not content or content["expires"] <= time.monotonic():
@@ -442,8 +463,16 @@ class DisplayAppManager(ResidentApp):
             "rendered",
             "error",
             "capture_error",
+            "input_applied",
         }:
             raise ValueError
+        before = (
+            self.connected,
+            self.client_version,
+            self.client_hdmi,
+            self.capture_capable,
+            self.last_error,
+        )
         if value["type"] == "hello":
             version = value.get("version")
             if not isinstance(version, str) or len(version) > 24:
@@ -455,6 +484,12 @@ class DisplayAppManager(ResidentApp):
             self.client_hdmi = value.get("hdmi_ready") is True
             self.capture_capable = value.get("capture") is True
         self.last_seen = time.monotonic()
+        if (
+            value["type"] == "input_applied"
+            and self._input_request
+            and value.get("id") == self._input_request
+        ):
+            self._input_applied.set()
         if (
             value["type"] == "capture_error"
             and self._capture
@@ -473,7 +508,15 @@ class DisplayAppManager(ResidentApp):
                     content["rendered"] = True
                     content["expires"] = time.monotonic() + content["duration"]
                 self._rendered.set()
-        self._notify()
+        after = (
+            self.connected,
+            self.client_version,
+            self.client_hdmi,
+            self.capture_capable,
+            self.last_error,
+        )
+        if before != after:
+            self._notify()
 
 
 class DisplayAppView(HomeAssistantView):

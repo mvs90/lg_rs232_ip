@@ -222,6 +222,12 @@ class NativePresentations:
                 else:
                     raise HomeAssistantError("Native toasts require an awake display")
             return
+        if manager and manager.resident is True:
+            # Resident startup/recovery owns the launcher. A stale heartbeat must
+            # never turn a layout request into an HDMI -> SI -> HDMI round trip.
+            raise HomeAssistantError(
+                "Resident display app is not connected; check app status or resume it"
+            )
         resident_manager = self.hass.data[DOMAIN][self._config_entry.entry_id].get(
             "display_app"
         )

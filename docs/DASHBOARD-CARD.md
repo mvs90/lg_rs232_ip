@@ -43,7 +43,7 @@ Update the integration, restart HA and reload the frontend. Edit a dashboard, ch
 
 ## Troubleshooting and development
 
-If the card picker does not list the card, fully reload the page after HA restarts and check that the LG integration is loaded. The integration registers `/lg_rs232_ip/lg-display-remote.js?v=2.4.0` as a frontend module. Do not add a second resource entry for it. The card bundle has no credentials and calls the existing authenticated HA entity services.
+If the card picker does not list the card, fully reload the page after HA restarts and check that the LG integration is loaded. The integration registers `/lg_rs232_ip/lg-display-remote.js?v=2.5.0` as a frontend module. Do not add a second resource entry for it. The card bundle has no credentials and calls the existing authenticated HA entity services.
 
 Home/Menu/Back/Exit use the LG webOS 4.0 guide's documented IR codes `7c`/`43`/`28`/`5b` (pages 67–68; [LG reference](devices/LG-UH5F-H.md)). Individual model support remains device-dependent.
 

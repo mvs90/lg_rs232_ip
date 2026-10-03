@@ -8,6 +8,7 @@ from homeassistant.components.media_player import async_process_play_media_url
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.util import dt as dt_util
 from .native_presentations import NativePresentations
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,6 +29,8 @@ class NativeControls(NativePresentations):
         self._presentation_active = False
         self._presentation_queue = deque()
         self._presentation_error = None
+        self._resident_request = None
+        self._resident_replace = asyncio.Event()
 
     async def _async_resolve_media(self, media_id, media_type, target):
         if media_source.is_media_source_id(media_id):
@@ -62,6 +65,21 @@ class NativeControls(NativePresentations):
         self._check_presentation_policy(request["priority"])
         if self._ha_stopping:
             raise HomeAssistantError("Integration is stopping")
+        app = self.hass.data[DOMAIN][self._config_entry.entry_id].get("display_app")
+        if request["kind"] == "display_app" and app and app.resident is True:
+            # A remote/layout control expresses the current intent, not a playlist.
+            # Keep at most the latest request of each priority; urgent wins.
+            self._presentation_queue = deque(
+                item
+                for item in self._presentation_queue
+                if item["kind"] != "display_app"
+                or (item["priority"] == "urgent" and request["priority"] != "urgent")
+            )
+            if self._resident_request and (
+                request["priority"] == "urgent"
+                or self._resident_request["priority"] != "urgent"
+            ):
+                self._resident_replace.set()
         if len(self._presentation_queue) >= 10:
             raise ServiceValidationError("Presentation queue is full (10 requests)")
         if request["priority"] == "urgent":
@@ -89,7 +107,11 @@ class NativeControls(NativePresentations):
         finally:
             self._presentation_active = False
             self._presentation_task = None
-            await self.async_refresh()
+            app = self.hass.data[DOMAIN][self._config_entry.entry_id].get("display_app")
+            if app and app.resident_connected is True:
+                self.async_write_ha_state()
+            else:
+                await self.async_refresh()
 
     async def _async_cancel_presentations(self):
         self._presentation_queue.clear()

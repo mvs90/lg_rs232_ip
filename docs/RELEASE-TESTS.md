@@ -1,4 +1,19 @@
-# Release acceptance — 2026-10-02
+# Release acceptance
+
+## LG 2.5.0: persistent HDMI and responsive app controls — 2026-10-03
+
+**253 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 56 browser tests pass across Chromium and WebKit.** These cover same-element HDMI selection and scoped acknowledgements, missing signal, connection loss without relaunch, cancellation, original SI preservation, manually enabled/disabled OSD, latest-message replacement, urgent priority, sensor-driven updates, unchanged DOM, expired-message replay prevention and repeated screenshot bridge cleanup. The historical 2.4 checks below describe that release, including its now-replaced pause-on-HA-source-selection behavior.
+
+On the **physical 75UH5F-HJ, firmware 04.13.50, webOS 4.0.1-136**, using the shared **HA 2026.9.4 Docker installation**:
+
+- Resident app 1.2.0 resumed through the HA device button and retained SI foreground. Six successive 30-second overlay/PiP/fullscreen requests replaced one another and were acknowledged after **87, 75, 40, 43, 38 and 38 ms**; median **42 ms**. This measures service request to app paint acknowledgement on this LAN, not photodiode/display latency.
+- Twelve additional rapidly submitted messages left only the newest visible; clearing content returned directly to the embedded fullscreen HDMI view.
+- HA source selection changed HDMI 1 → HDMI 2 → HDMI 1 while the native foreground remained the SI launcher. Each completed in approximately **2.9 seconds**, including the configured OSD guard and its settling delay. HDMI 2 had no signal: after 35 seconds the app remained connected, `hdmi_signal_ready` was false, and an overlay was acknowledged without waiting for HDMI frames. SI settings were unchanged.
+- The preview returned eight valid JPEG stream parts after returning to HDMI 1; the final 1280×720 capture visually showed HDMI with no app message. Buffered/repeated parts are not counted as independent captures or an FPS benchmark.
+- HA was stopped during an overlay. After 17 seconds, a direct capture showed fullscreen HDMI without the private message and the SI launcher remained foreground. Restarting HA reconnected the resident app. Confirmed standby and subsequent wake reconnected it again with no app error.
+- The final installation keeps the optional app and resident autostart enabled, with HDMI 1 selected. Native Web/API access, camera intervals and manually selected certificate policy are preserved.
+
+The app uses bounded request/capture lifetimes and patches existing DOM nodes; browser stress checks release all 30 successive screenshot bridges with a maximum of one live bridge and preserve the HDMI element. This is not a measurement of the LG process's total RAM/CPU or multi-day stability. Native image/video/website playback still uses its documented guarded app transition; only resident app messages/layouts and HA HDMI selection avoid that transition. The existing hosted cold-start requirement (HA must be reachable) remains.
 
 ## LG 2.4.0: optional resident app and automatic camera routing
 

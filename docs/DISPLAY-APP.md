@@ -1,6 +1,6 @@
 # Home Assistant display app
 
-LG 2.4 includes an optional app hosted by Home Assistant and launched by the panel's existing **SI app launcher**. No SuperSign server, Crestron controller, developer-mode login, IPK packaging or extra HACS repository is required. It remains part of the independent LG integration; AV Companion retains player/sound/socket orchestration.
+LG 2.5 includes an optional app hosted by Home Assistant and launched by the panel's existing **SI app launcher**. No SuperSign server, Crestron controller, developer-mode login, IPK packaging or extra HACS repository is required. It remains part of the independent LG integration; AV Companion retains player/sound/socket orchestration.
 
 ## Setup in Home Assistant
 
@@ -38,7 +38,7 @@ data:
 | `dashboard` | Include only sensors explicitly selected in integration options |
 | `priority` | `normal` respects quiet hours; `urgent` bypasses quiet hours but never the no-wake policy |
 
-Use `lg_rs232_ip.clear_content` or the remote card's return button to cancel. Presentations use the existing queue, wake policy, AV ownership guard and **OSD suppression option**. An OSD that was manually disabled is never enabled by the transition guard. Layout changes inside a running app do not issue an input command.
+Use `lg_rs232_ip.clear_content` or the remote card's return button to cancel. Temporary app launches and native media use the existing queue. In connected resident mode, a new normal app message replaces the current normal message immediately, including one still awaiting acknowledgement. Urgent messages replace older app requests and are not interrupted by normal ones; only the newest normal request waits behind an active urgent message. Native media requests retain their queue order. Wake policy, quiet hours, the AV ownership guard and **OSD suppression option** remain effective. An OSD that was manually disabled is never enabled by the transition guard. Layout changes inside a running app do not issue an input command.
 
 ## Status, recovery and privacy
 
@@ -48,7 +48,7 @@ Original SI settings are saved to a private HA `.storage` journal **before** cha
 
 Each config entry has its own random pairing token. The panel receives no HA login or long-lived HA access token. Its narrow endpoint serves only bundled files, current presentation data and bounded status events and individually requested JPEG uploads (maximum 5 MiB; no unsolicited frames). The endpoint cannot call HA services or read arbitrary entities. Disabling the app immediately revokes this endpoint. Do not share its private URL or expose the panel's management ports to the internet. A browser connected through plain HTTP shares the same transport limitations as that LAN connection.
 
-The app uses local assets and ES5-compatible JavaScript for the tested Chromium 53 platform. It clears private content after expiration or 15 seconds without a successful HA response. A loaded resident app keeps its HDMI view visible during that outage. Repeated polls retry a lost rendering acknowledgement. App assets are included in HACS updates; version changes trigger a reload, and the app requests closing when it leaves the foreground. This is a hosted app, not an offline-installed package.
+The app uses local assets and ES5-compatible JavaScript for the tested Chromium 53 platform. It clears private content after expiration or 15 seconds without a successful HA response. A loaded resident app keeps its HDMI view visible during that outage. A bounded acknowledgement retry handles lost responses independently of HDMI signal readiness. App assets are included in HACS updates; version changes trigger a reload, and the app requests closing when it leaves the foreground. This is a hosted app, not an offline-installed package.
 
 ## Confirmed capabilities and limits
 
@@ -66,15 +66,25 @@ See [release evidence](RELEASE-TESTS.md) and the reusable [device/API reference]
 |---|---|---|
 | App disabled | Existing native text overlay, image/video/website actions remain available; app-specific PiP requires enabling the app | Existing authenticated LG web capture |
 | App enabled, temporary mode | Existing timed app launch, guarded return and SI restoration | App capture while connected/capable, otherwise web capture |
-| Resident app connected and HDMI ready | `show_toast` uses an 8-second app overlay; `show_display_app` changes the current layout without launching or selecting an input | Demand-driven binary JPEG upload into the same HA camera cache |
-| Resident app unavailable | Native toast fallback; app-specific layouts can use the timed launch path when the app can be started; an unsupported/disconnected app never claims successful PiP | Immediate web capture when disconnected; timeout/error fallback with a 30-second app retry backoff |
+| Resident app connected, with or without an HDMI signal | `show_toast` uses an 8-second app overlay; `show_display_app` changes the current layout without launching or selecting an input | Demand-driven binary JPEG upload into the same HA camera cache |
+| Resident app unavailable | Native toast fallback; app-specific layouts report that the resident app is unavailable, without triggering a temporary launch/source round trip. Resume or wait for reconnection | Immediate web capture when disconnected; timeout/error fallback with a 30-second app retry backoff |
 
-The app stays **in the foreground with HDMI embedded full-screen**, including between messages. Overlay and PiP change that same video element's layout. A hidden background app is not the overlay mechanism. Native image/video/website playback uses its existing path, temporarily leaving resident mode with OSD suppression and then resuming it when ownership permits.
+The app stays **in the foreground with HDMI embedded full-screen**, including between messages. HA source selection (also through the AV adapter) selects HDMI inside the app and persists it separately from the original SI recovery snapshot. The same selection is a no-op. A changed source uses the existing OSD guard and a scoped app acknowledgement; the acknowledgement confirms source application, not that a cable supplies a signal. Overlay and PiP change that same video element's layout. A hidden background app is not the overlay mechanism. Native image/video/website playback uses its existing path, temporarily leaving resident mode with OSD suppression and then resuming it when ownership permits.
 
-SI configuration is applied automatically from HA; existing third-party SI settings are never overwritten. Resident mode does not wake a sleeping display by itself. A confirmed off/on cycle or **Resume display app** can start it again. A physical source change pauses it, preventing the controller from repeatedly taking the screen back. A missing heartbeat/HDMI initialization falls back to the original HDMI app and backs off before retrying. Required transitions retain the OSD guard; a manually disabled OSD stays disabled.
+SI configuration is applied automatically from HA; existing third-party SI settings are never overwritten. Resident mode does not wake a sleeping display by itself. A confirmed off/on cycle or **Resume display app** can start it again. A physical source change pauses it, preventing the controller from repeatedly taking the screen back. A missing HDMI signal is a diagnostic state (`hdmi_signal_ready`), not an app disconnection. Missing heartbeats report a connection error while retaining the loaded HDMI view; they never trigger recurring HDMI/SI relaunches. The app retries its HA connection itself. An explicit Resume after a physical source change adopts that source inside the app. Required transitions retain the OSD guard; a manually disabled OSD stays disabled.
 
 **Cold-start limit:** this remains a hosted SI app. The panel must reach HA to load its HTML/JavaScript after a cold start. An already loaded app retains HDMI during an HA outage, but this is not an offline-installed package and does not guarantee HDMI during a cold boot while HA is unavailable. No hardware video encoder or audio/video stream is exposed.
 
 The camera chooses its backend automatically without changing its entity ID or dashboard configuration. Active intervals may be **0.5–10 seconds** (0 disables acceleration); the normal background interval remains 1–3600 seconds. Requests are shared across viewers, never run as parallel captures, and slow panels determine the achievable rate. Closing viewers restores the slower interval; disabling the camera stops collection. Screenshots include the composed screen (HDMI and overlays) and remain in memory.
 
 On the 75UH5F-HJ, direct `captureScreen` returned 1280×720 JPEGs in 573–605 ms before upload, versus 754–836 ms for three existing web capture/download requests. These are short feasibility measurements, not sustained frame-rate guarantees. The [device reference](devices/LG-UH5F-H.md#direct-app-screenshots--hardware-investigation-2026-10-02) documents the calls and limits; [release tests](RELEASE-TESTS.md) record the production integration checks.
+
+## Runtime efficiency (app 1.2.0)
+
+- A single external HDMI video element is reused through overlays, PiP, fullscreen content and input changes. Layout changes do not reload its source. An explicit HDMI change reloads only that element's source.
+- One HTTP long poll waits up to 25 seconds and wakes immediately for content, selected-input, allowed-sensor or capture changes. Five-second version/visibility heartbeats run independently. Foreground and SI ownership checks remain in regular maintenance, not on every message's critical path.
+- Text/card nodes update only when values change. Idle HDMI causes no clock/countdown DOM updates. No frontend framework, remote asset bundle or background animation runs on the panel.
+- Only one requested screenshot is captured/uploaded at a time. The native bridge, upload callbacks, timeout and temporary base64 references are released afterwards, including on errors or page exit. Content is rendered before capture begins. Existing HA camera intervals and shared-viewer backpressure remain effective.
+- Private content expires locally even while HA is unavailable and cannot reappear from a repeated stale response. Already loaded HDMI continues; the hosted cold-start limitation above still applies.
+
+On the physical 75UH5F-HJ, six consecutive connected layout/message requests were acknowledged after **38–87 ms** (median **42 ms**) in a short LAN test, including replacement of active 30-second messages. A burst of twelve requests left only the newest visible. These measurements exclude initial app startup and do not promise the same latency on other networks or devices. HDMI input changes include the OSD guard's settling period and are slower than layout changes. Process-wide RAM/CPU and multi-day stability were not measured; bounded DOM, request and capture lifetimes are verified by regression tests.

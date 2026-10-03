@@ -7,9 +7,9 @@ async function mount(page, state) {
   const events = [];
   await page.route('http://display-app.test/**', async route => {
     const name = new URL(route.request().url()).pathname.split('/').pop();
+    if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
     if (name === 'state') {
-      if (state.offline) return route.fulfill({status: 503, body: ''});
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.1.0', revision: 1, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.2.0', revision: 1, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, content: state.content})});
     }
     if (name === 'event') {
       const event = route.request().postDataJSON(); events.push(event);
@@ -39,13 +39,14 @@ test('paired app blanks private content on loss of HA connection', async ({page}
   await mount(page, state);
   await expect(page.locator('.card')).toHaveCount(1);
   state.offline = true;
+  await page.waitForTimeout(150);
   await page.clock.install();
   await page.clock.fastForward(16000);
   await expect(page.locator('.card')).toHaveCount(0);
   await expect(page.locator('#title')).toHaveText('Display bereit');
 });
 
-test('HDMI plane is required before overlay acknowledgement and supports PiP layout', async ({page}) => {
+test('missing HDMI signal does not delay overlay acknowledgement or PiP layout', async ({page}) => {
   await page.addInitScript(() => {
     window.hdmiReady = false;
     Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', {get: () => window.hdmiReady ? 3840 : 0});
@@ -55,7 +56,7 @@ test('HDMI plane is required before overlay acknowledgement and supports PiP lay
   const state = {content: {...content(), layout: 'overlay'}};
   const events = await mount(page, state);
   await expect(page.locator('#hdmi-slot source')).toHaveAttribute('src', 'ext://hdmi:1');
-  expect(events.some(e => e.type === 'rendered')).toBe(false);
+  await expect.poll(() => events.some(e => e.type === 'rendered')).toBe(true);
   await page.evaluate(() => { window.hdmiReady = true; });
   await expect.poll(() => events.some(e => e.type === 'rendered')).toBe(true);
   state.content.layout = 'pip';
@@ -80,9 +81,10 @@ test('resident idle, overlay, PiP and expired/offline message retain the same HD
   state.content = null;
   await expect(page.locator('body')).toHaveClass('hdmi');
   expect(await page.evaluate(() => document.querySelector('video') === window.originalHDMI)).toBe(true);
-  state.content = {...content(), layout:'overlay'};
+  state.content = {...content(), id:'second-overlay', layout:'overlay'};
   await expect(page.locator('body')).toHaveClass('overlay');
   state.offline = true;
+  await page.waitForTimeout(150);
   await page.clock.install(); await page.clock.fastForward(16000);
   await expect(page.locator('body')).toHaveClass('hdmi');
   expect(await page.evaluate(() => document.querySelector('video') === window.originalHDMI)).toBe(true);
@@ -121,4 +123,82 @@ test('app uploads one binary screenshot for a ticket and reports capture failure
   });
   state.capture = {id:'failure',height:720};
   await expect.poll(() => events.some(e => e.type === 'capture_error' && e.id === 'failure')).toBe(true);
+});
+
+test('capture polls leave video, cards and unchanged DOM untouched', async ({page}) => {
+  const state = {content: {...content(), layout:'overlay'}, idle_hdmi:'ext://hdmi:1'};
+  await mount(page, state);
+  await expect(page.locator('.card')).toHaveCount(1);
+  await page.evaluate(() => {
+    window.originalHDMI = document.querySelector('video');
+    window.originalCard = document.querySelector('.card');
+    window.mutations = 0;
+    new MutationObserver(changes => { window.mutations += changes.length; }).observe(document.querySelector('main'), {subtree:true,childList:true,characterData:true,attributes:true});
+  });
+  await page.waitForTimeout(600);
+  expect(await page.evaluate(() => window.mutations)).toBe(0);
+  state.content.cards[0].value = '22';
+  await expect(page.locator('.card')).toContainText('22 °C');
+  expect(await page.evaluate(() => document.querySelector('.card') === window.originalCard && document.querySelector('video') === window.originalHDMI)).toBe(true);
+});
+
+test('HDMI selection reloads the same element once and acknowledges without signal', async ({page}) => {
+  await page.addInitScript(() => {
+    window.loads = 0;
+    HTMLMediaElement.prototype.load = function() {window.loads++;};
+    HTMLMediaElement.prototype.play = function() {};
+    HTMLMediaElement.prototype.pause = function() {};
+  });
+  const state = {content:null, idle_hdmi:'ext://hdmi:1'};
+  const events = await mount(page, state);
+  await expect(page.locator('video source')).toHaveAttribute('src','ext://hdmi:1');
+  await page.evaluate(() => {window.originalHDMI = document.querySelector('video');});
+  state.idle_hdmi = 'ext://hdmi:2'; state.input_request = 'selection-two';
+  await expect.poll(() => events.some(e => e.type === 'input_applied' && e.id === 'selection-two')).toBe(true);
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(() => window.loads)).toBe(1);
+  expect(await page.evaluate(() => document.querySelector('video') === window.originalHDMI)).toBe(true);
+  await expect(page.locator('body')).toHaveClass('hdmi');
+});
+
+test('new content immediately replaces old content; expired content cannot reappear', async ({page}) => {
+  const state = {content:content(),idle_hdmi:'ext://hdmi:1'};
+  await mount(page,state);
+  await expect(page.locator('#message')).toHaveText('Your home');
+  state.content = {...content(),id:'new',message:'Latest',duration:1};
+  await expect(page.locator('#message')).toHaveText('Latest');
+  await expect(page.locator('body')).toHaveClass('hdmi',{timeout:3000});
+  await page.waitForTimeout(200);
+  await expect(page.locator('#message')).toHaveText('');
+});
+
+test('repeated screenshots release native bridges and retain one HDMI element', async ({page}) => {
+  await page.addInitScript(() => {
+    window.liveBridges = 0; window.maxBridges = 0; window.captureCalls = 0;
+    window.PalmServiceBridge = function() {
+      window.liveBridges++; window.maxBridges = Math.max(window.maxBridges, window.liveBridges);
+      let cancelled = false;
+      this.cancel = () => { if (!cancelled) {cancelled = true; window.liveBridges--;} };
+      this.call = () => {
+        window.captureCalls++;
+        setTimeout(() => this.onservicecallback(JSON.stringify({returnValue:true,encoding:'base64',data:btoa('\xff\xd8\xffframe\xff\xd9')})), 5);
+      };
+    };
+  });
+  const state = {content:null,idle_hdmi:'ext://hdmi:1',capture:null};
+  await mount(page,state);
+  let uploads = 0;
+  await page.route('http://display-app.test/frame?*', async route => {
+    uploads++; await route.fulfill({contentType:'application/json',body:'{"ok":true}'});
+  });
+  await expect(page.locator('video')).toHaveCount(1);
+  await page.evaluate(() => {window.originalHDMI = document.querySelector('video');});
+  for (let i=0; i<30; i++) {
+    state.capture = {id:'capture-'+i,height:720};
+    await expect.poll(() => uploads).toBe(i+1);
+    await expect.poll(() => page.evaluate(() => window.liveBridges)).toBe(0);
+  }
+  expect(await page.evaluate(() => window.maxBridges)).toBe(1);
+  expect(await page.evaluate(() => window.captureCalls)).toBe(30);
+  expect(await page.evaluate(() => document.querySelector('video') === window.originalHDMI)).toBe(true);
 });

@@ -66,7 +66,7 @@ async def test_external_lease_blocks_native_queue_and_supply_cut(player):
     api = api_for(player)
     token = await api.async_begin_external_presentation()
     with pytest.raises(HomeAssistantError):
-        await player._enqueue_presentation({"priority": "normal"})
+        await player._enqueue_presentation({"kind": "native_image", "priority": "normal"})
     async with api.supply_guard() as allowed:
         assert not allowed
     await api.async_end_external_presentation("stale")
@@ -82,7 +82,7 @@ async def test_queue_waits_for_supply_transition(player):
     player._async_present_native = AsyncMock()
     async with api.supply_guard():
         queued = asyncio.create_task(
-            player._enqueue_presentation({"priority": "normal"})
+            player._enqueue_presentation({"kind": "native_image", "priority": "normal"})
         )
         await asyncio.sleep(0)
         assert not queued.done()

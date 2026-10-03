@@ -1,6 +1,7 @@
 """Optional SI lifecycle; an idle HDMI app never owns a presentation lease."""
 
 import asyncio
+import secrets
 import time
 
 from homeassistant.exceptions import HomeAssistantError
@@ -22,13 +23,14 @@ class ResidentApp:
         self._resident_foreground = None
         self._resident_retry = 0.0
         self._resident_started = 0.0
+        self._input_request = None
+        self._input_applied = asyncio.Event()
 
     @property
     def resident_connected(self):
         return bool(
             self.resident
             and self.connected
-            and self.client_hdmi
             and self.saved.get("resident")
             and not self.saved.get("paused")
             and self._resident_foreground == SI_APP_ID
@@ -36,10 +38,24 @@ class ResidentApp:
 
     @property
     def logical_input(self):
-        return self.saved.get("original_input") if self.resident_connected else None
+        return self.selected_input if self.resident_connected else None
+
+    @property
+    def selected_input(self):
+        return self.saved.get("selected_input", self.saved.get("original_input"))
+
+    @property
+    def selected_app(self):
+        selected = self.saved.get("selected_app")
+        if selected in EXTERNAL_APPS:
+            return selected
+        value = self.selected_input
+        if value in (0x90, 0x91, 0x92):
+            return f"com.webos.app.hdmi{value - 0x90 + 1}"
+        return self.saved.get("original_app")
 
     def idle_hdmi(self):
-        original = self.saved.get("original_app")
+        original = self.selected_app
         if (
             self.resident
             and self.saved.get("resident")
@@ -48,6 +64,54 @@ class ResidentApp:
         ):
             return "ext://hdmi:" + original[-1]
         return None
+
+    async def async_select_hdmi(self, input_id):
+        """Called under the control lock. A missing signal is not an app failure."""
+        if not self.resident_connected or input_id not in (0x90, 0x91, 0x92):
+            return False
+        target_app = f"com.webos.app.hdmi{input_id - 0x90 + 1}"
+        if self.selected_input == input_id and self.selected_app == target_app:
+            return True
+        from .native_presentations import settle_mutation
+
+        # Finish the bounded source/OSD transaction even if the service caller
+        # disconnects. Never leave a new input paired with an old recovery journal.
+        _, cancelled = await settle_mutation(
+            self._async_apply_hdmi(input_id, target_app)
+        )
+        if cancelled:
+            raise asyncio.CancelledError
+        return True
+
+    async def _async_apply_hdmi(self, input_id, target_app):
+        previous = self.selected_input
+        previous_app = self.selected_app
+        self._input_request = secrets.token_hex(16)
+        self._input_applied.clear()
+        try:
+            async with self.controller._lg_display.async_suppress_osd_for_switch():
+                self.saved["selected_input"] = input_id
+                self.saved["selected_app"] = target_app
+                if self.content:
+                    self.content["hdmi"] = self.idle_hdmi()
+                self.changed()
+                try:
+                    await asyncio.wait_for(self._input_applied.wait(), 5)
+                except TimeoutError:
+                    # Publish rollback before the guard restores OSD.
+                    self.saved["selected_input"] = previous
+                    self.saved["selected_app"] = previous_app
+                    self._input_request = None
+                    if self.content:
+                        self.content["hdmi"] = self.idle_hdmi()
+                    self.changed()
+                    raise HomeAssistantError(
+                        "Display app did not confirm HDMI selection"
+                    ) from None
+                await self.store.async_save(self.saved)
+        finally:
+            self._input_request = None
+            self._notify()
 
     async def async_resume(self):
         if not self.resident:
@@ -75,11 +139,12 @@ class ResidentApp:
             and await self.async_owns_si()
         ):
             async with self.controller._lg_display.async_suppress_osd_for_switch():
-                await self.web.async_launch_app(self.saved["original_app"])
+                await self.web.async_launch_app(self.selected_app)
 
-    async def async_maintain_resident(self):
+    async def async_maintain_resident(self, *, power="query"):
         controller = self.controller
-        power = await controller._lg_display.async_get_power_status(use_cache=False)
+        if power == "query":
+            power = await controller._lg_display.async_get_power_status(use_cache=False)
         previous_power, self._resident_power = self._resident_power, power
         if power is not True:
             self._resident_foreground = None
@@ -110,6 +175,7 @@ class ResidentApp:
                 foreground = await self.web.async_foreground_app()
                 if self.saved.get("resident"):
                     if not await self.async_owns_si():
+                        self._resident_foreground = None
                         raise HomeAssistantError(
                             "SI settings changed outside Home Assistant"
                         )
@@ -124,12 +190,9 @@ class ResidentApp:
                             not self.resident_connected
                             and time.monotonic() - self._resident_started > 30
                         ):
-                            await self.async_pause_resident()
+                            # The loaded app keeps HDMI alive during a network outage.
+                            # Leaving/relaunching it would create repeated blackouts.
                             self.last_error = "resident_connection_lost"
-                            self.saved["auto_retry"] = True
-                            self._resident_retry = time.monotonic() + 60
-                            self._resident_started = 0
-                            await self.store.async_save(self.saved)
                         return
                     if self._resident_foreground == SI_APP_ID:
                         # A physical source change wins over the optional resident app.
@@ -140,9 +203,13 @@ class ResidentApp:
                 # Explicit SI restoration can leave the feature enabled but paused.
                 if not self.saved.get("resident"):
                     await self.async_prepare_si(foreground, True, resident=True)
-                elif foreground != self.saved.get("original_app"):
-                    await self.async_pause_resident(leave=False)
-                    return
+                elif foreground != self.selected_app:
+                    # Explicit Resume (or a wake cycle) adopts the current HDMI.
+                    self.saved["selected_app"] = foreground
+                    self.saved[
+                        "selected_input"
+                    ] = await controller._lg_display.async_get_input(use_cache=False)
+                    await self.store.async_save(self.saved)
                 self.last_seen = 0
                 self.client_hdmi = False
                 self._resident_started = time.monotonic()
@@ -154,23 +221,19 @@ class ResidentApp:
                 self.last_error = "resident_start_failed"
                 self._resident_retry = time.monotonic() + 30
             finally:
-                self.changed()
                 self._notify()
 
     async def async_present_connected(self, request):
         """Use the existing foreground app; never launch an app in this path."""
-        if not self.connected or self.mode != "si":
+        if not self.resident_connected:
             return False
         controller = self.controller
         identifier = None
         async with controller._control_lock:
             controller._check_presentation_policy(request["priority"])
-            if (
-                await controller._lg_display.async_get_power_status(use_cache=False)
-                is not True
-                or await self.web.async_foreground_app() != SI_APP_ID
-                or not await self.async_owns_si()
-            ):
+            # Foreground/settings are verified by maintenance; the short-lived,
+            # versioned visibility heartbeat is the fast-path liveness check.
+            if not self.resident_connected or controller.external_owner:
                 return False
             identifier = self.begin(
                 request["title"],
@@ -179,20 +242,41 @@ class ResidentApp:
                 request["dashboard"],
                 request.get("layout", "fullscreen"),
             )
+            controller._resident_request = request
+            controller._resident_replace.clear()
+            controller._presentation_error = None
             self.content["hdmi"] = self.idle_hdmi()
             controller._presentation_active = True
             controller.async_write_ha_state()
+        rendered = asyncio.create_task(self.wait_rendered(identifier))
+        replaced = asyncio.create_task(controller._resident_replace.wait())
         try:
-            await self.wait_rendered(identifier)
+            done, _ = await asyncio.wait(
+                (rendered, replaced), return_when=asyncio.FIRST_COMPLETED
+            )
+            if replaced in done:
+                return True
+            await rendered
             end = time.monotonic() + request["duration"]
             while time.monotonic() < end:
                 if not self.connected:
                     raise HomeAssistantError(
                         "Display app disconnected during presentation"
                     )
-                await asyncio.sleep(min(1, end - time.monotonic()))
+                try:
+                    await asyncio.wait_for(
+                        controller._resident_replace.wait(),
+                        min(1, end - time.monotonic()),
+                    )
+                    return True
+                except TimeoutError:
+                    pass
             return True
         finally:
+            for task in (rendered, replaced):
+                task.cancel()
+            await asyncio.gather(rendered, replaced, return_exceptions=True)
             self.end(identifier)
+            controller._resident_request = None
             controller._presentation_active = False
             controller.async_write_ha_state()

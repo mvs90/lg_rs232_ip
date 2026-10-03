@@ -1,120 +1,185 @@
-/* ES5 / Chromium 53: intentionally no modern HA frontend or external SDK. */
+/* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var video = null, videoSource = null, idleHdmi = null, revision = null;
-  var captureBusy = false, lastCapture = null, bridge = null;
-  var active = null, expires = 0, lastSuccess = 0;
-  var wasVisible = !document.hidden;
-  document.addEventListener("visibilitychange", function () {
-    if (!document.hidden) { wasVisible = true; }
-    else if (wasVisible && window.PalmSystem) { heartbeat(); window.close(); }
-  });
+  var VERSION = "1.2.0", video = null, sourceNode = null, videoSource = null;
+  var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
+  var captureBusy = false, lastCapture = null, cancelCapture = null;
+  var active = null, dismissed = null, expires = 0, lastSuccess = Date.now();
+  var acknowledged = false, ackBusy = false, heartbeatBusy = false, stopped = false;
+  var pollXHR = null, pollTimer = null, cardsSignature = null, wasVisible = !document.hidden;
   function el(id) { return document.getElementById(id); }
-  function text(id, value) { el(id).textContent = value; }
+  function text(id, value) { var node = el(id); if (node.textContent !== value) { node.textContent = value; } }
+  function layout(value) { if (document.body.className !== value) { document.body.className = value; } }
   function request(method, path, data, done) {
-    var xhr = new XMLHttpRequest();
-    xhr.open(method, path, true); xhr.timeout = 5000;
+    var xhr = new XMLHttpRequest(), finished = false;
+    function finish(value) {
+      if (finished) { return; } finished = true;
+      xhr.onload = xhr.onerror = xhr.ontimeout = null;
+      if (value) { lastSuccess = Date.now(); }
+      done(value);
+    }
+    xhr.open(method, path, true); xhr.timeout = method === "GET" ? 30000 : 5000;
     if (data) { xhr.setRequestHeader("Content-Type", "application/json"); }
     xhr.onload = function () {
-      if (xhr.status !== 200) { done(null); return; }
-      try { done(JSON.parse(xhr.responseText)); } catch (_) { done(null); }
+      var result = null;
+      if (xhr.status === 200) { try { result = JSON.parse(xhr.responseText); } catch (_) {} }
+      finish(result);
     };
-    xhr.onerror = xhr.ontimeout = function () { done(null); };
+    xhr.onerror = xhr.ontimeout = function () { finish(null); };
     xhr.send(data ? JSON.stringify(data) : null);
+    return xhr;
   }
-  function event(value) { request("POST", "event", value, function () {}); }
+  function event(value, done) { return request("POST", "event", value, done || function () {}); }
   function ensureHdmi(source) {
     if (!/^ext:\/\/hdmi:[1-4]$/.test(source)) { throw new Error("HDMI input missing"); }
-    if (videoSource !== source) {
-      el("hdmi-slot").textContent = "";
+    if (!video) {
       video = document.createElement("video"); video.autoplay = true;
-      var child = document.createElement("source"); child.type = "service/webos-external"; child.src = source;
-      video.appendChild(child); el("hdmi-slot").appendChild(video); videoSource = source;
+      sourceNode = document.createElement("source"); sourceNode.type = "service/webos-external";
+      sourceNode.src = source; video.appendChild(sourceNode); el("hdmi-slot").appendChild(video);
+    } else if (videoSource !== source) {
+      // Reuse the decoder element; only an explicit HDMI selection reloads its source.
+      video.pause(); sourceNode.src = source; video.load();
+      var playing = video.play(); if (playing && playing.catch) { playing.catch(function () {}); }
     }
+    videoSource = source;
+  }
+  function releaseHdmi() {
+    if (!video) { return; }
+    video.pause(); sourceNode.removeAttribute("src"); video.load();
+    el("hdmi-slot").removeChild(video); video = sourceNode = videoSource = null;
   }
   function heartbeat() {
-    event({type:"hello", version:"1.1.0", bridge:typeof window.PalmServiceBridge === "function",
+    if (heartbeatBusy || stopped) { return; } heartbeatBusy = true;
+    event({type:"hello", version:VERSION, bridge:typeof window.PalmServiceBridge === "function",
       visible:!document.hidden, hdmi_ready:!!(video && video.videoWidth && video.videoHeight && !video.error),
-      capture:typeof window.PalmServiceBridge === "function"});
+      capture:typeof window.PalmServiceBridge === "function"}, function () { heartbeatBusy = false; });
   }
   function capture(ticket) {
-    if (!ticket || ticket.id === lastCapture || captureBusy || document.hidden || typeof window.PalmServiceBridge !== "function") { return; }
+    if (!ticket || ticket.id === lastCapture || captureBusy || document.hidden || stopped || typeof window.PalmServiceBridge !== "function") { return; }
     captureBusy = true; lastCapture = ticket.id;
-    var finished = false, timer, b = bridge = new window.PalmServiceBridge();
-    function fail() {
-      if (finished) { return; } finished = true; captureBusy = false; clearTimeout(timer);
-      if (b.cancel) { b.cancel(); } bridge = null;
-      event({type:"capture_error", id:ticket.id});
+    var finished = false, timer, xhr = null, b = new window.PalmServiceBridge();
+    function finish(ok, silent) {
+      if (finished) { return; } finished = true; clearTimeout(timer); captureBusy = false; cancelCapture = null;
+      b.onservicecallback = function () {};
+      if (b.cancel) { b.cancel(); }
+      if (xhr) { xhr.onload = xhr.onerror = xhr.ontimeout = null; if (!ok) { xhr.abort(); } }
+      if (!ok && !silent) { event({type:"capture_error", id:ticket.id}); }
+      b = xhr = null;
     }
-    timer = setTimeout(fail, 3000);
-    b.onservicecallback = function(raw) {
-      if (finished) { return; }
+    cancelCapture = function () { finish(false, true); };
+    timer = setTimeout(function () { finish(false); }, 3000);
+    b.onservicecallback = function (raw) {
+      if (finished || xhr) { return; }
       try {
         var result = JSON.parse(raw);
-        if (result.returnValue !== true || result.encoding !== "base64" || typeof result.data !== "string" || result.data.length > 7 * 1024 * 1024) { fail(); return; }
+        if (result.returnValue !== true || result.encoding !== "base64" || typeof result.data !== "string" || result.data.length > 7 * 1024 * 1024) { finish(false); return; }
         var decoded = atob(result.data), bytes = new Uint8Array(decoded.length), i;
-        if (bytes.length > 5 * 1024 * 1024) { fail(); return; }
-        for (i=0; i<bytes.length; i++) { bytes[i] = decoded.charCodeAt(i); }
-        var xhr = new XMLHttpRequest(); xhr.open("POST", "frame?id=" + encodeURIComponent(ticket.id), true); xhr.timeout = 3000;
+        result = raw = null;
+        if (bytes.length > 5 * 1024 * 1024) { finish(false); return; }
+        for (i = 0; i < bytes.length; i++) { bytes[i] = decoded.charCodeAt(i); }
+        decoded = null;
+        xhr = new XMLHttpRequest(); xhr.open("POST", "frame?id=" + encodeURIComponent(ticket.id), true); xhr.timeout = 3000;
         xhr.setRequestHeader("Content-Type", "image/jpeg");
-        xhr.onload = function() { finished = true; captureBusy = false; clearTimeout(timer); bridge = null; };
-        xhr.onerror = xhr.ontimeout = fail; xhr.send(bytes.buffer);
-      } catch (_) { fail(); }
+        xhr.onload = function () { finish(xhr.status === 200); };
+        xhr.onerror = xhr.ontimeout = function () { finish(false); }; xhr.send(bytes.buffer);
+      } catch (_) { finish(false); }
     };
     try { b.call("luna://com.webos.service.commercial.signage.storageservice/captureScreen", JSON.stringify({save:false,width:Math.round(ticket.height * 16 / 9),height:ticket.height})); }
-    catch (_) { fail(); }
+    catch (_) { finish(false); }
+  }
+  function cards(items) {
+    var signature = JSON.stringify(items);
+    if (signature === cardsSignature) { return; } cardsSignature = signature;
+    var parent = el("cards"), i, node;
+    for (i = 0; i < items.length; i++) {
+      node = parent.children[i];
+      if (!node) {
+        node = document.createElement("div"); node.className = "card";
+        var label = document.createElement("div"), value = document.createElement("div"), unit = document.createElement("span");
+        label.className = "label"; value.className = "value"; unit.className = "unit";
+        value.appendChild(document.createTextNode("")); value.appendChild(unit);
+        node.appendChild(label); node.appendChild(value); parent.appendChild(node);
+      }
+      if (node.children[0].textContent !== items[i].name) { node.children[0].textContent = items[i].name; }
+      if (node.children[1].firstChild.nodeValue !== items[i].value + " ") { node.children[1].firstChild.nodeValue = items[i].value + " "; }
+      if (node.children[1].children[0].textContent !== items[i].unit) { node.children[1].children[0].textContent = items[i].unit; }
+    }
+    while (parent.children.length > items.length) { parent.removeChild(parent.lastChild); }
   }
   function clear(message) {
-    if (idleHdmi) { ensureHdmi(idleHdmi); }
-    else { el("hdmi-slot").textContent = ""; video = null; videoSource = null; }
-    active = null; expires = 0; document.body.className = idleHdmi ? "hdmi" : "idle";
+    if (idleHdmi) { ensureHdmi(idleHdmi); } else { releaseHdmi(); }
+    if (active) { dismissed = active; }
+    active = null; expires = 0; acknowledged = false;
+    layout(idleHdmi ? "hdmi" : "idle");
     text("title", "Display bereit"); text("message", ""); text("status", message);
-    el("cards").textContent = ""; text("countdown", "");
+    cards([]); text("countdown", "");
+  }
+  function acknowledge() {
+    if (!active || acknowledged || ackBusy) { return; }
+    var id = active; ackBusy = true;
+    event({type:"rendered", id:id}, function (result) {
+      ackBusy = false; if (active === id && result) { acknowledged = true; }
+    });
   }
   function render(content) {
-    if (!content) { clear("Keine aktive Anzeige"); return; }
+    if (idleHdmi) { ensureHdmi(idleHdmi); }
+    if (!content || content.id === dismissed) { clear("Keine aktive Anzeige"); return; }
     var changed = active !== content.id;
-    active = content.id; expires = Date.now() + (changed ? content.duration : content.remaining) * 1000;
-    document.body.className = content.layout || "fullscreen"; text("status", content.cards.length ? "Deine Übersicht" : "Benachrichtigung");
-    text("title", content.title); text("message", content.message); el("cards").textContent = "";
-    content.cards.forEach(function (item) {
-      var card = document.createElement("div"), label = document.createElement("div"), value = document.createElement("div"), unit = document.createElement("span");
-      card.className = "card"; label.className = "label"; value.className = "value"; unit.className = "unit";
-      label.textContent = item.name; value.textContent = item.value + " "; unit.textContent = item.unit;
-      value.appendChild(unit); card.appendChild(label); card.appendChild(value); el("cards").appendChild(card);
-    });
-    if (content.layout === "overlay" || content.layout === "pip") {
-      ensureHdmi(content.hdmi);
-      if (video.error) { throw new Error("HDMI unavailable"); }
-      // Metadata may arrive before the external video plane actually becomes ready.
-      if (!video.videoWidth || !video.videoHeight) { return; }
-    } else if (video && !idleHdmi) { el("hdmi-slot").textContent = ""; video = null; videoSource = null; }
-    if (changed || !content.rendered) {
-      window.requestAnimationFrame(function () { window.requestAnimationFrame(function () {
-        if (active === content.id) { event({type:"rendered", id:content.id}); }
-      }); });
+    if (changed) { active = content.id; expires = Date.now() + content.duration * 1000; acknowledged = false; }
+    acknowledged = acknowledged || content.rendered;
+    layout(content.layout || "fullscreen"); text("status", content.cards.length ? "Deine Übersicht" : "Benachrichtigung");
+    text("title", content.title); text("message", content.message); cards(content.cards);
+    if (content.layout === "overlay" || content.layout === "pip") { ensureHdmi(content.hdmi); }
+    else if (!idleHdmi) { releaseHdmi(); }
+    // The layout is usable even when HDMI has no signal. Signal readiness is diagnostic.
+    if (changed || !acknowledged) {
+      window.requestAnimationFrame(function () { window.requestAnimationFrame(acknowledge); });
     }
   }
+  function acknowledgeInput() {
+    if (!inputRequest || inputAck === inputRequest) { return; }
+    var id = inputRequest;
+    event({type:"input_applied", id:id}, function (result) { if (result && inputRequest === id) { inputAck = id; } });
+  }
   function poll() {
-    request("GET", "state" + (revision === null ? "" : "?since=" + encodeURIComponent(revision)), null, function (data) {
+    if (stopped) { return; }
+    pollXHR = request("GET", "state" + (revision === null ? "" : "?since=" + encodeURIComponent(revision)), null, function (data) {
+      pollXHR = null;
+      if (stopped) { return; }
       if (data) {
-        if (data.version !== "1.1.0") { window.location.reload(); return; }
-        lastSuccess = Date.now(); text("connection", "Mit Home Assistant verbunden");
+        if (data.version !== VERSION) { window.location.reload(); return; }
+        text("connection", "Mit Home Assistant verbunden");
         var first = revision === null;
-        revision = data.revision;
-        idleHdmi = data.idle_hdmi || null;
+        revision = data.revision; idleHdmi = data.idle_hdmi || null; inputRequest = data.input_request;
+        try {
+          render(data.content);
+          if (inputRequest) { window.requestAnimationFrame(acknowledgeInput); }
+        } catch (_) { event({type:"error", id:active}); clear("Anzeige fehlgeschlagen"); }
         if (first) { heartbeat(); }
-        capture(data.capture);
-        try { render(data.content); } catch (_) { event({type:"error", id:active}); clear("Anzeige fehlgeschlagen"); }
+        // Paint commands first; a frame is collected only for an outstanding HA ticket.
+        if (data.capture) { window.setTimeout(function () { capture(data.capture); }, 50); }
       } else { text("connection", "Verbindung unterbrochen"); }
-      window.setTimeout(poll, data ? 50 : 2000);
+      pollTimer = window.setTimeout(poll, data ? 0 : 2000);
     });
   }
-  window.setInterval(function () {
-    var now = new Date(); text("clock", ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2));
+  var tickTimer = window.setInterval(function () {
     if (active && (Date.now() >= expires || Date.now() - lastSuccess > 15000)) { clear("Anzeige beendet"); }
-    if (active) { text("countdown", Math.max(0, Math.ceil((expires - Date.now()) / 1000)) + " s"); }
-  }, 500);
-  window.setInterval(heartbeat, 5000);
+    if (active) {
+      var now = new Date(); text("clock", ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2));
+      text("countdown", Math.max(0, Math.ceil((expires - Date.now()) / 1000)) + " s"); acknowledge();
+    }
+    acknowledgeInput();
+  }, 1000);
+  var heartbeatTimer = window.setInterval(heartbeat, 5000);
+  function stop() {
+    stopped = true; clearTimeout(pollTimer); clearInterval(tickTimer); clearInterval(heartbeatTimer);
+    if (pollXHR) { pollXHR.abort(); pollXHR = null; }
+    if (cancelCapture) { cancelCapture(); }
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) { wasVisible = true; }
+    else if (wasVisible && window.PalmSystem) { heartbeat(); stop(); window.close(); }
+  });
+  window.addEventListener("pagehide", stop);
   poll();
 }());

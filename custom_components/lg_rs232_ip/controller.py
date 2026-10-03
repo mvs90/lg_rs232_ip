@@ -124,7 +124,7 @@ class DisplayController(NativeControls):
                 .get("display_app")
             )
             if app:
-                await app.async_maybe_recover()
+                await app.async_maybe_recover(power=self.power)
             if self.power is True:
                 self._current_input_id = await self._lg_display.async_get_input()
                 if app and app.logical_input is not None:
@@ -179,6 +179,11 @@ class DisplayController(NativeControls):
                 .get("display_app")
             )
             if app:
+                if await app.async_select_hdmi(input_id):
+                    self._current_input_id = input_id
+                    self._source = self._resolve_source_name(input_id)
+                    self.async_write_ha_state()
+                    return
                 await app.async_pause_resident(leave=False)
             if not await self._lg_display.async_set_input(input_id):
                 raise HomeAssistantError("LG rejected input")

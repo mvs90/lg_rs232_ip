@@ -96,8 +96,10 @@ class DisplayAPI:
                 raise HomeAssistantError("LG native presentation is active")
             app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
             if app and method == "async_set_input":
-                # AV selects its HDMI source on wake; keep a matching resident plane.
-                if app.logical_input == args[0]:
+                if await app.async_select_hdmi(args[0]):
+                    controller._current_input_id = args[0]
+                    controller._source = controller._resolve_source_name(args[0])
+                    controller.async_write_ha_state()
                     return True
                 await app.async_pause_resident(leave=False)
             return await getattr(self.display, method)(*args)
