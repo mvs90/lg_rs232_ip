@@ -9,7 +9,7 @@ async function mount(page, state) {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.2.0', revision: 1, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.3.2', revision: 1, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
     }
     if (name === 'event') {
       const event = route.request().postDataJSON(); events.push(event);
@@ -201,4 +201,86 @@ test('repeated screenshots release native bridges and retain one HDMI element', 
   expect(await page.evaluate(() => window.maxBridges)).toBe(1);
   expect(await page.evaluate(() => window.captureCalls)).toBe(30);
   expect(await page.evaluate(() => document.querySelector('video') === window.originalHDMI)).toBe(true);
+});
+
+const studioPresets = require('../fixtures/studio-catalog.json').presets;
+function designed(mode='signal') {
+  const config=JSON.parse(JSON.stringify(studioPresets[1].layout));
+  config.enabled=true; config.mode=mode; config.signal_delay=1;
+  config.scenes.signal.elements.find(e=>e.kind==='entity').entity_id='sensor.temperature';
+  return {config,revision:1,timezone:'Europe/Berlin',now:new Date().toISOString(),values:{'sensor.temperature':{state:'22',unit:'°C'}}};
+}
+
+test('designed scenes keep one HDMI plane through data updates, notifications and deactivation', async ({page}) => {
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  await mount(page,state);
+  await expect(page.locator('body')).toHaveClass('designed');
+  await expect(page.locator('.lg-entity')).toContainText('22 °C');
+  expect(await page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('61%');
+  await page.evaluate(()=>{window.originalHDMI=document.querySelector('video');window.originalWidget=document.querySelector('.lg-entity');window.mutations=0;new MutationObserver(changes=>window.mutations+=changes.length).observe(document.querySelector('.lg-entity'),{subtree:true,attributes:true,childList:true,characterData:true});});
+  await page.waitForTimeout(350);
+  expect(await page.evaluate(()=>window.mutations)).toBe(0);
+  state.layout.values['sensor.temperature'].state='23';
+  await expect(page.locator('.lg-entity')).toContainText('23 °C');
+  expect(await page.evaluate(()=>document.querySelector('.lg-entity')===window.originalWidget)).toBe(true);
+  state.content={...content(),layout:'overlay',duration:1};
+  await expect(page.locator('.lg-message')).toContainText('Your home');
+  expect(await page.evaluate(()=>window.injected)).toBeUndefined();
+  await expect(page.locator('.lg-message')).toHaveCount(0,{timeout:3000});
+  expect(await page.evaluate(()=>document.querySelector('video')===window.originalHDMI)).toBe(true);
+  state.layout=null;
+  await expect(page.locator('body')).toHaveClass('hdmi');
+  expect(await page.locator('#hdmi-slot').getAttribute('style')).toBeNull();
+});
+
+test('automatic no-signal debounce and manual dashboard mode do not reload HDMI', async ({page}) => {
+  await page.addInitScript(()=>{
+    window.ready=true;window.loads=0;
+    Object.defineProperty(HTMLVideoElement.prototype,'videoWidth',{get:()=>window.ready?1920:0});
+    Object.defineProperty(HTMLVideoElement.prototype,'videoHeight',{get:()=>window.ready?1080:0});
+    Object.defineProperty(HTMLVideoElement.prototype,'error',{get:()=>null});
+    HTMLMediaElement.prototype.load=function(){window.loads++;};
+  });
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed('auto')};
+  await mount(page,state);
+  await expect(page.locator('#hdmi-slot')).toBeVisible();
+  await page.evaluate(()=>{window.ready=false;});
+  await page.waitForTimeout(200);
+  await expect(page.locator('#hdmi-slot')).toBeVisible();
+  await expect(page.locator('#hdmi-slot')).toBeHidden({timeout:3500});
+  await page.evaluate(()=>{window.ready=true;});
+  await expect(page.locator('#hdmi-slot')).toBeVisible({timeout:2000});
+  state.layout.config.mode='no_signal';
+  await expect(page.locator('#hdmi-slot')).toBeHidden();
+  await expect(page.locator('.lg-clock')).toBeVisible();
+  expect(await page.evaluate(()=>window.loads)).toBe(0);
+});
+
+test('layouts work without resident HDMI and plain text/calendar data cannot inject markup', async ({page}) => {
+  const state={content:{...content(),layout:'pip'},layout:designed(),idle_hdmi:null};
+  state.layout.config.scenes.pip.elements.push({...state.layout.config.scenes.signal.elements.find(e=>e.kind==='calendar'),entity_id:'calendar.test'});
+  state.layout.values['calendar.test']={state:'on',events:[{summary:'<img src=x onerror=window.injected=true>',start:'2026-10-04'}]};
+  const events=await mount(page,state);
+  await expect(page.locator('#hdmi-slot source')).toHaveAttribute('src','ext://hdmi:1');
+  await expect(page.locator('.lg-calendar')).toContainText('<img src=x');
+  await expect(page.locator('.lg-calendar img')).toHaveCount(0);
+  expect(await page.evaluate(()=>window.injected)).toBeUndefined();
+  await expect.poll(()=>events.some(e=>e.type==='rendered')).toBe(true);
+});
+
+test('unchanged dashboard polls do not repeat calendar date formatting', async ({page}) => {
+  await page.addInitScript(()=>{
+    window.dateFormats=0;const original=Date.prototype.toLocaleDateString;
+    Date.prototype.toLocaleDateString=function(...args){window.dateFormats++;return original.apply(this,args);};
+  });
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  state.layout.config.scenes.signal.elements.find(e=>e.kind==='calendar').entity_id='calendar.family';
+  state.layout.values['calendar.family']={state:'off',events:[{summary:'Dinner',start:'2026-10-04T19:00:00+02:00'}]};
+  await mount(page,state);
+  await expect(page.locator('.lg-calendar')).toContainText('Dinner');
+  const count=await page.evaluate(()=>window.dateFormats);
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(()=>window.dateFormats)).toBe(count);
+  state.layout.values['calendar.family'].events[0].summary='Latest';
+  await expect(page.locator('.lg-calendar')).toContainText('Latest');
 });

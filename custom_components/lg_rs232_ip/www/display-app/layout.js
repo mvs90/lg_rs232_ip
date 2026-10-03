@@ -1,0 +1,125 @@
+/* Shared ES5 renderer: used by both the panel preview and Chromium 53 on the LG. */
+(function () {
+  "use strict";
+  var FONTS = {sans:"Arial, sans-serif",serif:"Georgia, serif",mono:"monospace"};
+  var CONDITIONS = {sunny:"Sonnig",clear:"Klar", "clear-night":"Klare Nacht",cloudy:"Bewölkt",partlycloudy:"Wolkig",rainy:"Regen",pouring:"Starker Regen",snowy:"Schnee",fog:"Nebel",windy:"Windig",lightning:"Gewitter","lightning-rainy":"Gewitter"};
+  function rgba(hex, opacity) { return "rgba("+parseInt(hex.slice(1,3),16)+","+parseInt(hex.slice(3,5),16)+","+parseInt(hex.slice(5,7),16)+","+opacity+")"; }
+  function background(scene) {
+    var color = scene.color, accent = scene.accent;
+    var styles = {
+      solid:color,
+      aurora:"radial-gradient(ellipse at 82% 8%,"+rgba(accent,.3)+",transparent 55%),radial-gradient(ellipse at 10% 95%,#26395b,transparent 65%),linear-gradient(125deg,"+color+",#08151e)",
+      dawn:"radial-gradient(ellipse at 95% 0%,"+rgba(accent,.58)+",transparent 65%),linear-gradient(145deg,"+color+",#553b52 70%,#bd7866)",
+      ocean:"radial-gradient(ellipse at 95% 85%,"+rgba(accent,.35)+",transparent 55%),linear-gradient(145deg,"+color+",#114a60)",
+      sand:"radial-gradient(ellipse at 2% 0%,#fffdf7,transparent 80%),linear-gradient(130deg,"+color+",#d7cbb6)",
+      midnight:"radial-gradient(ellipse at 88% 0%,"+rgba(accent,.14)+",transparent 60%),linear-gradient(135deg,"+color+",#060b12)"
+    };
+    return styles[scene.background] || color;
+  }
+  function style(node, key, value) {
+    if (!node._lgStyle) { node._lgStyle = {}; }
+    if (node._lgStyle[key] !== value) { node.style[key] = value; node._lgStyle[key] = value; }
+  }
+  function text(node, value) { value = String(value || ""); if (node.textContent !== value) { node.textContent = value; } }
+  function child(parent, name) { var node = document.createElement("div"); node.className = "lg-"+name; parent.appendChild(node); return node; }
+  function dateText(value, timezone, withTime) {
+    if (!value) { return ""; }
+    if (value.length === 10) { timezone="UTC"; }
+    var date = new Date(value.length === 10 ? value+"T12:00:00Z" : value);
+    if (isNaN(date.getTime())) { return String(value); }
+    try { return date.toLocaleDateString("de-DE", {weekday:"short",day:"2-digit",month:"2-digit",timeZone:timezone}) + (withTime && value.length > 10 ? " · "+date.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit",timeZone:timezone}) : ""); }
+    catch (_) { return date.toLocaleDateString(); }
+  }
+  function rows(node, values) {
+    var i, row;
+    for (i=0; i<values.length; i++) {
+      row = node.children[i];
+      if (!row) { row = child(node,"row"); row.appendChild(document.createElement("small")); row.appendChild(document.createElement("span")); }
+      text(row.children[0],values[i][0]); text(row.children[1],values[i][1]);
+    }
+    while (node.children.length > values.length) { node.removeChild(node.lastChild); }
+  }
+  function Renderer(root, hdmi, preview) {
+    this.root = root; this.hdmi = hdmi; this.preview = !!preview; this.nodes = {}; this.scene = null; this.data = null; this.options = null;
+  }
+  Renderer.prototype.render = function (scene, data, options) {
+    this.scene = scene; this.data = data || {}; this.options = options || {};
+    var root=this.root, height=root.clientHeight || 720, wanted={}, found=false, self=this;
+    root.classList.add("lg-scene"); style(root,"background",background(scene));
+    scene.elements.forEach(function (item,index) {
+      var node, hdmi=item.kind === "hdmi";
+      if (hdmi) { node=self.hdmi; found=true; }
+      else {
+        node=self.nodes[item.id];
+        if (node && node._lgKind !== item.kind) { root.removeChild(node); delete self.nodes[item.id]; node=null; }
+        if (!node) {
+          node=child(root,"widget lg-"+item.kind); node.dataset.layoutId=item.id; node._lgKind=item.kind;
+          node._label=child(node,"label"); node._value=child(node,"value"); node._detail=child(node,"detail"); node._list=child(node,"list"); self.nodes[item.id]=node;
+        }
+        wanted[item.id]=true;
+      }
+      if (!node) { return; }
+      style(node,"visibility","visible"); style(node,"display",hdmi && !self.preview ? "block" : "flex");
+      style(node,"position","absolute"); style(node,"left",item.x+"%"); style(node,"top",item.y+"%"); style(node,"width",item.width+"%"); style(node,"height",item.height+"%"); style(node,"zIndex",String(index+1));
+      style(node,"fontSize",(height*item.font_size/100)+"px");
+      if (hdmi) { return; }
+      style(node,"color",item.color); style(node,"backgroundColor",rgba(item.background,item.opacity));
+      style(node,"borderRadius",(height*item.radius/1080)+"px"); style(node,"padding",(height*.018)+"px "+(height*.026)+"px");
+      style(node,"textAlign",item.align); style(node,"fontFamily",FONTS[item.font]);
+      style(node._label,"fontSize",(height*.014)+"px");
+      self.fill(node,item);
+    });
+    Object.keys(this.nodes).forEach(function (key) { if (!wanted[key]) { root.removeChild(self.nodes[key]); delete self.nodes[key]; } });
+    if (!found && this.hdmi) {
+      style(this.hdmi,"visibility","hidden"); style(this.hdmi,"display","block");
+      style(this.hdmi,"width","100%"); style(this.hdmi,"height","100%");
+    }
+  };
+  Renderer.prototype.fill = function (node,item) {
+    var data=this.data[item.entity_id], value="", detail="", list=[], label=item.label, timezone=this.options.timezone || "Europe/Berlin";
+    var now=this.options.now || new Date();
+    // Camera tickets can arrive frequently. Unchanged widgets do no formatting
+    // or DOM work; only a clock's minute and its selected data invalidate it.
+    var fillKey=JSON.stringify([item,data,timezone,item.kind === "clock" ? Math.floor(now.getTime()/60000) : null,item.kind === "message" ? this.options.message : null]);
+    if (node._fillKey === fillKey) { return; } node._fillKey=fillKey;
+    if (item.kind === "clock") {
+      var clockKey=Math.floor(now.getTime()/60000)+"/"+timezone;
+      if (this.clockKey !== clockKey) {
+      try { value=now.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit",timeZone:timezone}); detail=now.toLocaleDateString("de-DE",{weekday:"long",day:"numeric",month:"long",timeZone:timezone}); }
+      catch (_) { value=("0"+now.getHours()).slice(-2)+":"+("0"+now.getMinutes()).slice(-2); detail=now.toLocaleDateString(); }
+      this.clockKey=clockKey; this.clockValue=value; this.clockDetail=detail;
+      } else { value=this.clockValue; detail=this.clockDetail; }
+    } else if (item.kind === "text") { value=item.text; }
+    else if (item.kind === "message") {
+      var message=this.options.message || {title:"Home Assistant",message:"Deine Benachrichtigung erscheint hier."};
+      value=message.title; detail=message.message;
+      if (message.cards && message.cards.length) { list=message.cards.slice(0,6).map(function (card) {return [card.name,card.value+" "+card.unit];}); }
+    } else if (!item.entity_id) { value="–"; detail="Entität auswählen"; }
+    else if (!data || data.state === "unavailable" || data.state === "unknown") { value="–"; detail="Nicht verfügbar"; }
+    else if (item.kind === "weather") {
+      value=(data.temperature || "–")+" "+(data.temperature_unit || "°C");
+      detail=(CONDITIONS[data.state] || data.state)+(data.humidity ? " · "+data.humidity+" %" : "");
+      list=(data.forecast || []).slice(0,4).map(function (row) {return [dateText(row.datetime,timezone,false),row.temperature+"° · "+(CONDITIONS[row.condition] || row.condition)];});
+    } else if (item.kind === "calendar") {
+      value=(data.events || []).length ? "" : "Keine Termine";
+      list=(data.events || []).slice(0,6).map(function (row) {return [dateText(row.start,timezone,true),row.summary];});
+    } else {
+      var states={on:"Ein",off:"Aus",home:"Zuhause",not_home:"Unterwegs",open:"Offen",closed:"Geschlossen",locked:"Verriegelt",unlocked:"Entriegelt"};
+      value=(states[data.state] || data.state)+(data.unit ? " "+data.unit : "");
+    }
+    text(node._label,item.show_label ? label || (data && data.name) || "" : "");
+    style(node._label,"display",node._label.textContent ? "block" : "none");
+    text(node._value,value); text(node._detail,detail+(data && data.stale ? " · Letzter Stand" : "")); rows(node._list,list);
+  };
+  Renderer.prototype.tick = function (now) {
+    if (!this.scene) { return; } this.options.now=now;
+    var self=this; this.scene.elements.forEach(function (item) {if (item.kind === "clock" && self.nodes[item.id]) {self.fill(self.nodes[item.id],item);}});
+  };
+  Renderer.prototype.clear = function () {
+    var self=this; Object.keys(this.nodes).forEach(function (key) {self.root.removeChild(self.nodes[key]);}); this.nodes={}; this.scene=null;
+    this.root.classList.remove("lg-scene"); this.root.style.background=""; this.root._lgStyle={};
+    if (this.hdmi) {this.hdmi.removeAttribute("style"); this.hdmi._lgStyle={};}
+  };
+  window.LGLayoutRenderer=Renderer;
+  window.LGLayoutBackground=background;
+}());

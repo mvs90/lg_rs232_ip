@@ -17,12 +17,15 @@ from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
 @pytest.mark.asyncio
 async def test_bundled_module_registered_without_dashboard_mutation():
     hass = SimpleNamespace(
-        http=SimpleNamespace(async_register_static_paths=AsyncMock(), register_view=Mock()),
+        http=SimpleNamespace(
+            async_register_static_paths=AsyncMock(), register_view=Mock()
+        ),
         data={DATA_EXTRA_MODULE_URL: set()},
+        bus=Mock(),
     )
     assert await async_setup(hass, {})
     paths = hass.http.async_register_static_paths.await_args.args[0]
-    assert len(paths) == 1
+    assert len(paths) == 5
     assert paths[0].url_path == CARD_PATH
     assert Path(paths[0].path).is_file()
     assert paths[0].cache_headers is False
@@ -32,6 +35,10 @@ async def test_bundled_module_registered_without_dashboard_mutation():
     )
     assert manifest["version"] == CARD_VERSION
     assert "frontend" in manifest["dependencies"]
+    from homeassistant.components.frontend import DATA_PANELS
+
+    panel = hass.data[DATA_PANELS]["lg-display-studio"]
+    assert panel.require_admin and panel.sidebar_title == "LG Display Studio"
 
 
 def test_remote_discovery_and_web_capability_follow_entry_options(player):

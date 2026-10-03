@@ -34,3 +34,9 @@ Two repositories intentionally contain one `custom_components` domain each, foll
 Resident app requests coalesce to the latest content at each priority, and an event interrupts an active normal request without waiting for its duration or running a hardware refresh. Urgent content retains priority. Native media retain the existing FIFO/urgent queue and guarded transitions. Explicit cancellation and unload release presentation tasks and waiters.
 
 One 25-second long poll wakes on content, input, allowed-sensor or capture changes; independent five-second heartbeats do not wake it. The ES5 client retains the HDMI element and patches only changed content. Camera capture uses one per-entry request ID and a bounded binary JPEG response, with web fallback and error backoff. Native bridge/upload lifetimes end on success, failure or page exit; frames never enter config storage. The app's per-entry token grants no generic command/service execution.
+
+## Display Studio and declarative scenes
+
+The optional Studio uses an administrator-only HA custom panel and authenticated editor views. Layout JSON is validated and revision-checked, stored separately per entry, and contains no arbitrary HTML/CSS or HA service calls. A panel pairing token cannot use the editor API. The independent device/AV boundary remains unchanged.
+
+DisplayLayouts tracks only configured entity IDs, coalesces state events and caches bounded calendar/forecast responses on HA. The ES5 renderer is shared by the modern editor's preview and the LG app; it retains one native HDMI plane, caches unchanged widget formatting and changes automatic signal scenes without hardware source commands. Notification scenes temporarily override the persistent scene, then return to it. Layout storage does not grant app/SI enablement or a presentation/power lease. HA shutdown/unload cancels listeners, timers and outstanding data fetches.

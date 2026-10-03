@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.0
+
+- Automatically register the administrator-only LG Display Studio sidebar panel, with a shared editor/display renderer and four editable templates.
+- Add independent signal/no-signal and overlay/PiP/fullscreen scenes, freely positioned HDMI and widgets, backgrounds, typography, colours, layer order, undo/redo and validated JSON import/export.
+- Show selected HA states, weather forecasts, calendar events and timezone-aware clocks with bounded HA-side caches and per-entry persistent, revision-checked configuration.
+- Keep the existing HDMI element through layout changes and debounce loss of signal; retain optional app operation and existing OSD/notification/standby policies. Report the actual app scene and revision in diagnostics.
+- Validate on both supported HA generations, Chromium/WebKit and the physical webOS 4 panel. See docs/DISPLAY-STUDIO.md and docs/RELEASE-TESTS.md.
+
 ## 2.3.0
 
 - Add an optional HA-hosted display app with per-device pairing, automatic temporary SI configuration, rendering acknowledgement, sensor allowlist and HA setup options. No external CMS or developer-mode installation is needed.

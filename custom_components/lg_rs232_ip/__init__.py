@@ -30,6 +30,11 @@ async def async_setup(hass, config):
     from .display_app import DisplayAppView
 
     hass.http.register_view(DisplayAppView(hass))
+    from .layout_api import LayoutEditorView, LayoutListView, LayoutValidateView
+
+    hass.http.register_view(LayoutListView(hass))
+    hass.http.register_view(LayoutEditorView(hass))
+    hass.http.register_view(LayoutValidateView())
     return True
 
 
@@ -58,6 +63,10 @@ async def async_setup_entry(hass, entry):
         "controller": controller,
         "alert_state": LGDisplayAlertState(entry.entry_id),
     }
+    from .layouts import DisplayLayouts
+
+    layouts = data["layouts"] = DisplayLayouts(hass, entry)
+    await layouts.async_start()
     recovery = await Store(
         hass, 1, f"{DOMAIN}.{entry.entry_id}.display_app"
     ).async_load()
@@ -106,6 +115,7 @@ async def async_unload_entry(hass, entry):
         await data["controller"].async_close()
         if app := data.get("display_app"):
             await app.async_close()
+        await data["layouts"].async_close()
         if web := data.get("web_manager") or data.get("recovery_web"):
             await web.async_close()
         await data["lg_display"].async_disconnect()

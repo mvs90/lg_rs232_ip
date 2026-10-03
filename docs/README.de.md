@@ -14,6 +14,10 @@ Ab HA 2025.3; geprüft unter 2025.3.4 und 2026.9.4. Die Integration ist noch nic
 
 Ab **2.1.0** wird eine Fernbedienungskarte automatisch mitgeliefert: Nach HA-Neustart die Browserseite neu laden, Dashboard bearbeiten → Karte hinzufügen → **LG Display Remote**. Display und optionale Kamera im visuellen Editor wählen. [Bedienung und YAML-Beispiel](DASHBOARD-CARD.md).
 
+## Layout-Dashboard
+
+Ab **2.6.0** erscheint für Administratoren automatisch **LG Display Studio** in der Seitenleiste. Vier anpassbare Vorlagen, getrennte Ansichten mit/ohne HDMI sowie gestaltbare Overlay-, PiP- und Vollbildmeldungen werden mitgeliefert. HDMI, Uhr, Wetter, Kalender, Texte und HA-Zustandsfelder lassen sich frei verschieben und skalieren. Für dauerhafte Ansichten die optionale SI-App im Dauerbetrieb aktivieren. **[Einrichtung und Bedienung](DISPLAY-STUDIO.md)**.
+
 ## Displayfunktionen
 
 Ein/Aus, HDMI-Eingänge, Displaylautstärke, Stummschaltung, Navigation, unterstützte Bild-/Energieeinstellungen und Statussensoren bleiben vollständig eigenständig. Erweiterte Einstellungen sind modellabhängig und teilweise standardmäßig deaktiviert. Kein Zuspieler und keine Steckdose werden von dieser Integration geschaltet.

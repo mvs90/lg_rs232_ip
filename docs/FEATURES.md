@@ -104,3 +104,7 @@ Attributes expose `collection_enabled`, `last_capture`, `refresh_interval`, `act
 ## Native video, websites and streams (1.6)
 
 MP4 uploads, Play via URL websites without reboot, and tokenized HA-hosted HTML video for HLS/HTTP streams extend the native presentation queue. Conditional input/URL restoration, persistent URL recovery and bounded owned-file cleanup are covered by tests. [Actions, examples and exact limits](NATIVE-MEDIA.md).
+
+## Display Studio (2.6)
+
+The bundled [Layout Studio](DISPLAY-STUDIO.md) adds an automatically registered admin sidebar panel, five independent scene layouts, four templates, freely placed/resized HDMI, clock/weather/calendar/entity/text widgets and custom notification windows. Persistent scenes require the optional resident SI app; editor configuration alone never wakes or switches the display.

@@ -1,7 +1,8 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.2.0", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.3.2", video = null, sourceNode = null, videoSource = null;
+  var design = null, designer = null, currentContent = null, signalLost = 0, sceneKey = null, serverOffset = 0;
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
   var captureBusy = false, lastCapture = null, cancelCapture = null;
   var active = null, dismissed = null, expires = 0, lastSuccess = Date.now();
@@ -51,7 +52,7 @@
   function heartbeat() {
     if (heartbeatBusy || stopped) { return; } heartbeatBusy = true;
     event({type:"hello", version:VERSION, bridge:typeof window.PalmServiceBridge === "function",
-      visible:!document.hidden, hdmi_ready:!!(video && video.videoWidth && video.videoHeight && !video.error),
+      visible:!document.hidden, layout_scene:sceneKey, layout_revision:design ? design.revision : null, hdmi_ready:!!(video && video.videoWidth && video.videoHeight && !video.error),
       capture:typeof window.PalmServiceBridge === "function"}, function () { heartbeatBusy = false; });
   }
   function capture(ticket) {
@@ -106,10 +107,28 @@
     }
     while (parent.children.length > items.length) { parent.removeChild(parent.lastChild); }
   }
+  function renderDesign(content) {
+    if (!design || !design.config.enabled || !window.LGLayoutRenderer) {
+      if (designer) { designer.clear(); designer = null; sceneKey = null; }
+      return false;
+    }
+    if (!designer) { designer = new window.LGLayoutRenderer(el("layout-root"), el("hdmi-slot"), false); }
+    var key, ready = !!(video && video.videoWidth && video.videoHeight && !video.error);
+    if (ready) { signalLost = 0; } else if (!signalLost) { signalLost = Date.now(); }
+    if (content) { key = content.layout || "fullscreen"; }
+    else if (design.config.mode !== "auto") { key = design.config.mode; }
+    else { key = ready || Date.now() - signalLost < design.config.signal_delay * 1000 ? "signal" : "no_signal"; }
+    sceneKey = key;
+    layout("designed");
+    designer.render(design.config.scenes[key], design.values, {message:content, timezone:design.timezone, now:new Date(Date.now()+serverOffset)});
+    return true;
+  }
   function clear(message) {
     if (idleHdmi) { ensureHdmi(idleHdmi); } else { releaseHdmi(); }
     if (active) { dismissed = active; }
     active = null; expires = 0; acknowledged = false;
+    currentContent = null;
+    if (renderDesign(null)) { return; }
     layout(idleHdmi ? "hdmi" : "idle");
     text("title", "Display bereit"); text("message", ""); text("status", message);
     cards([]); text("countdown", "");
@@ -125,8 +144,14 @@
     if (idleHdmi) { ensureHdmi(idleHdmi); }
     if (!content || content.id === dismissed) { clear("Keine aktive Anzeige"); return; }
     var changed = active !== content.id;
+    currentContent = content;
     if (changed) { active = content.id; expires = Date.now() + content.duration * 1000; acknowledged = false; }
     acknowledged = acknowledged || content.rendered;
+    if (design && !idleHdmi && content.hdmi) { ensureHdmi(content.hdmi); }
+    if (renderDesign(content)) {
+      if (changed || !acknowledged) { window.requestAnimationFrame(function () { window.requestAnimationFrame(acknowledge); }); }
+      return;
+    }
     layout(content.layout || "fullscreen"); text("status", content.cards.length ? "Deine Übersicht" : "Benachrichtigung");
     text("title", content.title); text("message", content.message); cards(content.cards);
     if (content.layout === "overlay" || content.layout === "pip") { ensureHdmi(content.hdmi); }
@@ -151,6 +176,8 @@
         text("connection", "Mit Home Assistant verbunden");
         var first = revision === null;
         revision = data.revision; idleHdmi = data.idle_hdmi || null; inputRequest = data.input_request;
+        design = data.layout || null;
+        if (design && design.now) { serverOffset = new Date(design.now).getTime() - Date.now(); }
         try {
           render(data.content);
           if (inputRequest) { window.requestAnimationFrame(acknowledgeInput); }
@@ -169,6 +196,16 @@
       text("countdown", Math.max(0, Math.ceil((expires - Date.now()) / 1000)) + " s"); acknowledge();
     }
     acknowledgeInput();
+    if (designer) {
+      // Clock updates are cheap; automatic signal changes only patch the scene.
+      if (!active && design.config.mode === "auto") {
+        var ready = !!(video && video.videoWidth && video.videoHeight && !video.error);
+        if (ready) { signalLost = 0; } else if (!signalLost) { signalLost = Date.now(); }
+        var key = ready || Date.now()-signalLost < design.config.signal_delay*1000 ? "signal" : "no_signal";
+        if (key !== sceneKey) { renderDesign(null); }
+      }
+      designer.tick(new Date(Date.now()+serverOffset));
+    }
   }, 1000);
   var heartbeatTimer = window.setInterval(heartbeat, 5000);
   function stop() {
@@ -181,5 +218,6 @@
     else if (wasVisible && window.PalmSystem) { heartbeat(); stop(); window.close(); }
   });
   window.addEventListener("pagehide", stop);
+  window.addEventListener("resize", function () { if (designer) { renderDesign(currentContent); } });
   poll();
 }());

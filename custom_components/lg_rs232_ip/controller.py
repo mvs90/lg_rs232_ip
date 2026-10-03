@@ -91,13 +91,11 @@ class DisplayController(NativeControls):
         async def stopping(_):
             self._stop_unsub = None  # The one-shot listener has already removed itself.
             await self.async_close()
-            app = (
-                self.hass.data.get(DOMAIN, {})
-                .get(self._config_entry.entry_id, {})
-                .get("display_app")
-            )
-            if app:
+            data = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id, {})
+            if app := data.get("display_app"):
                 await app.async_close()
+            if layouts := data.get("layouts"):
+                await layouts.async_close()
 
         self._stop_unsub = self.hass.bus.async_listen_once(
             EVENT_HOMEASSISTANT_STOP, stopping

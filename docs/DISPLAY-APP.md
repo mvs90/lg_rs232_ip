@@ -1,6 +1,8 @@
 # Home Assistant display app
 
-LG 2.5 includes an optional app hosted by Home Assistant and launched by the panel's existing **SI app launcher**. No SuperSign server, Crestron controller, developer-mode login, IPK packaging or extra HACS repository is required. It remains part of the independent LG integration; AV Companion retains player/sound/socket orchestration.
+LG 2.6 includes an optional app hosted by Home Assistant and launched by the panel's existing **SI app launcher**. No SuperSign server, Crestron controller, developer-mode login, IPK packaging or extra HACS repository is required. It remains part of the independent LG integration; AV Companion retains player/sound/socket orchestration.
+
+The automatically registered **[LG Display Studio](DISPLAY-STUDIO.md)** sidebar panel adds configurable persistent dashboards with/without HDMI and individually designed notification windows. The fixed layouts described below remain the default when custom layouts are disabled. With custom layouts enabled, each action's layout name selects the matching Studio scene.
 
 ## Setup in Home Assistant
 
@@ -48,7 +50,7 @@ Original SI settings are saved to a private HA `.storage` journal **before** cha
 
 Each config entry has its own random pairing token. The panel receives no HA login or long-lived HA access token. Its narrow endpoint serves only bundled files, current presentation data and bounded status events and individually requested JPEG uploads (maximum 5 MiB; no unsolicited frames). The endpoint cannot call HA services or read arbitrary entities. Disabling the app immediately revokes this endpoint. Do not share its private URL or expose the panel's management ports to the internet. A browser connected through plain HTTP shares the same transport limitations as that LAN connection.
 
-The app uses local assets and ES5-compatible JavaScript for the tested Chromium 53 platform. It clears private content after expiration or 15 seconds without a successful HA response. A loaded resident app keeps its HDMI view visible during that outage. A bounded acknowledgement retry handles lost responses independently of HDMI signal readiness. App assets are included in HACS updates; version changes trigger a reload, and the app requests closing when it leaves the foreground. This is a hosted app, not an offline-installed package.
+The app uses local assets and ES5-compatible JavaScript for the tested Chromium 53 platform. It clears transient notification content after expiration or 15 seconds without a successful HA response. An enabled Studio dashboard retains its last received values during a connection outage; those values are no longer live. A loaded resident app keeps its HDMI view visible during that outage. A bounded acknowledgement retry handles lost responses independently of HDMI signal readiness. App assets are included in HACS updates; version changes trigger a reload, and the app requests closing when it leaves the foreground. This is a hosted app, not an offline-installed package.
 
 ## Confirmed capabilities and limits
 

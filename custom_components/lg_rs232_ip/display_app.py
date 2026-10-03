@@ -23,7 +23,7 @@ from .const import DOMAIN
 from .resident_app import ResidentApp, SI_APP_ID
 from .web_manager import LGWebError
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.2"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -73,6 +73,8 @@ class DisplayAppManager(ResidentApp):
         self.content = None
         self.last_seen = 0.0
         self.client_version = None
+        self.client_layout_scene = None
+        self.client_layout_revision = None
         self.client_has_bridge = False
         self.last_error = None
         self._rendered = asyncio.Event()
@@ -87,6 +89,9 @@ class DisplayAppManager(ResidentApp):
         self._changed = asyncio.Event()
         self._sensor_unsub = None
         self._init_resident()
+        self.layouts = hass.data.get(DOMAIN, {}).get(entry.entry_id, {}).get("layouts")
+        if self.layouts:
+            self.layouts.changed = self.changed
 
     async def async_start(self):
         self.saved = await self.store.async_load() or {}
@@ -99,7 +104,13 @@ class DisplayAppManager(ResidentApp):
             self.assets = await self.hass.async_add_executor_job(
                 lambda: {
                     name: (ASSETS / name).read_bytes()
-                    for name in ("index.html", "app.js", "app.css")
+                    for name in (
+                        "index.html",
+                        "app.js",
+                        "app.css",
+                        "layout.js",
+                        "layout.css",
+                    )
                 }
             )
             entities = self.entry.options.get("display_app_entities", [])[:12]
@@ -209,6 +220,8 @@ class DisplayAppManager(ResidentApp):
             "hdmi_signal_ready": self.client_hdmi if self.connected else False,
             "app_version": APP_VERSION,
             "client_version": self.client_version,
+            "layout_scene": self.client_layout_scene if self.connected else None,
+            "layout_revision": self.client_layout_revision if self.connected else None,
             "platform_bridge_present": self.client_has_bridge,
             "si_configured": bool(self.saved.get("installed")),
             "si_restore_pending": "previous" in self.saved and not self.resident,
@@ -427,6 +440,7 @@ class DisplayAppManager(ResidentApp):
             "idle_hdmi": self.idle_hdmi(),
             "capture": self._capture,
             "input_request": self._input_request,
+            "layout": self.layouts.payload() if self.layouts else None,
         }
         content = self.content
         if not content or content["expires"] <= time.monotonic():
@@ -469,6 +483,8 @@ class DisplayAppManager(ResidentApp):
         before = (
             self.connected,
             self.client_version,
+            self.client_layout_scene,
+            self.client_layout_revision,
             self.client_hdmi,
             self.capture_capable,
             self.last_error,
@@ -480,6 +496,16 @@ class DisplayAppManager(ResidentApp):
             self.client_version = version
             self.client_has_bridge = value.get("bridge") is True
         if value["type"] in {"hello", "heartbeat"}:
+            scene = value.get("layout_scene")
+            revision = value.get("layout_revision")
+            self.client_layout_scene = (
+                scene
+                if scene in ("signal", "no_signal", "overlay", "pip", "fullscreen")
+                else None
+            )
+            self.client_layout_revision = (
+                revision if type(revision) is int and revision >= 0 else None
+            )
             self.client_visible = value.get("visible") is True
             self.client_hdmi = value.get("hdmi_ready") is True
             self.capture_capable = value.get("capture") is True
@@ -511,6 +537,8 @@ class DisplayAppManager(ResidentApp):
         after = (
             self.connected,
             self.client_version,
+            self.client_layout_scene,
+            self.client_layout_revision,
             self.client_hdmi,
             self.capture_capable,
             self.last_error,
@@ -555,6 +583,8 @@ class DisplayAppView(HomeAssistantView):
             "index.html": "text/html",
             "app.js": "application/javascript",
             "app.css": "text/css",
+            "layout.js": "application/javascript",
+            "layout.css": "text/css",
         }
         if resource not in mime:
             raise web.HTTPNotFound()

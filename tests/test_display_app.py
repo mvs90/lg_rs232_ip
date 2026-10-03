@@ -1016,3 +1016,24 @@ async def test_hdmi_timeout_rolls_back_before_restoring_osd(app):
             await app.async_select_hdmi(0x91)
     assert restored
     app.controller._lg_display.async_set_input.assert_not_awaited()
+
+
+async def test_layout_heartbeat_reports_only_supported_scene_and_revision(app):
+    from custom_components.lg_rs232_ip.display_app import APP_VERSION
+
+    app.event(
+        {
+            "type": "hello",
+            "version": APP_VERSION,
+            "visible": True,
+            "layout_scene": "signal",
+            "layout_revision": 7,
+        }
+    )
+    assert app.attributes["layout_scene"] == "signal"
+    assert app.attributes["layout_revision"] == 7
+    app.event(
+        {"type": "heartbeat", "layout_scene": "invalid", "layout_revision": "secret"}
+    )
+    assert app.attributes["layout_scene"] is None
+    assert app.attributes["layout_revision"] is None

@@ -1,5 +1,21 @@
 # Release acceptance
 
+## LG 2.6.0: Display Studio
+
+**275 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14. All 74 browser cases passed across Chromium and WebKit** (72 in the full run, followed by the expanded 26-case app suite after the last widget-cache optimization). Coverage includes layout bounds, plain-text rendering, authenticated/admin-only real HTTP routes, optimistic-save conflicts, persistence, removed bindings during in-flight fetches, bounded service results, HA timezone/all-day fallback, editor drag/resize/undo, responsive editing, safe text and preservation of the HDMI element through scene changes. Unchanged calendar widgets perform no repeated date formatting during capture-style polls.
+
+On the physical **75UH5F-HJ / 04.13.50 / webOS 4.0.1-136**, with **HA 2026.9.4**:
+
+- The automatically registered sidebar editor opened in the real HA frontend. No manual dashboard or resource creation was required.
+- Cinema, Aurora, Morgenlicht and Paper & Sand all rendered on the LG. Temporary HA test states supplied explicitly labelled synthetic weather, calendar and temperature values; these entities were removed afterwards. Calendar/forecast service responses were tested with HA service fixtures, not live external weather/calendar providers.
+- Aurora retained HDMI in its positioned/resized video rectangle. Native screen captures showed the backgrounds, widget geometry and typography.
+- Custom overlay, PiP and fullscreen messages each reported the expected scene and returned to the configured persistent scene after expiry. The SI launcher remained foreground throughout.
+- Switching the embedded input to unconnected HDMI 2 produced the automatic no-signal scene after the configured delay. Returning to HDMI 1 restored the signal scene without replacing the SI app.
+- A HA restart preserved the saved layout and reconnected app **1.3.2**. Final test configuration is Cinema, automatic mode, HDMI 1, with no test-entity bindings. Installed integration files match the repository source. Unauthenticated access to the real editor endpoint returned HTTP 401.
+
+The scene heartbeat is a five-second diagnostic, not a message-latency measurement. Only one native HDMI plane is used. These checks do not measure total LG RAM/CPU, multi-day stability, all protected-content sources or every panel model. Portrait layouts, uploaded background images and arbitrary Lovelace/HTML execution are outside this release. Private HDMI screenshots and credentials are excluded from Git.
+
+
 ## LG 2.5.0: persistent HDMI and responsive app controls — 2026-10-03
 
 **253 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 56 browser tests pass across Chromium and WebKit.** These cover same-element HDMI selection and scoped acknowledgements, missing signal, connection loss without relaunch, cancellation, original SI preservation, manually enabled/disabled OSD, latest-message replacement, urgent priority, sensor-driven updates, unchanged DOM, expired-message replay prevention and repeated screenshot bridge cleanup. The historical 2.4 checks below describe that release, including its now-replaced pause-on-HA-source-selection behavior.
