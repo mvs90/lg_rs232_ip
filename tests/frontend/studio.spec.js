@@ -77,7 +77,7 @@ test('selected widget remains editable after successive saves without reopening 
 
 test('pointer move and resize are bounded; keyboard and undo restore exact geometry',async({page})=>{
   await mount(page);
-  await openView(page,'Mit HDMI');
+  await openView(page,'PiP');
   await page.locator('.sidebar').getByRole('button',{name:/Aurora/}).click();
   await page.locator('.layer .name').filter({hasText:'HDMI / PiP'}).click();
   const selected=page.locator('.selection.selected');let box=await selected.boundingBox();
@@ -204,7 +204,7 @@ test('room suggestions add styled media/status cards once, support editing and r
 test('overview manages independent named views, assignments, deletion undo and persistence',async({page})=>{
   await mount(page);
   await expect(page.locator('.overview')).toBeVisible();await expect(page.locator('.workspace')).toBeHidden();
-  await expect(page.locator('.view-card')).toHaveCount(6);
+  await expect(page.locator('.view-card')).toHaveCount(7);
   await page.getByRole('button',{name:'＋ Neue Ansicht',exact:true}).click();
   await page.getByLabel('Name',{exact:true}).fill('Mein Sonnenplatz');
   await page.getByLabel('Vorlage',{exact:true}).selectOption('morning');
@@ -214,9 +214,9 @@ test('overview manages independent named views, assignments, deletion undo and p
   await page.getByLabel('Name der Ansicht').fill('Mein Tageslicht');await page.getByLabel('Name der Ansicht').press('Tab');
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
-  await expect(page.locator('.view-card')).toHaveCount(7);
-  await page.getByRole('button',{name:'Mein Tageslicht duplizieren',exact:true}).click();
   await expect(page.locator('.view-card')).toHaveCount(8);
+  await page.getByRole('button',{name:'Mein Tageslicht duplizieren',exact:true}).click();
+  await expect(page.locator('.view-card')).toHaveCount(9);
   await openView(page,'Mein Tageslicht · Kopie');
   await page.getByLabel('Hintergrund',{exact:true}).selectOption('ocean');
   await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
@@ -232,7 +232,7 @@ test('overview manages independent named views, assignments, deletion undo and p
   await page.screenshot({path:'test-results/studio-views-'+test.info().project.name+'.png',fullPage:true});
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   await page.evaluate(()=>{studio.remove();document.body.append(studio);});
-  await expect(page.locator('.view-card')).toHaveCount(8);
+  await expect(page.locator('.view-card')).toHaveCount(9);
   await expect(page.locator('.overview')).toBeVisible();
 });
 
@@ -251,7 +251,7 @@ test('solar view follows live HA updates without reload and preserves edited fie
 
 test('empty overview remains usable, supports new views and fits a phone',async({page})=>{
   await mount(page,390);
-  for(const name of ['Mit HDMI','Ohne HDMI','Dashboard','Meldung · Overlay','Meldung · PiP','Meldung · Vollbild'])await page.getByRole('button',{name:name+' löschen',exact:true}).click();
+  for(const name of ['Mit HDMI','Ohne HDMI','Dashboard','Meldung · Overlay','Meldung · PiP','Meldung · Vollbild','PiP'])await page.getByRole('button',{name:name+' löschen',exact:true}).click();
   await expect(page.locator('.view-card')).toHaveCount(0);
   await expect(page.getByRole('button',{name:'Neue Ansicht anlegen',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
@@ -261,4 +261,38 @@ test('empty overview remains usable, supports new views and fits a phone',async(
   await page.getByRole('button',{name:'Ansicht anlegen',exact:true}).click();
   await expect(page.getByLabel('Name der Ansicht')).toHaveValue('Sonnenstand');
   await expect(page.locator('.scene .lg-clock')).toHaveCount(1);
+});
+
+test('themes change colours only, palette is editable and top buttons preserve drafts without source changes',async({page})=>{
+  await mount(page);await openView(page,'PiP');
+  await page.locator('.layer .name').filter({hasText:'Draußen'}).click();
+  await page.getByLabel('Home-Assistant-Entität').fill('weather.home');await page.getByLabel('Home-Assistant-Entität').press('Tab');
+  await page.getByLabel('Links (%)',{exact:true}).fill('5');await page.getByLabel('Links (%)',{exact:true}).press('Tab');
+  const before=await page.evaluate(()=>JSON.parse(JSON.stringify(studio.scene.elements)));
+  await page.locator('.sidebar').getByRole('button',{name:'Paper & Sand',exact:true}).click();
+  const after=await page.evaluate(()=>studio.scene.elements);
+  const content=items=>items.map(({color,background,accent_color,...rest})=>rest);
+  expect(content(after)).toEqual(content(before));expect(after[0].color).not.toBe(before[0].color);
+  await expect(page.locator('.sidebar .room-suggestions')).toHaveCount(0);
+  await page.getByLabel('Kartenfarbe',{exact:true}).fill('#234567');await page.getByLabel('Kartenfarbe',{exact:true}).press('Tab');
+  expect(await page.evaluate(()=>studio.scene.elements.filter(i=>i.kind!=='hdmi').every(i=>i.background==='#234567'))).toBe(true);
+  await page.locator('.context-tabs').getByRole('button',{name:'Dashboard',exact:true}).click();
+  await expect(page.getByLabel('Name der Ansicht')).toHaveValue('Dashboard');
+  await page.locator('.context-tabs').getByRole('button',{name:'Mitteilung',exact:true}).click();
+  await expect(page.locator('.scene .lg-message')).toBeVisible();
+  await page.locator('.context-tabs').getByRole('button',{name:'HDMI · Vollbild',exact:true}).click();
+  await expect(page.getByLabel('Name der Ansicht')).toBeDisabled();
+  await expect(page.locator('.selection')).toHaveCount(0);
+  await expect(page.locator('.sidebar')).toBeHidden();
+  expect(await page.locator('.lg-hdmi-placeholder').evaluate(n=>n.style.width)).toBe('100%');
+  await page.locator('.context-tabs').getByRole('button',{name:'PiP',exact:true}).click();
+  expect(await page.evaluate(()=>studio.scene.elements.find(i=>i.kind==='weather').entity_id)).toBe('weather.home');
+  expect(await page.evaluate(()=>studio.scene.elements.find(i=>i.kind==='weather').x)).toBe(5);
+  expect(await page.evaluate(()=>calls.some(c=>['POST','media_player'].includes(c[0])))).toBe(false);
+  await page.screenshot({path:'test-results/studio-themes-'+test.info().project.name+'.png',fullPage:true});
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await page.getByLabel('Eigenes Layout verwenden').check();
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await page.getByRole('button',{name:'PiP anzeigen',exact:true}).click();
+  expect(await page.evaluate(()=>calls.some(c=>c[0]==='media_player'&&c[2].source==='PiP'))).toBe(true);
 });

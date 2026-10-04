@@ -18,7 +18,7 @@ from .const import DOMAIN
 from .layout_backgrounds import LayoutBackgrounds
 from .layout_media import LayoutMedia
 from .layout_cards import card_metadata
-from .layout_config import layout_entities, make_layout, validate_layout
+from .layout_config import active_scenes, layout_entities, make_layout, validate_layout
 from .layout_library import from_config, sync_legacy, validate_library
 
 _LOGGER = logging.getLogger(__name__)
@@ -188,7 +188,7 @@ class DisplayLayouts:
 
     def forecast_requests(self):
         requests = {}
-        for scene in self.config["scenes"].values():
+        for scene in active_scenes(self.config).values():
             for item in scene["elements"]:
                 entity = item["entity_id"]
                 if not entity:
@@ -353,7 +353,7 @@ class DisplayLayouts:
     def media_entities(self):
         return {
             item["entity_id"]
-            for scene in self.config["scenes"].values()
+            for scene in active_scenes(self.config).values()
             for item in scene["elements"]
             if item["kind"] == "media"
             and item.get("show_cover", True)
@@ -364,7 +364,7 @@ class DisplayLayouts:
         selected = config or self.config
         cards = {
             item["entity_id"]
-            for scene in selected["scenes"].values()
+            for scene in active_scenes(selected).values()
             for item in scene["elements"]
             if item["kind"] in ("media", "status")
         }
@@ -445,8 +445,10 @@ class DisplayLayouts:
     def payload(self):
         if not self.config["enabled"]:
             return None
+        document = self.document()
+        document["config"]["scenes"] = active_scenes(document["config"])
         return {
-            **self.document(),
+            **document,
             "values": self.values(),
             "sun": self.sun(),
             "timezone": str(self.hass.config.time_zone),

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.10.0
+
+- Separate editor colour themes from content templates. Left-hand themes/palette/background controls preserve widgets, entities, text, geometry and typography; top context buttons navigate saved views and a read-only HDMI-fullscreen preview.
+- Keep physical HDMI selections full-screen in the resident app regardless of signal status or legacy automatic layouts. Add the persistent PiP source and independently assigned `pip_view` scene, retaining the last HDMI input and returning after notifications.
+- Persist Dashboard/PiP selections in the acknowledged source transaction with OSD-state preservation, rollback and AV standby protection. Add optional API v1 PiP capabilities for AV Companion 1.2.0.
+- Preserve old HDMI compositions for the explicit PiP view; keep legacy drafts while excluding inactive automatic scenes from panel payloads and data/forecast subscriptions. Release display app 1.7.1.
+
 ## 2.9.0
 
 - Start Studio with a gallery of named views. Create from templates, edit, rename, independently duplicate or delete views; assign them to Dashboard, HDMI signal/no-signal and notification contexts. Preserve existing layouts, bindings and backgrounds as six named views.

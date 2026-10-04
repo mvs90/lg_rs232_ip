@@ -130,6 +130,8 @@ class DisplayController(NativeControls):
                 self._source = (
                     "Dashboard"
                     if app and app.dashboard_selected and app.resident_connected
+                    else "PiP"
+                    if app and app.pip_selected and app.resident_connected
                     else self._resolve_source_name(self._current_input_id)
                 )
                 self.volume = await self._lg_display.async_get_volume()
@@ -173,6 +175,14 @@ class DisplayController(NativeControls):
         await self.async_refresh()
 
     async def async_select_dashboard(self):
+        await self.async_select_app_view("dashboard")
+
+    async def async_select_pip(self):
+        await self.async_select_app_view("pip")
+
+    async def async_select_app_view(self, view):
+        if view not in ("dashboard", "pip"):
+            raise HomeAssistantError("Unknown app view")
         app = (
             self.hass.data.get(DOMAIN, {})
             .get(self._config_entry.entry_id, {})
@@ -186,7 +196,7 @@ class DisplayController(NativeControls):
             raise HomeAssistantError("An external presentation owns the display")
         await self.async_clear_content()
         async with self._control_lock:
-            await self.async_ensure_on("dashboard selection")
+            await self.async_ensure_on("app view selection")
         if not app.resident_connected:
             await app.async_resume()
             try:
@@ -195,13 +205,13 @@ class DisplayController(NativeControls):
                         await asyncio.sleep(0.2)
             except TimeoutError:
                 raise HomeAssistantError(
-                    "Display app did not connect for dashboard selection"
+                    "Display app did not connect for view selection"
                 ) from None
         async with self._control_lock:
             if self.external_owner or self.presentation_active:
                 raise HomeAssistantError("Display is busy with another presentation")
-            await app.async_select_dashboard()
-            self._source = "Dashboard"
+            await app.async_select_view(view)
+            self._source = "Dashboard" if view == "dashboard" else "PiP"
             self.async_write_ha_state()
 
     async def async_select_input(self, input_id):
@@ -219,6 +229,7 @@ class DisplayController(NativeControls):
                     self.async_write_ha_state()
                     return
                 app.saved.pop("dashboard", None)
+                app.saved.pop("pip", None)
                 await app.async_pause_resident(leave=False)
             if not await self._lg_display.async_set_input(input_id):
                 raise HomeAssistantError("LG rejected input")

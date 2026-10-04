@@ -38,7 +38,7 @@ async def layouts(tmp_path):
 @pytest.mark.parametrize("preset", presets(), ids=lambda p: p["id"])
 def test_presets_have_valid_independent_signal_and_notification_scenes(preset):
     config = validate_layout(preset["layout"])
-    assert len(config["scenes"]) == 6
+    assert len(config["scenes"]) == 7
     assert config["scenes"]["signal"]["elements"][0]["kind"] in ("hdmi", "clock")
     assert not any(
         item["kind"] == "hdmi" for item in config["scenes"]["no_signal"]["elements"]
@@ -101,7 +101,8 @@ async def test_only_selected_scalar_data_and_bounded_weather_calendar_are_shared
 ):
     config = make_layout()
     config["enabled"] = True
-    scene = config["scenes"]["no_signal"]["elements"]
+    config["scenes"]["dashboard"] = deepcopy(config["scenes"]["no_signal"])
+    scene = config["scenes"]["dashboard"]["elements"]
     scene[1]["entity_id"] = "weather.home"
     scene[2]["entity_id"] = "calendar.family"
     scene[3]["entity_id"] = "sensor.temperature"
@@ -177,7 +178,7 @@ async def test_only_selected_scalar_data_and_bounded_weather_calendar_are_shared
 async def test_removed_binding_cannot_receive_in_flight_calendar_response(layouts):
     config = make_layout()
     config["enabled"] = True
-    config["scenes"]["no_signal"]["elements"][2]["entity_id"] = "calendar.family"
+    config["scenes"]["dashboard"]["elements"][2]["entity_id"] = "calendar.family"
     await layouts.async_save(config, 0)
     started, finish = asyncio.Event(), asyncio.Event()
 

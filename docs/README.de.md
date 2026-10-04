@@ -70,3 +70,7 @@ Im **LG Display Studio** unter **Karten aus deinem Raum** einen HA-Raum wählen 
 ### Gespeicherte Ansichten (2.9.0)
 
 Das Studio startet mit einer Galerie. Über **Neue Ansicht** ein benanntes Design aus einer Vorlage anlegen; bestehende Ansichten lassen sich bearbeiten, unabhängig duplizieren und löschen. In der Übersicht die Verwendung für Dashboard, HDMI und Meldungen zuordnen und **Speichern**. Die Vorlage **Sonnenstand** ersetzt „Morgenlicht“ und aktualisiert Farben und Lichtposition auch während der laufenden Anzeige. [Ansichten verwalten](DISPLAY-STUDIO.md#ansichten-verwalten).
+
+### Farbthemes und PiP-Quelle (2.10.0)
+
+Im Editor links nur Farben und Hintergrund ändern; Inhalte, Entitäten und Positionen bleiben beim Theme-Wechsel erhalten. Oben direkt zwischen HDMI-Vollbild, Dashboard, PiP und Mitteilungsansichten wechseln. HDMI-Quellen erscheinen immer im Vollbild in der App; **Dashboard** und **PiP** laden ihre eigenen zugeordneten Ansichten. PiP behält den zuletzt gewählten HDMI-Eingang. Für diese Quellen im kombinierten Player AV Companion 1.2.0 verwenden.

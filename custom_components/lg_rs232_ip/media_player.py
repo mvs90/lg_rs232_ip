@@ -201,11 +201,17 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
 
     @property
     def dashboard_source(self):
+        return self._app_source_name("Dashboard")
+
+    @property
+    def pip_source(self):
+        return self._app_source_name("PiP")
+
+    def _app_source_name(self, name):
         labels = {
             self.entry.options.get(f"input_name_hdmi{i}", f"HDMI {i}")
             for i in range(1, 4)
         }
-        name = "Dashboard"
         while name in labels:
             name += " (App)"
         return name
@@ -215,10 +221,13 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         app = self.display_app
         if app and app.dashboard_selected and app.resident_connected:
             return self.dashboard_source
+        if app and app.pip_selected and app.resident_connected:
+            return self.pip_source
         if (
-            self.controller._source == "Dashboard"
+            self.controller._source in ("Dashboard", "PiP")
             and app
             and not app.dashboard_selected
+            and not app.pip_selected
         ):
             return self.controller._resolve_source_name(app.selected_input)
         return self.controller._source
@@ -231,7 +240,7 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             if self.entry.options.get(f"show_input_hdmi{i}", True)
         ]
         if self.display_app and self.display_app.dashboard_available:
-            sources.append(self.dashboard_source)
+            sources.extend([self.dashboard_source, self.pip_source])
         return sources
 
     @property
@@ -260,6 +269,9 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             "osd_restore_error": self.controller._lg_display.osd_restore_error,
             "signal_present": self.controller.signal,
             "dashboard_source": self.dashboard_source
+            if self.display_app and self.display_app.dashboard_available
+            else None,
+            "pip_source": self.pip_source
             if self.display_app and self.display_app.dashboard_available
             else None,
         }
@@ -296,6 +308,13 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         await self.controller.async_turn_off()
 
     async def async_select_source(self, source):
+        if (
+            source == self.pip_source
+            and self.display_app
+            and self.display_app.dashboard_available
+        ):
+            await self.controller.async_select_pip()
+            return
         if (
             source == self.dashboard_source
             and self.display_app

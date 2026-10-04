@@ -1075,7 +1075,7 @@ async def test_dashboard_source_is_persistent_excludes_av_standby_and_hdmi_selec
             app.controller, SimpleNamespace(entry_id="test", options={})
         )
         api = get_display_api(app.hass, "test")
-        assert entity.source_list[-1] == "Dashboard"
+        assert entity.source_list[-2:] == ["Dashboard", "PiP"]
         assert api.dashboard_available
         app.web.reset_mock()
         app.controller._lg_display.async_set_input.reset_mock()
@@ -1183,6 +1183,7 @@ async def test_dashboard_source_does_not_hide_a_custom_hdmi_label(app):
             "HDMI 2",
             "HDMI 3",
             "Dashboard (App)",
+            "PiP",
         ]
         await acknowledge_selection(app, entity.async_select_source("Dashboard (App)"))
         assert entity.source == "Dashboard (App)"
@@ -1256,5 +1257,93 @@ async def test_paired_media_artwork_only_exposes_selected_saved_players(app):
             cfg["scenes"]["dashboard"]["elements"] = []
             await layouts.async_save(cfg, layouts.revision)
             assert (await client.get(url)).status == 404
+    finally:
+        await layouts.async_close()
+
+
+async def test_pip_source_is_independent_persisted_and_same_hdmi_exits_it(app):
+    from custom_components.lg_rs232_ip.api import get_display_api
+    from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
+
+    layouts = await configure_dashboard(app)
+    try:
+        entity = LGDisplayMediaPlayer(
+            app.controller, SimpleNamespace(entry_id="test", options={})
+        )
+        api = get_display_api(app.hass, "test")
+        assert api.pip_available and "PiP" in entity.source_list
+        await acknowledge_selection(app, entity.async_select_source("PiP"))
+        assert (
+            app.pip_selected and not app.dashboard_selected and entity.source == "PiP"
+        )
+        assert app.state()["pip"] and not app.state()["dashboard"]
+        assert (await app.store.async_load())["pip"] is True
+        assert api.presentation_active and api.pip_active
+        assert await api.async_get_input() is None
+        assert await api.async_get_signal_status() is None
+        # A separate instance reads the selected source from the recovery journal.
+        second = DisplayAppManager(app.hass, app.entry, app.controller, app.web)
+        second.layouts = layouts
+        second.resident = True
+        await second.async_start()
+        assert second.pip_selected and not second.dashboard_selected
+        await second.async_close()
+        # Selecting Dashboard leaves PiP, selecting the same HDMI leaves both.
+        await acknowledge_selection(app, entity.async_select_source("Dashboard"))
+        assert app.dashboard_selected and not app.pip_selected
+        await acknowledge_selection(app, api.async_select_pip())
+        await acknowledge_selection(app, api.async_set_input(0x90))
+        assert not app.pip_selected and entity.source == "HDMI 1"
+        assert not api.presentation_active
+    finally:
+        await layouts.async_close()
+
+
+async def test_failed_view_change_restores_pip_and_explicit_power_off_releases_guard(
+    app,
+):
+    from custom_components.lg_rs232_ip.api import get_display_api
+
+    layouts = await configure_dashboard(app)
+
+    async def timeout(awaitable, _timeout):
+        awaitable.close()
+        raise TimeoutError
+
+    try:
+        await acknowledge_selection(app, app.async_select_pip())
+        with patch(
+            "custom_components.lg_rs232_ip.resident_app.asyncio.wait_for", timeout
+        ):
+            with pytest.raises(HomeAssistantError, match="confirm"):
+                await app.async_select_dashboard()
+        assert app.pip_selected and not app.dashboard_selected
+        assert (await app.store.async_load())["pip"] is True
+        api = get_display_api(app.hass, "test")
+        app.controller.power = False
+        app.controller._lg_display.async_get_power_status.return_value = False
+        assert not api.pip_active
+        async with api.supply_guard() as allowed:
+            assert allowed
+        assert app.saved["pip"]  # Wake keeps the selected view.
+    finally:
+        await layouts.async_close()
+
+
+async def test_pip_label_collision_does_not_hide_physical_hdmi(app):
+    from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
+
+    layouts = await configure_dashboard(app)
+    try:
+        entity = LGDisplayMediaPlayer(
+            app.controller,
+            SimpleNamespace(entry_id="test", options={"input_name_hdmi1": "PiP"}),
+        )
+        assert entity.pip_source == "PiP (App)"
+        assert "PiP" in entity.source_list and "PiP (App)" in entity.source_list
+        await acknowledge_selection(app, entity.async_select_source("PiP (App)"))
+        assert entity.source == "PiP (App)"
+        await acknowledge_selection(app, entity.async_select_source("PiP"))
+        assert not app.pip_selected
     finally:
         await layouts.async_close()

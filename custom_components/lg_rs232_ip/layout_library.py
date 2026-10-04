@@ -13,6 +13,7 @@ SCENE_NAMES = {
     "overlay": "Meldung · Overlay",
     "pip": "Meldung · PiP",
     "fullscreen": "Meldung · Vollbild",
+    "pip_view": "PiP",
 }
 
 
@@ -59,6 +60,9 @@ def validate_library(value, settings):
         normalized = validate_layout(candidate)["scenes"]["dashboard"]
         views.append({"id": identifier, "name": name.strip(), "scene": normalized})
     assignments = value.get("assignments")
+    if isinstance(assignments, dict) and set(assignments) == set(SCENES) - {"pip_view"}:
+        # Keep the existing HDMI composition available as the explicit PiP view.
+        assignments = {**assignments, "pip_view": assignments["signal"]}
     if not isinstance(assignments, dict) or set(assignments) != set(SCENES):
         raise ValueError("Assign each display context")
     if any(

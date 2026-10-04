@@ -49,17 +49,38 @@ class ResidentApp:
         )
 
     async def async_select_dashboard(self):
+        await self.async_select_view("dashboard")
+
+    @property
+    def pip_selected(self):
+        return bool(
+            self.dashboard_available
+            and self.saved.get("pip")
+            and not self.saved.get("paused")
+        )
+
+    async def async_select_pip(self):
+        await self.async_select_view("pip")
+
+    async def async_select_view(self, view):
+        if view not in ("dashboard", "pip"):
+            raise HomeAssistantError("Unknown app view")
         if not self.dashboard_available or not self.resident_connected:
             raise HomeAssistantError(
                 "Enable custom layouts and connect the resident display app first"
             )
-        if self.dashboard_selected:
+        if (view == "dashboard" and self.dashboard_selected) or (
+            view == "pip" and self.pip_selected
+        ):
             return
         from .native_presentations import settle_mutation
 
         _, cancelled = await settle_mutation(
             self._async_apply_hdmi(
-                self.selected_input, self.selected_app, dashboard=True
+                self.selected_input,
+                self.selected_app,
+                dashboard=view == "dashboard",
+                pip=view == "pip",
             )
         )
         if cancelled:
@@ -103,6 +124,7 @@ class ResidentApp:
             self.selected_input == input_id
             and self.selected_app == target_app
             and not self.saved.get("dashboard")
+            and not self.saved.get("pip")
         ):
             return True
         from .native_presentations import settle_mutation
@@ -116,8 +138,11 @@ class ResidentApp:
             raise asyncio.CancelledError
         return True
 
-    async def _async_apply_hdmi(self, input_id, target_app, *, dashboard=False):
+    async def _async_apply_hdmi(
+        self, input_id, target_app, *, dashboard=False, pip=False
+    ):
         previous_dashboard = self.saved.get("dashboard", False)
+        previous_pip = self.saved.get("pip", False)
         previous = self.selected_input
         previous_app = self.selected_app
         self._input_request = secrets.token_hex(16)
@@ -125,6 +150,7 @@ class ResidentApp:
         try:
             async with self.controller._lg_display.async_suppress_osd_for_switch():
                 self.saved["dashboard"] = dashboard
+                self.saved["pip"] = pip
                 self.saved["selected_input"] = input_id
                 self.saved["selected_app"] = target_app
                 if self.content:
@@ -135,6 +161,7 @@ class ResidentApp:
                 except TimeoutError:
                     # Publish rollback before the guard restores OSD.
                     self.saved["dashboard"] = previous_dashboard
+                    self.saved["pip"] = previous_pip
                     self.saved["selected_input"] = previous
                     self.saved["selected_app"] = previous_app
                     self._input_request = None

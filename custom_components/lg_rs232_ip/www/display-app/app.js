@@ -1,8 +1,8 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.6.0", video = null, sourceNode = null, videoSource = null;
-  var dashboardSelected = false, design = null, designer = null, currentContent = null, signalLost = 0, sceneKey = null, serverOffset = 0;
+  var VERSION = "1.7.1", video = null, sourceNode = null, videoSource = null;
+  var dashboardSelected = false, pipSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
   var captureBusy = false, lastCapture = null, cancelCapture = null;
   var active = null, dismissed = null, expires = 0, lastSuccess = Date.now();
@@ -108,20 +108,21 @@
     while (parent.children.length > items.length) { parent.removeChild(parent.lastChild); }
   }
   function renderDesign(content) {
-    if (!design || !design.config.enabled || !window.LGLayoutRenderer) {
+    // Physical HDMI selection always uses the full native video plane. Custom
+    // compositions are entered only through explicit app sources or messages.
+    if ((!content && !dashboardSelected && !pipSelected) || !design || !design.config.enabled || !window.LGLayoutRenderer) {
       if (designer) { designer.clear(); designer = null; sceneKey = null; }
+      sceneKey = !content && idleHdmi ? "signal" : null;
       return false;
     }
     if (!designer) { designer = new window.LGLayoutRenderer(el("layout-root"), el("hdmi-slot"), false); }
-    var key, ready = !!(video && video.videoWidth && video.videoHeight && !video.error);
-    if (ready) { signalLost = 0; } else if (!signalLost) { signalLost = Date.now(); }
+    var key;
     if (content) { key = content.layout || "fullscreen"; }
     else if (dashboardSelected) { key = "dashboard"; }
-    else if (design.config.mode !== "auto") { key = design.config.mode; }
-    else { key = ready || Date.now() - signalLost < design.config.signal_delay * 1000 ? "signal" : "no_signal"; }
+    else { key = "pip_view"; }
     sceneKey = key;
     layout("designed");
-    designer.render(design.config.scenes[key], design.values, {message:content, timezone:design.timezone, sun:design.sun, hideHdmi:dashboardSelected && !design.config.scenes.dashboard.elements.some(function (item) { return item.kind === "hdmi"; }), mediaUrl:function(entity,id) {return "cover.jpg?entity="+encodeURIComponent(entity)+"&v="+encodeURIComponent(id);}, imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date(Date.now()+serverOffset)});
+    designer.render(design.config.scenes[key], design.values, {message:content, timezone:design.timezone, sun:design.sun, hideHdmi:(dashboardSelected || pipSelected) && !design.config.scenes[dashboardSelected ? "dashboard" : "pip_view"].elements.some(function (item) { return item.kind === "hdmi"; }), mediaUrl:function(entity,id) {return "cover.jpg?entity="+encodeURIComponent(entity)+"&v="+encodeURIComponent(id);}, imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date(Date.now()+serverOffset)});
     return true;
   }
   function clear(message) {
@@ -177,7 +178,7 @@
         text("connection", "Mit Home Assistant verbunden");
         var first = revision === null;
         revision = data.revision; idleHdmi = data.idle_hdmi || null; inputRequest = data.input_request;
-        design = data.layout || null; dashboardSelected = data.dashboard === true;
+        design = data.layout || null; dashboardSelected = data.dashboard === true; pipSelected = data.pip === true;
         if (design && design.now) { serverOffset = new Date(design.now).getTime() - Date.now(); }
         try {
           render(data.content);
@@ -198,13 +199,7 @@
     }
     acknowledgeInput();
     if (designer) {
-      // Clock updates are cheap; automatic signal changes only patch the scene.
-      if (!active && !dashboardSelected && design.config.mode === "auto") {
-        var ready = !!(video && video.videoWidth && video.videoHeight && !video.error);
-        if (ready) { signalLost = 0; } else if (!signalLost) { signalLost = Date.now(); }
-        var key = ready || Date.now()-signalLost < design.config.signal_delay*1000 ? "signal" : "no_signal";
-        if (key !== sceneKey) { renderDesign(null); }
-      }
+      // Clocks/progress advance locally without changing the selected source.
       designer.tick(new Date(Date.now()+serverOffset));
     }
   }, 1000);

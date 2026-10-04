@@ -4,7 +4,15 @@ from copy import deepcopy
 import math
 import re
 
-SCENES = ("signal", "no_signal", "dashboard", "overlay", "pip", "fullscreen")
+SCENES = (
+    "signal",
+    "no_signal",
+    "dashboard",
+    "overlay",
+    "pip",
+    "fullscreen",
+    "pip_view",
+)
 KINDS = (
     "hdmi",
     "clock",
@@ -171,6 +179,11 @@ def make_layout(style="cinema"):
             text="Zeit für einen guten Start.",
         ),
     ]
+    pip_view = (
+        deepcopy(signal)
+        if style != "cinema"
+        else make_layout("aurora")["scenes"]["signal"]["elements"]
+    )
     return {
         "schema": 1,
         "enabled": False,
@@ -185,7 +198,8 @@ def make_layout(style="cinema"):
                 accent,
             )
             for key, items in zip(
-                SCENES, (signal, overview, dashboard, overlay, pip, fullscreen)
+                SCENES,
+                (signal, overview, dashboard, overlay, pip, fullscreen, pip_view),
             )
         },
     }
@@ -276,6 +290,8 @@ def validate_layout(value):
     entities = set()
     for key in SCENES:
         raw = value.get("scenes", {}).get(key)
+        if key == "pip_view" and raw is None:
+            raw = deepcopy(value["scenes"].get("signal"))
         if key == "dashboard" and raw is None:
             raw = deepcopy(
                 value["scenes"].get("no_signal")
@@ -382,7 +398,8 @@ def validate_layout(value):
                     kind + "."
                 ):
                     raise ValueError("Select a matching weather/calendar entity")
-                entities.add(entity_id)
+                if key not in ("signal", "no_signal"):
+                    entities.add(entity_id)
             obj["entity_id"] = entity_id
             normalized["elements"].append(obj)
         if hdmi > 1 or messages > 1:
@@ -393,10 +410,19 @@ def validate_layout(value):
     return result
 
 
+def active_scenes(config):
+    """Legacy automatic HDMI layouts remain editable, but no longer run."""
+    return {
+        key: scene
+        for key, scene in config["scenes"].items()
+        if key not in ("signal", "no_signal")
+    }
+
+
 def layout_entities(config):
     return {
         item["entity_id"]
-        for scene in config["scenes"].values()
+        for scene in active_scenes(config).values()
         for item in scene["elements"]
         if item["entity_id"]
     }

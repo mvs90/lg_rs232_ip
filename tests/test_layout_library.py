@@ -82,7 +82,7 @@ async def test_saved_views_only_publish_assigned_data_and_survive_restart(layout
     layouts.hass.states.async_set("sensor.private", "secret")
     await layouts.async_save(config, 0, library)
     assert "private" not in str(layouts.payload())
-    assert len(layouts.editor_document()["config"]["views"]) == 7
+    assert len(layouts.editor_document()["config"]["views"]) == 8
     second = DisplayLayouts(layouts.hass, layouts.entry)
     await second.async_start()
     try:
@@ -146,7 +146,7 @@ async def test_library_api_authorization_and_inactive_background_protection(layo
             path, headers=headers, json={"config": editor, "revision": 0}
         )
         assert response.status == 200
-        assert len((await response.json())["config"]["views"]) == 7
+        assert len((await response.json())["config"]["views"]) == 8
         assert (
             await client.post(
                 path, headers=headers, json={"config": editor, "revision": 0}
@@ -191,3 +191,36 @@ async def test_live_sun_updates_are_bounded_published_and_cleaned_up(layouts):
     config["enabled"] = False
     await layouts.async_save(config, 1)
     assert layouts._sun_timer is None
+
+
+def test_29_library_keeps_its_hdmi_composition_as_explicit_pip():
+    config = make_layout("morning")
+    del config["scenes"]["pip_view"]
+    library = from_config(make_layout("morning"))
+    library["views"] = [view for view in library["views"] if view["id"] != "pip_view"]
+    del library["assignments"]["pip_view"]
+    original = deepcopy(library)
+    runtime, normalized = validate_library(library, config)
+    assert normalized["views"] == original["views"]
+    assert normalized["assignments"]["pip_view"] == "signal"
+    assert runtime["scenes"]["pip_view"] == config["scenes"]["signal"]
+    assert library == original
+
+
+async def test_legacy_hdmi_scenes_stay_saved_but_do_not_publish_or_request_data(
+    layouts,
+):
+    config = make_layout()
+    config["enabled"] = True
+    old = element("media", 5, 5, 40, 40)
+    old["entity_id"] = "media_player.legacy"
+    weather = element("weather", 50, 5, 40, 40)
+    weather["entity_id"] = "weather.legacy"
+    config["scenes"]["signal"]["elements"] = [old, weather]
+    config["scenes"]["no_signal"]["elements"] = [old, weather]
+    await layouts.async_save(config, 0)
+    assert layouts.document()["config"]["scenes"]["signal"]["elements"]
+    assert "signal" not in layouts.payload()["config"]["scenes"]
+    assert "no_signal" not in layouts.payload()["config"]["scenes"]
+    assert layouts.values() == {} and layouts.media_entities() == set()
+    assert layouts.forecast_requests() == {}

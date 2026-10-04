@@ -1,5 +1,19 @@
 # Release acceptance
 
+## LG 2.10.0: colour-only themes and explicit PiP source — 2026-10-04
+
+**302 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 100 browser cases pass across Chromium and WebKit.** Ruff and whitespace checks pass. New coverage includes theme changes preserving every non-colour widget field, editable palettes, context navigation without changing the source, read-only HDMI preview, explicit PiP selection, source-label collisions, persistence, acknowledgement rollback, standby/supply protection, removal of the PiP HDMI widget, and omission of old automatic scenes from panel data/forecast/image access.
+
+Using the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container and physical **75UH5F-HJ / firmware 04.13.50 / webOS 4.0.1-136**: the initial source/restart/capture checks used display app 1.7.0; the final AV and payload checks verified **1.7.1** after its notification handling adjustment for views without an HDMI widget.
+
+- Native captures verified HDMI 1 full-screen and the previously saved HDMI composition as the separate PiP view. The SI launcher stayed foreground. Selecting the same HDMI 1 after PiP restored full-screen video.
+- A four-second overlay returned to persistent PiP. Restarting the same container restored the PiP selection and unchanged saved library. Unconnected HDMI 2 remained in the full-screen HDMI scene after the former signal-delay period instead of loading widgets. Dashboard still used its own saved composition.
+- A temporary real AV Companion 1.2.0 config entry exposed PiP, selected it through the public LG API, returned to full-screen HDMI and reflected direct LG PiP selection. The temporary entry was removed afterwards. No linked player, sound system, socket or Apple Home pairing was added.
+- The final paired payload contains only the five active custom contexts; legacy automatic scenes remain saved but are omitted. Installed LG 2.10.0 and AV Companion 1.2.0 files match repository sources.
+- The real HA Studio UI showed left colour/background controls and top context buttons. Applying Paper & Sand retained exactly the same widget labels and geometry; undo restored the original draft. The actual remote offered HDMI 1/2/3, Dashboard and PiP.
+
+The original library, bindings and HDMI 1 source were preserved/restored. Private native captures and credentials are excluded from Git. These checks do not certify total LG CPU/RAM, multi-day operation, every HDMI/HDCP provider or actual HomeKit input discovery on an iPhone.
+
 ## LG 2.9.0: saved views and live solar backgrounds — 2026-10-04
 
 **297 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 96 browser cases pass across Chromium and WebKit.** Ruff and whitespace checks pass.

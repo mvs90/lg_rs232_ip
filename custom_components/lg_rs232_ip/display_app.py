@@ -23,7 +23,7 @@ from .const import DOMAIN
 from .resident_app import ResidentApp, SI_APP_ID
 from .web_manager import LGWebError
 
-APP_VERSION = "1.6.0"
+APP_VERSION = "1.7.1"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -217,6 +217,7 @@ class DisplayAppManager(ResidentApp):
             "launch_mode": self.mode,
             "resident_enabled": self.resident,
             "dashboard_selected": self.dashboard_selected,
+            "pip_selected": self.pip_selected,
             "resident_connected": self.resident_connected,
             "resident_paused": bool(self.saved.get("paused")),
             "capture_capable": self.connected and self.capture_capable,
@@ -442,6 +443,7 @@ class DisplayAppManager(ResidentApp):
             "revision": self._revision,
             "idle_hdmi": self.idle_hdmi(),
             "dashboard": self.dashboard_selected,
+            "pip": self.pip_selected,
             "capture": self._capture,
             "input_request": self._input_request,
             "layout": self.layouts.payload() if self.layouts else None,
@@ -505,7 +507,15 @@ class DisplayAppManager(ResidentApp):
             self.client_layout_scene = (
                 scene
                 if scene
-                in ("signal", "no_signal", "dashboard", "overlay", "pip", "fullscreen")
+                in (
+                    "signal",
+                    "no_signal",
+                    "dashboard",
+                    "pip_view",
+                    "overlay",
+                    "pip",
+                    "fullscreen",
+                )
                 else None
             )
             self.client_layout_revision = (
@@ -601,10 +611,12 @@ class DisplayAppView(HomeAssistantView):
                 headers=headers,
             )
         if resource == "background.jpg" and manager.layouts:
+            from .layout_config import active_scenes
+
             identifier = request.query.get("id", "")
             if not any(
                 scene.get("image_id") == identifier and identifier
-                for scene in manager.layouts.config["scenes"].values()
+                for scene in active_scenes(manager.layouts.config).values()
             ):
                 raise web.HTTPNotFound()
             try:

@@ -9,7 +9,7 @@ async function mount(page, state) {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.6.0', revision: 1, dashboard: state.dashboard || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.7.1', revision: 1, dashboard: state.dashboard || false, pip: state.pip || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -208,12 +208,12 @@ const studioPresets = require('../fixtures/studio-catalog.json').presets;
 function designed(mode='signal') {
   const config=JSON.parse(JSON.stringify(studioPresets[1].layout));
   config.enabled=true; config.mode=mode; config.signal_delay=1;
-  config.scenes.signal.elements.find(e=>e.kind==='entity').entity_id='sensor.temperature';
+  config.scenes.pip_view.elements.find(e=>e.kind==='entity').entity_id='sensor.temperature';
   return {config,revision:1,timezone:'Europe/Berlin',now:new Date().toISOString(),values:{'sensor.temperature':{state:'22',unit:'°C'}}};
 }
 
 test('designed scenes keep one HDMI plane through data updates, notifications and deactivation', async ({page}) => {
-  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  const state={content:null,idle_hdmi:'ext://hdmi:1',pip:true,layout:designed()};
   await mount(page,state);
   await expect(page.locator('body')).toHaveClass('designed');
   await expect(page.locator('.lg-entity')).toContainText('22 °C');
@@ -234,7 +234,7 @@ test('designed scenes keep one HDMI plane through data updates, notifications an
   expect(await page.locator('#hdmi-slot').getAttribute('style')).toBeNull();
 });
 
-test('automatic no-signal debounce and manual dashboard mode do not reload HDMI', async ({page}) => {
+test('HDMI stays fullscreen despite signal loss or saved layouts; only explicit PiP enters its view', async ({page}) => {
   await page.addInitScript(()=>{
     window.ready=true;window.loads=0;
     Object.defineProperty(HTMLVideoElement.prototype,'videoWidth',{get:()=>window.ready?1920:0});
@@ -244,22 +244,30 @@ test('automatic no-signal debounce and manual dashboard mode do not reload HDMI'
   });
   const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed('auto')};
   await mount(page,state);
-  await expect(page.locator('#hdmi-slot')).toBeVisible();
-  await page.evaluate(()=>{window.ready=false;});
-  await page.waitForTimeout(200);
-  await expect(page.locator('#hdmi-slot')).toBeVisible();
-  await expect(page.locator('#hdmi-slot')).toBeHidden({timeout:3500});
-  await page.evaluate(()=>{window.ready=true;});
-  await expect(page.locator('#hdmi-slot')).toBeVisible({timeout:2000});
+  await expect(page.locator('body')).toHaveClass('hdmi');
+  await page.evaluate(()=>{window.ready=false;window.originalHDMI=document.querySelector('video');});
   state.layout.config.mode='no_signal';
-  await expect(page.locator('#hdmi-slot')).toBeHidden();
-  await expect(page.locator('.lg-clock')).toBeVisible();
+  await page.waitForTimeout(1500);
+  await expect(page.locator('body')).toHaveClass('hdmi');
+  await expect(page.locator('#hdmi-slot')).toBeVisible();
+  await expect(page.locator('.lg-widget')).toHaveCount(0);
+  state.pip=true;
+  await expect(page.locator('body')).toHaveClass('designed');
+  expect(await page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('61%');
+  state.content={...content(),layout:'overlay',duration:1};
+  await expect(page.locator('.lg-message')).toBeVisible();
+  await expect(page.locator('.lg-message')).toHaveCount(0,{timeout:3000});
+  expect(await page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('61%');
+  state.pip=false;
+  await expect(page.locator('body')).toHaveClass('hdmi');
+  expect(await page.locator('#hdmi-slot').getAttribute('style')).toBeNull();
+  expect(await page.evaluate(()=>document.querySelector('video')===window.originalHDMI)).toBe(true);
   expect(await page.evaluate(()=>window.loads)).toBe(0);
 });
 
 test('layouts work without resident HDMI and plain text/calendar data cannot inject markup', async ({page}) => {
   const state={content:{...content(),layout:'pip'},layout:designed(),idle_hdmi:null};
-  state.layout.config.scenes.pip.elements.push({...state.layout.config.scenes.signal.elements.find(e=>e.kind==='calendar'),entity_id:'calendar.test'});
+  state.layout.config.scenes.pip.elements.push({...state.layout.config.scenes.pip_view.elements.find(e=>e.kind==='calendar'),entity_id:'calendar.test'});
   state.layout.values['calendar.test']={state:'on',events:[{summary:'<img src=x onerror=window.injected=true>',start:'2026-10-04'}]};
   const events=await mount(page,state);
   await expect(page.locator('#hdmi-slot source')).toHaveAttribute('src','ext://hdmi:1');
@@ -274,8 +282,8 @@ test('unchanged dashboard polls do not repeat calendar date formatting', async (
     window.dateFormats=0;const original=Date.prototype.toLocaleDateString;
     Date.prototype.toLocaleDateString=function(...args){window.dateFormats++;return original.apply(this,args);};
   });
-  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
-  state.layout.config.scenes.signal.elements.find(e=>e.kind==='calendar').entity_id='calendar.family';
+  const state={content:null,idle_hdmi:'ext://hdmi:1',pip:true,layout:designed()};
+  state.layout.config.scenes.pip_view.elements.find(e=>e.kind==='calendar').entity_id='calendar.family';
   state.layout.values['calendar.family']={state:'off',events:[{summary:'Dinner',start:'2026-10-04T19:00:00+02:00'}]};
   await mount(page,state);
   await expect(page.locator('.lg-calendar')).toContainText('Dinner');
@@ -368,4 +376,18 @@ test('missing cover uses local placeholder; media metadata is plain text',async(
   await expect(page.locator('.lg-media-art')).not.toHaveClass(/loaded/);
   await expect(page.locator('.lg-media-placeholder')).toBeVisible();
   expect(await page.evaluate(()=>window.injected)).toBeUndefined();
+});
+
+test('PiP with its video widget removed stays free of HDMI through notifications',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',pip:true,layout:designed()};
+  state.layout.config.scenes.pip_view.elements=[];
+  await mount(page,state);
+  await expect(page.locator('#hdmi-slot')).toBeHidden();
+  state.content={...content(),layout:'overlay',duration:1};
+  await expect(page.locator('.lg-message')).toBeVisible();
+  await expect(page.locator('#hdmi-slot')).toBeHidden();
+  await expect(page.locator('.lg-message')).toHaveCount(0,{timeout:3000});
+  state.pip=false;
+  await expect(page.locator('body')).toHaveClass('hdmi');
+  await expect(page.locator('#hdmi-slot')).toBeVisible();
 });

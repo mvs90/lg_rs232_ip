@@ -32,7 +32,9 @@ class DisplayAPI:
     @property
     def presentation_active(self):
         return self.ready and (
-            self.controller.presentation_active or self.dashboard_active
+            self.controller.presentation_active
+            or self.dashboard_active
+            or self.pip_active
         )
 
     @property
@@ -51,6 +53,20 @@ class DisplayAPI:
 
     async def async_select_dashboard(self):
         await self.controller.async_select_dashboard()
+
+    @property
+    def pip_available(self):
+        return self.dashboard_available
+
+    @property
+    def pip_active(self):
+        if not self.ready:
+            return False
+        app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
+        return bool(app and app.pip_selected and self.controller.power is not False)
+
+    async def async_select_pip(self):
+        await self.controller.async_select_pip()
 
     @property
     def is_available(self):
@@ -87,7 +103,7 @@ class DisplayAPI:
     async def async_get_input(self, *, use_cache=True):
         if self.ready:
             app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
-            if app and app.dashboard_selected:
+            if app and (app.dashboard_selected or app.pip_selected):
                 return None
             if app and app.logical_input is not None:
                 return app.logical_input
@@ -98,7 +114,7 @@ class DisplayAPI:
         )
 
     async def async_get_signal_status(self):
-        if self.dashboard_active:
+        if self.dashboard_active or self.pip_active:
             return None
         return await self.display.async_get_signal_status() if self.ready else None
 
@@ -125,6 +141,7 @@ class DisplayAPI:
                     controller.async_write_ha_state()
                     return True
                 app.saved.pop("dashboard", None)
+                app.saved.pop("pip", None)
                 await app.async_pause_resident(leave=False)
             return await getattr(self.display, method)(*args)
 
