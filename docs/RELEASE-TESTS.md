@@ -1,5 +1,22 @@
 # Release acceptance
 
+## LG 2.9.0: saved views and live solar backgrounds — 2026-10-04
+
+**297 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 96 browser cases pass across Chromium and WebKit.** Ruff and whitespace checks pass.
+
+Coverage includes independent named copies, six-context assignments, old-layout adoption without overwriting the original store, delete/undo/default fallback, empty galleries, mobile sizing, optimistic conflicts, administrator-only HTTP access, inactive-image protection, preservation of unassigned/shared views through the older API, continued widget editing after save, live solar updates and cancellation of the solar timer. Only assigned scenes and their selected entities reach the display; the saved library stays in HA.
+
+Using the existing **`unifi-air-quality-ha-dev` HA 2026.9.4 container**, without creating another instance, and the physical **75UH5F-HJ / firmware 04.13.50 / webOS 4.0.1-136 / app 1.6.0**:
+
+- The six existing scenes became six saved views with their real weather/sensor bindings intact. Two independent test views were saved; while unassigned they did not alter the runtime layout.
+- Assigning the test solar view to Dashboard displayed it. Restarting the same container preserved both views and the assignment; the resident app reconnected.
+- The actual `sun.sun` position advanced after 35 seconds with an unchanged saved-layout revision, confirming the live calculation without an editor reload.
+- A temporary, explicitly synthetic sun entity exercised day and night within a short test. Native LG screenshots visually confirmed both gradients after a state change alone, without another layout save or source switch. The SI launcher remained foreground.
+- Deleting an assigned view restored its context's built-in default. The original six views, their entity bindings, configured solar entity and selected Dashboard source were restored afterwards, and the temporary sun entity was removed.
+- Installed LG 2.9.0 and AV Companion 1.1.0 files match their respective repository sources. AV Companion was unchanged; private captures, configuration backups and authentication are excluded from Git.
+
+These tests establish persistence and live rendering on this panel. They do not measure total LG CPU/RAM or multi-day operation. Solar position is calculated on HA every 30 seconds; the display receives only the resulting angles and uses the existing lightweight renderer.
+
 ## LG 2.8.0: media cards and room suggestions — 2026-10-04
 
 **291 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 88 browser tests pass across Chromium and WebKit.** Ruff and whitespace checks pass. Coverage includes exact entity/device room inheritance, disabled/hidden/diagnostic exclusions, no automatic saves, media binding validation, bounded image conversion, coalesced concurrent fetches, cancellation isolation, stale-cover races, failed-cover backoff, plaintext metadata, selected-entity privacy, administrator-only previews, paired saved-binding checks, GET-only routes, compact/poster artwork, playing/paused progress, off/absent covers and removal/undo.

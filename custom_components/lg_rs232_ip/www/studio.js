@@ -1,10 +1,10 @@
 /* Local Home Assistant layout editor. The LG only runs the small ES5 renderer. */
-const VERSION = "2.8.0";
+const VERSION = "2.9.0";
 const clone = value => JSON.parse(JSON.stringify(value));
 const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 const SCENES = {signal:"Mit HDMI",no_signal:"Ohne HDMI",dashboard:"Dashboard",overlay:"Meldung · Overlay",pip:"Meldung · PiP",fullscreen:"Meldung · Vollbild"};
 const KINDS = {hdmi:"HDMI / PiP",clock:"Uhr & Datum",weather:"Wetter",calendar:"Kalender",entity:"HA-Entität",status:"Statuskarte",media:"Medienplayer",text:"Text",message:"Meldungsfenster"};
-const BACKGROUNDS = {solid:"Einfarbig",aurora:"Aurora",dawn:"Morgenlicht",ocean:"Ozean",sand:"Sand",midnight:"Mitternacht",solar:"Sonnenstand",gradient:"Eigener Verlauf",image:"Eigenes Bild"};
+const BACKGROUNDS = {solid:"Einfarbig",aurora:"Aurora",dawn:"Warmer Verlauf",ocean:"Ozean",sand:"Sand",midnight:"Mitternacht",solar:"Sonnenstand",gradient:"Eigener Verlauf",image:"Eigenes Bild"};
 const icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4M5 6h7M5 9h4"/></svg>';
 const options = (items, value) => Object.entries(items).map(([key,label]) => `<option value="${escapeHTML(key)}" ${key === value ? "selected" : ""}>${escapeHTML(label)}</option>`).join("");
 
@@ -35,26 +35,27 @@ class LGDisplayStudio extends HTMLElement {
       if(generation!==this._generation || !this.isConnected) return;
       if(!this.catalog.entries.length) {this.shadowRoot.querySelector('.empty').textContent="Lege zuerst ein LG-Display in den Integrationseinstellungen an.";return;}
       this.entryId=this.entryId && this.catalog.entries.some(e=>e.entry_id===this.entryId) ? this.entryId : this.catalog.entries[0].entry_id;
-      const doc=await this.hass.callApi("GET",`lg_rs232_ip/layout/${this.entryId}`);
+      const doc=await this.hass.callApi("GET",`lg_rs232_ip/layout_library/${this.entryId}`);
       if(generation!==this._generation) return;
-      this.accept(doc); this.mount();
+      this.accept(doc); this.page="overview"; this.mount();
     } catch(error) { if(generation===this._generation) this.shadowRoot.querySelector('.empty').textContent="Der Editor konnte nicht geladen werden. Bitte als Administrator anmelden und erneut öffnen."; }
   }
-  accept(doc) {this.suggestions=[];this.suggestionArea="";this._suggestionRequest=(this._suggestionRequest || 0)+1;this.releaseImages();this.backgrounds=doc.backgrounds || [];this.backendSun=doc.sun;this.config=clone(doc.config);this.revision=doc.revision;this.saved=clone(doc.config);this.backendValues=doc.values || {};this.timezone=doc.timezone || this.hass.config?.time_zone || "Europe/Berlin";this.dirty=false;this.selected=null;this.history=[];this.future=[];}
+  accept(doc) {this.suggestions=[];this.suggestionArea="";this._suggestionRequest=(this._suggestionRequest || 0)+1;this.releaseImages();this.backgrounds=doc.backgrounds || [];this.backendSun=doc.sun;this.config=this.withViews(clone(doc.config));this.viewId=this.config.views[0]?.id;this.revision=doc.revision;this.saved=clone(this.config);this.backendValues=doc.values || {};this.timezone=doc.timezone || this.hass.config?.time_zone || "Europe/Berlin";this.dirty=false;this.selected=null;this.history=[];this.future=[];}
   mount() {
+    clearInterval(this._clock);clearInterval(this._dataTimer);this._resize?.disconnect();
     this.shadowRoot.innerHTML=`<link rel="stylesheet" href="/lg_rs232_ip/studio.css?v=${VERSION}"><link rel="stylesheet" href="/lg_rs232_ip/layout.css?v=${VERSION}">
-      <header><button class="menu" aria-label="Seitenleiste öffnen">☰</button><div class="logo">${icon}</div><div><h1>Display Studio</h1><p>Dein Zuhause. Auf deinem Bildschirm.</p></div><div class="spacer"></div><select class="device" aria-label="Display">${this.catalog.entries.map(e=>`<option value="${escapeHTML(e.entry_id)}" ${e.entry_id===this.entryId?'selected':''}>${escapeHTML(e.name)}</option>`).join("")}</select><div class="toolbar"><span class="status" role="status"></span><button class="secondary" data-action="undo" title="Rückgängig">↶</button><button class="secondary" data-action="redo" title="Wiederholen">↷</button><button class="primary" data-action="save">Speichern & anwenden</button></div></header>
-      <div class="notice" hidden></div><div class="workspace"><aside class="sidebar"><h2>Ein guter Anfang</h2><div class="presets">${this.catalog.presets.map(p=>`<button class="preset" data-preset="${escapeHTML(p.id)}"><div class="mini" data-mini="${escapeHTML(p.id)}"></div><strong>${escapeHTML(p.name)}</strong><span>${escapeHTML(p.description)}</span></button>`).join("")}</div><p class="note">Vorlagen ändern deinen Entwurf. Erst Speichern überträgt ihn auf das Display.</p><div class="links"><button class="small" data-action="export">Exportieren</button><button class="small" data-action="import">Importieren</button><input class="export" type="file" accept="application/json,.json"></div><details class="room-suggestions" open><summary>Karten aus deinem Raum</summary><label>Raum für Kartenvorschläge<select id="suggestion-room"><option value="">Raum wählen</option></select></label><button class="small" data-action="suggestions">Vorschläge aktualisieren</button><p class="note room-hint"></p><div class="suggestions"></div></details><h3>Ausgabe</h3><button class="secondary" data-action="dashboard">Dashboard anzeigen</button><div class="toggle"><label><input type="checkbox" id="enabled">Eigenes Layout verwenden</label></div><p class="note">Nur die hier ausgewählten Entitäten werden an das Display weitergegeben.</p></aside>
-      <main class="main"><div class="scene-tabs" role="tablist">${Object.entries(SCENES).map(([key,name])=>`<button class="tab" role="tab" data-scene="${key}" aria-selected="false">${name}</button>`).join("")}</div><div class="mode-controls"><label>Ansicht auf dem Display<select id="mode">${options({auto:"Automatisch nach HDMI-Signal",signal:"Immer die HDMI-Ansicht",no_signal:"Immer die Ansicht ohne HDMI"},this.config.mode)}</select></label><label>Signalpause (s)<input id="signal-delay" type="number" min="0" max="30" value="${this.config.signal_delay}"></label></div><div class="preview-label"><span id="scene-title"></span><span>16:9 · HDMI-Platzhalter · Live-Entitäten</span></div><div class="frame"><div class="stage"><div class="scene"><div class="lg-hdmi-placeholder">HDMI</div></div><div class="selection-layer"></div></div></div><p class="hint">Element anklicken und ziehen · Größe über die Ecke ändern · Pfeiltasten: 1 %, mit Umschalt: 0,1 %</p><div class="flash" aria-live="polite"></div><section class="message-test"><h2>Meldung ausprobieren</h2><textarea id="test-message" aria-label="Testnachricht">Die Waschmaschine ist fertig.</textarea><div class="row"><select id="test-layout" aria-label="Nachrichtenlayout">${options({overlay:"Overlay",pip:"PiP",fullscreen:"Vollbild"},'overlay')}</select><button class="secondary" data-action="test">10 Sekunden anzeigen</button></div><p class="note">Verwendet das gespeicherte Layout. Für die Anzeige muss die App verbunden sein.</p></section></main><aside class="inspector"><section class="section"><h2>Szene gestalten</h2><div class="form-grid"><label class="full">Hintergrund<select id="background">${options(BACKGROUNDS,this.scene.background)}</select></label><label>Grundfarbe<input id="scene-color" type="color"></label><label>Akzent<input id="scene-accent" type="color"></label></div><label class="field">Verlaufswinkel<input id="gradient-angle" type="range" min="0" max="360" step="1"></label><label class="field">Sonnenstand-Entität<input id="sun-entity" list="sun-entities" placeholder="sun.sun"><datalist id="sun-entities">${Object.keys(this.hass.states).filter(id=>id.startsWith('sun.')).map(id=>`<option value="${escapeHTML(id)}"></option>`).join('')}</datalist></label><div class="background-tools"><label class="field">Eigenes Hintergrundbild<select id="bg-image"></select></label><label class="field">Bild einpassen<select id="image-fit">${options({cover:'Ausfüllen',contain:'Vollständig zeigen'},this.scene.image_fit)}</select></label><label class="field">Bild abdunkeln<input id="image-dim" type="range" min="0" max="0.9" step="0.05"></label><input id="bg-upload" class="export" type="file" accept="image/jpeg,image/png"><button class="small" data-action="upload-background">Bild hochladen</button><button class="small" data-action="clean-backgrounds">Unbenutzte Bilder entfernen</button><p class="note">JPEG/PNG, bis 5 MiB. Lokal auf maximal 1920 × 1080 verkleinert. Erst Speichern ändert das Display.</p></div><h3>Elemente · vorne zuerst</h3><div class="layers"></div><div class="add"><select aria-label="Elementtyp" id="new-kind">${options(KINDS,'entity')}</select><button class="small" data-action="add">＋</button></div></section><section class="properties"></section></aside></div>`;
+      <header><button class="menu" aria-label="Seitenleiste öffnen">☰</button><div class="logo">${icon}</div><div><h1>Display Studio</h1><p>Dein Zuhause. Auf deinem Bildschirm.</p></div><div class="spacer"></div><select class="device" aria-label="Display">${this.catalog.entries.map(e=>`<option value="${escapeHTML(e.entry_id)}" ${e.entry_id===this.entryId?'selected':''}>${escapeHTML(e.name)}</option>`).join("")}</select><div class="toolbar"><span class="status" role="status"></span><button class="secondary" data-action="undo" title="Rückgängig">↶</button><button class="secondary" data-action="redo" title="Wiederholen">↷</button><button class="primary" data-action="save">Speichern</button></div></header>
+      <div class="notice" hidden></div><div class="overview"><div class="gallery-heading"><div><p class="eyebrow">DEINE ANSICHTEN</p><h2>Ein Platz für jeden Moment.</h2><p>Gespeicherte Designs für Fernsehen, Alltag und Meldungen.</p></div><button class="primary" data-action="new-view">＋ Neue Ansicht</button></div><div class="gallery-flash" role="status"></div><section class="view-creator" hidden></section><div class="view-gallery"></div><section class="view-assignments"><h2>Wann wird welche Ansicht angezeigt?</h2><p class="note">Die Zuordnung gilt nach dem Speichern. „Standard“ verwendet die integrierte Grundansicht.</p><div class="assignment-grid"></div></section><section class="template-gallery"><h2>Vorlagen als Ausgangspunkt</h2><div class="template-options"></div></section></div><div class="editor-navigation"><button class="secondary" data-action="overview">← Alle Ansichten</button><label>Name der Ansicht<input id="view-name" maxlength="80"></label><span class="view-usage"></span></div><div class="workspace"><aside class="sidebar"><h2>Ein guter Anfang</h2><div class="presets">${this.catalog.presets.map(p=>`<button class="preset" data-preset="${escapeHTML(p.id)}"><div class="mini" data-mini="${escapeHTML(p.id)}"></div><strong>${escapeHTML(p.name)}</strong><span>${escapeHTML(p.description)}</span></button>`).join("")}</div><p class="note">Vorlagen ändern nur diese Ansicht. Erst Speichern übernimmt den Entwurf.</p><div class="links"><button class="small" data-action="export">Exportieren</button><button class="small" data-action="import">Importieren</button><input class="export" type="file" accept="application/json,.json"></div><details class="room-suggestions" open><summary>Karten aus deinem Raum</summary><label>Raum für Kartenvorschläge<select id="suggestion-room"><option value="">Raum wählen</option></select></label><button class="small" data-action="suggestions">Vorschläge aktualisieren</button><p class="note room-hint"></p><div class="suggestions"></div></details><h3>Ausgabe</h3><button class="secondary" data-action="dashboard">Dashboard anzeigen</button><div class="toggle"><label><input type="checkbox" id="enabled">Eigenes Layout verwenden</label></div><p class="note">Nur die hier ausgewählten Entitäten werden an das Display weitergegeben.</p></aside>
+      <main class="main"><div class="view-assignment-hint">Zuordnung zu Dashboard, HDMI und Meldungen in der Ansichtenübersicht.</div><div class="mode-controls"><label>Ansicht auf dem Display<select id="mode">${options({auto:"Automatisch nach HDMI-Signal",signal:"Immer die HDMI-Ansicht",no_signal:"Immer die Ansicht ohne HDMI"},this.config.mode)}</select></label><label>Signalpause (s)<input id="signal-delay" type="number" min="0" max="30" value="${this.config.signal_delay}"></label></div><div class="preview-label"><span id="scene-title"></span><span>16:9 · HDMI-Platzhalter · Live-Entitäten</span></div><div class="frame"><div class="stage"><div class="scene"><div class="lg-hdmi-placeholder">HDMI</div></div><div class="selection-layer"></div></div></div><p class="hint">Element anklicken und ziehen · Größe über die Ecke ändern · Pfeiltasten: 1 %, mit Umschalt: 0,1 %</p><div class="flash" aria-live="polite"></div><section class="message-test"><h2>Meldung ausprobieren</h2><textarea id="test-message" aria-label="Testnachricht">Die Waschmaschine ist fertig.</textarea><div class="row"><select id="test-layout" aria-label="Nachrichtenlayout">${options({overlay:"Overlay",pip:"PiP",fullscreen:"Vollbild"},'overlay')}</select><button class="secondary" data-action="test">10 Sekunden anzeigen</button></div><p class="note">Verwendet das gespeicherte Layout. Für die Anzeige muss die App verbunden sein.</p></section></main><aside class="inspector"><section class="section"><h2>Szene gestalten</h2><div class="form-grid"><label class="full">Hintergrund<select id="background" aria-label="Hintergrund">${options(BACKGROUNDS,this.scene.background)}</select></label><label>Grundfarbe<input id="scene-color" type="color"></label><label>Akzent<input id="scene-accent" type="color"></label></div><label class="field">Verlaufswinkel<input id="gradient-angle" type="range" min="0" max="360" step="1"></label><label class="field">Sonnenstand-Entität<input id="sun-entity" list="sun-entities" placeholder="sun.sun"><datalist id="sun-entities">${Object.keys(this.hass.states).filter(id=>id.startsWith('sun.')).map(id=>`<option value="${escapeHTML(id)}"></option>`).join('')}</datalist></label><div class="background-tools"><label class="field">Eigenes Hintergrundbild<select id="bg-image"></select></label><label class="field">Bild einpassen<select id="image-fit">${options({cover:'Ausfüllen',contain:'Vollständig zeigen'},this.scene.image_fit)}</select></label><label class="field">Bild abdunkeln<input id="image-dim" type="range" min="0" max="0.9" step="0.05"></label><input id="bg-upload" class="export" type="file" accept="image/jpeg,image/png"><button class="small" data-action="upload-background">Bild hochladen</button><button class="small" data-action="clean-backgrounds">Unbenutzte Bilder entfernen</button><p class="note">JPEG/PNG, bis 5 MiB. Lokal auf maximal 1920 × 1080 verkleinert. Erst Speichern ändert das Display.</p></div><h3>Elemente · vorne zuerst</h3><div class="layers"></div><div class="add"><select aria-label="Elementtyp" id="new-kind">${options(KINDS,'entity')}</select><button class="small" data-action="add">＋</button></div></section><section class="properties"></section></aside></div>`;
     const $=selector=>this.shadowRoot.querySelector(selector);
     $('.menu').onclick=()=>this.dispatchEvent(new CustomEvent('hass-toggle-menu',{bubbles:true,composed:true}));
     $('.device').onchange=event=>this.switchDisplay(event.target.value);
     this.shadowRoot.querySelectorAll('[data-action]').forEach(button=>button.onclick=()=>this.action(button.dataset.action));
     this.shadowRoot.querySelectorAll('[data-preset]').forEach(button=>{
       const preset=this.catalog.presets.find(p=>p.id===button.dataset.preset);button.querySelector('.mini').style.background=window.LGLayoutBackground(preset.layout.scenes.no_signal);
-      button.onclick=()=>{this.checkpoint();const enabled=this.config.enabled;this.config=clone(preset.layout);this.config.enabled=enabled;this.selected=null;this.changed(true);this.flash(`${preset.name} übernommen. Du kannst jede Ansicht einzeln anpassen.`);};
+      button.onclick=()=>{this.checkpoint();this.view.scene=clone(preset.layout.scenes[this.sceneKey]);this.selected=null;this.changed(true);this.flash(`${preset.name} auf diese Ansicht angewendet. Deine anderen Ansichten bleiben erhalten.`);};
     });
-    this.shadowRoot.querySelectorAll('[data-scene]').forEach(button=>button.onclick=()=>{this.sceneKey=button.dataset.scene;this.selected=null;this.refreshScene();});
+    $('#view-name').onchange=event=>{const name=event.target.value.trim();if(!name){event.target.value=this.view.name;return;}this.checkpoint();this.view.name=name;this.changed();};
     $('#suggestion-room').onchange=event=>this.loadSuggestions(event.target.value);
     this.loadSuggestions();
     $('#bg-upload').onchange=event=>this.uploadBackground(event.target.files[0]);
@@ -67,14 +68,15 @@ class LGDisplayStudio extends HTMLElement {
     $('#test-message').oninput=()=>this.paint();
     this.renderer=new window.LGLayoutRenderer($('.scene'),$('.lg-hdmi-placeholder'),true);
     this._resize=new ResizeObserver(()=>this.paint());this._resize.observe($('.stage'));
-    this._clock=setInterval(()=>this.renderer?.tick(new Date()),1000);
+    this._clock=setInterval(()=>{if(this.page!=="overview")this.renderer?.tick(new Date());},1000);
     this._dataTimer=setInterval(()=>this.refreshValues(),30000);
-    this.refreshScene();this.updateStatus();
+    this.refreshScene();this.updateStatus();this.renderOverview();this.showPage();
   }
-  get scene() {return this.config.scenes[this.sceneKey];}
+  get view() {return this.config.views.find(view=>view.id===this.viewId);}
+  get scene() {return this.view?.scene || this.config.scenes[this.sceneKey];}
   get item() {return this.scene.elements.find(item=>item.id===this.selected);}
   checkpoint() {this.history.push(clone(this.config));if(this.history.length>30)this.history.shift();this.future=[];}
-  changed(refresh=false) {this.dirty=JSON.stringify(this.config)!==JSON.stringify(this.saved);if(refresh)this.refreshScene();else {this.paint();this.renderSelection();}this.renderSuggestions();this.updateStatus();}
+  changed(refresh=false) {this.compileViews();this.dirty=JSON.stringify(this.config)!==JSON.stringify(this.saved);if(refresh)this.refreshScene();else {this.paint();this.renderSelection();}this.renderSuggestions();this.updateStatus();if(this.page==="overview")this.renderOverview();}
   updateStatus() {
     const root=this.shadowRoot, status=root.querySelector('.status');if(!status)return;
     status.textContent=this.busy?'Wird gespeichert …':this.dirty?'Ungespeichert':'Gespeichert';status.dataset.dirty=String(this.dirty);
@@ -91,16 +93,16 @@ class LGDisplayStudio extends HTMLElement {
   async switchDisplay(entryId) {
     if(this.busy)return;
     if(this.dirty) {this.flash('Speichere deinen Entwurf oder mache die Änderungen rückgängig, bevor du das Display wechselst.',true);this.shadowRoot.querySelector('.device').value=this.entryId;return;}
-    try {const doc=await this.hass.callApi('GET',`lg_rs232_ip/layout/${entryId}`);this.entryId=entryId;this.accept(doc);this.refreshScene();this.updateStatus();this.loadSuggestions();} catch(_) {this.flash('Display konnte nicht geladen werden.',true);}
+    try {const doc=await this.hass.callApi('GET',`lg_rs232_ip/layout_library/${entryId}`);this.entryId=entryId;this.accept(doc);this.page="overview";this.mount();} catch(_) {this.flash('Display konnte nicht geladen werden.',true);}
   }
   refreshScene() {
     const root=this.shadowRoot;root.querySelectorAll('[data-scene]').forEach(tab=>tab.setAttribute('aria-selected',String(tab.dataset.scene===this.sceneKey)));
-    root.querySelector('#scene-title').textContent=SCENES[this.sceneKey];root.querySelector('#background').value=this.scene.background;root.querySelector('#scene-color').value=this.scene.color;root.querySelector('#scene-accent').value=this.scene.accent;root.querySelector('#gradient-angle').value=this.scene.gradient_angle;root.querySelector('#sun-entity').value=this.config.sun_entity;root.querySelector('#image-fit').value=this.scene.image_fit;root.querySelector('#image-dim').value=this.scene.image_dim;this.renderBackgrounds();
+    root.querySelector('#scene-title').textContent=this.view?.name || SCENES[this.sceneKey];root.querySelector('#view-name').value=this.view?.name || '';root.querySelector('.view-usage').textContent=this.usage(this.viewId);root.querySelector('#background').value=this.scene.background;root.querySelector('#scene-color').value=this.scene.color;root.querySelector('#scene-accent').value=this.scene.accent;root.querySelector('#gradient-angle').value=this.scene.gradient_angle;root.querySelector('#sun-entity').value=this.config.sun_entity;root.querySelector('#image-fit').value=this.scene.image_fit;root.querySelector('#image-dim').value=this.scene.image_dim;this.renderBackgrounds();
     this.paint();this.renderLayers();this.renderSelection();this.renderProperties();this.renderSuggestions();
   }
   values() {
     const result=clone(this.backendValues || {});
-    for(const scene of Object.values(this.config.scenes)) for(const item of scene.elements) {
+    for(const scene of [this.scene]) for(const item of scene.elements) {
       const state=this.hass.states[item.entity_id];if(!state)continue;
       const attrs=state.attributes;result[item.entity_id]={...result[item.entity_id],state:state.state,name:attrs.friendly_name || item.entity_id,unit:attrs.unit_of_measurement || ''};
       if(['media','status'].includes(item.kind))Object.assign(result[item.entity_id],this.cardData(state));
@@ -109,8 +111,8 @@ class LGDisplayStudio extends HTMLElement {
     }
     return result;
   }
-  sun() {const id=this.config.sun_entity,state=this.hass.states[id];if(!id || state && !['above_horizon','below_horizon'].includes(state.state))return null;return state ? {is_daytime:state.state==='above_horizon',elevation:state.attributes.elevation,azimuth:state.attributes.azimuth,rising:state.attributes.rising} : id===this.saved.sun_entity ? this.backendSun : null;}
-  paint() {if(this.renderer && this.config)this.renderer.render(this.scene,this.values(),{timezone:this.timezone,sun:this.sun(),mediaUrl:(id,key)=>this.mediaUrl(id,key),imageUrl:id=>this.imageUrl(id),now:new Date(),message:{title:'Home Assistant',message:this.shadowRoot.querySelector('#test-message')?.value || 'Deine Benachrichtigung erscheint hier.'}});}
+  sun() {const id=this.config.sun_entity,state=this.hass.states[id];if(!id || state && !['above_horizon','below_horizon'].includes(state.state))return null;if(id==='sun.sun' && id===this.saved.sun_entity && this.backendSun)return this.backendSun;return state ? {is_daytime:state.state==='above_horizon',elevation:state.attributes.elevation,azimuth:state.attributes.azimuth,rising:state.attributes.rising} : id===this.saved.sun_entity ? this.backendSun : null;}
+  paint() {if(this.page==="overview"){this.paintGallery();return;}if(this.renderer && this.config)this.renderer.render(this.scene,this.values(),{timezone:this.timezone,sun:this.sun(),mediaUrl:(id,key)=>this.mediaUrl(id,key),imageUrl:id=>this.imageUrl(id),now:new Date(),message:{title:'Home Assistant',message:this.shadowRoot.querySelector('#test-message')?.value || 'Deine Benachrichtigung erscheint hier.'}});}
   async refreshValues() {
     if(this._dataBusy || !this.isConnected)return;
     this._dataBusy=true;const id=this.entryId,generation=this._generation;
@@ -169,6 +171,7 @@ class LGDisplayStudio extends HTMLElement {
     root.innerHTML=`<h2>${escapeHTML(KINDS[item.kind])}</h2><label class="field">Widget-Typ<select data-kind>${options(KINDS,item.kind)}</select></label><div class="form-grid">${field('x','Links (%)',0,98,.1)}${field('y','Oben (%)',0,98,.1)}${field('width','Breite (%)',2,100,.1)}${field('height','Höhe (%)',2,100,.1)}</div>${item.kind==='hdmi'?'<p class="hint">Das HDMI-Bild wird unverzerrt in dieses Rechteck eingepasst. Pro Szene ist ein HDMI-Bild möglich.</p>':`<h3>Inhalt</h3><label class="field">Beschriftung<input data-prop="label" value="${escapeHTML(item.label)}" maxlength="100"></label>${binding}${item.kind==='text'?`<label class="field">Text<textarea aria-label="Text" data-prop="text" maxlength="2000">${escapeHTML(item.text)}</textarea></label>`:''}${item.kind==='media'?`<label class="field">Mediengestaltung<select data-prop="media_style">${options({compact:'Cover neben Text',poster:'Großes Cover'},item.media_style || 'compact')}</select></label>${[['show_cover','Cover anzeigen'],['show_progress','Fortschritt anzeigen'],['show_volume','Lautstärke anzeigen']].map(([key,label])=>`<div class="toggle"><label><input type="checkbox" data-prop="${key}" ${item[key]!==false?'checked':''}>${label}</label></div>`).join('')}`:''}${['media','status'].includes(item.kind)?`<label class="field">Akzentfarbe<input type="color" data-prop="accent_color" value="${item.accent_color || '#79e5c0'}"></label>`:''}${item.kind==='status'?`<div class="toggle"><label><input type="checkbox" data-prop="status_coloring" ${item.status_coloring!==false?'checked':''}>Status farblich hervorheben</label></div>`:''}${item.kind==='weather'?`<label class="field">Wetteransicht<select data-prop="forecast_type">${options({current:'Nur aktuell',daily:'Tagesvorschau',hourly:'Stundenvorschau'},item.forecast_type)}</select></label><div class="form-grid">${field('forecast_count','Prognoseabschnitte',1,8)}<label>Gestaltung<select data-prop="weather_style">${options({glass:'Karte',sky:'Himmel nach Sonnenstand',minimal:'Transparent'},item.weather_style)}</select></label></div><div class="toggle"><label><input type="checkbox" data-prop="animate" ${item.animate?'checked':''}>Aktuelles Wettersymbol animieren</label></div>`:''}<div class="toggle"><label><input type="checkbox" data-prop="show_label" ${item.show_label?'checked':''}>Beschriftung anzeigen</label></div><h3>Aussehen</h3><div class="form-grid">${field('font_size','Schriftgröße (% Höhe)',1,18,.1)}${field('radius','Rundung',0,80)}<label>Textfarbe<input type="color" data-prop="color" value="${item.color}"></label><label>Flächenfarbe<input type="color" data-prop="background" value="${item.background}"></label>${field('opacity','Deckkraft',0,1,.05)}<label>Ausrichtung<select data-prop="align">${options({left:'Links',center:'Mittig',right:'Rechts'},item.align)}</select></label><label class="full">Schrift<select data-prop="font">${options({sans:'Klar · Sans Serif',serif:'Editorial · Serif',mono:'Technisch · Monospace'},item.font)}</select></label></div>`}<div class="links"><button class="small delete" data-remove>Element entfernen</button></div>`;
     root.querySelector('[data-remove]').onclick=()=>this.removeItem(item.id);
     root.querySelector('[data-kind]').onchange=event=>{
+      const item=this.item;if(!item)return;
       const kind=event.target.value;
       if(['hdmi','message'].includes(kind) && this.scene.elements.some(other=>other!==item && other.kind===kind)){event.target.value=item.kind;this.flash('Dieser Typ ist in der Szene bereits vorhanden.',true);return;}
       this.checkpoint();if(item.label===KINDS[item.kind])item.label=KINDS[kind];item.kind=kind;
@@ -176,6 +179,7 @@ class LGDisplayStudio extends HTMLElement {
       this.changed(true);
     };
     root.querySelectorAll('[data-prop]').forEach(input=>input.onchange=()=>{
+      const item=this.item;if(!item)return;
       this.checkpoint();const key=input.dataset.prop;let value=input.type==='checkbox'?input.checked:input.type==='number'?Number(input.value):input.value;
       if(input.type==='number')value=Math.max(Number(input.min),Math.min(Number(input.max),Number.isFinite(value)?value:Number(input.min)));
       item[key]=value;
@@ -185,10 +189,12 @@ class LGDisplayStudio extends HTMLElement {
     });
   }
   async action(action) {
+    if(action==='new-view')return this.showCreator();
+    if(action==='overview'){this.page="overview";this.renderOverview();this.showPage();return;}
     if(action==='save')return this.save();
     if(action==='suggestions')return this.loadSuggestions(this.shadowRoot.querySelector('#suggestion-room').value);
-    if(action==='undo' && this.history.length){this.future.push(clone(this.config));this.config=this.history.pop();this.selected=null;this.changed(true);}
-    if(action==='redo' && this.future.length){this.history.push(clone(this.config));this.config=this.future.pop();this.selected=null;this.changed(true);}
+    if(action==='undo' && this.history.length){this.future.push(clone(this.config));this.config=this.history.pop();this.selected=null;this.ensureView();this.changed(true);this.flash('Änderung zurückgenommen.');}
+    if(action==='redo' && this.future.length){this.history.push(clone(this.config));this.config=this.future.pop();this.selected=null;this.ensureView();this.changed(true);this.flash('Änderung wiederhergestellt.');}
     if(action==='add'){
       const kind=this.shadowRoot.querySelector('#new-kind').value;
       if(this.scene.elements.length>=16 || (['hdmi','message'].includes(kind)&&this.scene.elements.some(i=>i.kind===kind))){this.flash('Maximal 16 Elemente, davon je ein HDMI- und Meldungsfenster.',true);return;}
@@ -211,6 +217,7 @@ class LGDisplayStudio extends HTMLElement {
   removeItem(id) {this.checkpoint();this.scene.elements=this.scene.elements.filter(item=>item.id!==id);this.selected=null;this.changed(true);}
   async showDashboard() {
     if(this.dirty){this.flash('Speichere zuerst deinen Entwurf.',true);return;}
+    if(this.view){await this.activateView(this.view.id);return;}
     try {const registry=await this.hass.callWS({type:'config/entity_registry/list'});const player=registry.find(e=>e.config_entry_id===this.entryId&&e.entity_id.startsWith('media_player.')&&!e.disabled_by);if(!player)throw Error();await this.hass.callService('media_player','select_source',{entity_id:player.entity_id,source:this.hass.states[player.entity_id]?.attributes.dashboard_source || 'Dashboard'});this.flash('Quelle Dashboard ausgewählt. Über die Fernbedienung kannst du wieder HDMI wählen.');}catch(_){this.flash('Dashboard nicht erreichbar. Prüfe SI-Dauerbetrieb und Stromversorgung.',true);}
   }
   releaseImages() {for(const url of Object.values(this.imageUrls || {}))if(url)URL.revokeObjectURL(url);this.imageUrls={};this.imagePending=new Set();for(const record of Object.values(this.coverUrls || {}))if(record.url)URL.revokeObjectURL(record.url);this.coverUrls={};this.coverPending=new Set();}
@@ -228,14 +235,14 @@ class LGDisplayStudio extends HTMLElement {
   async uploadBackground(file) {
     if(!file||this.busy)return;
     if(file.size>5*1024*1024){this.flash('Das Bild darf höchstens 5 MiB groß sein.',true);return;}
-    const entry=this.entryId,key=this.sceneKey,generation=this._generation;this.busy=true;this.updateStatus();
+    const entry=this.entryId,viewId=this.viewId,generation=this._generation;this.busy=true;this.updateStatus();
     try {const response=await this.hass.fetchWithAuth(`/api/lg_rs232_ip/layout_background/${entry}/upload`,{method:'POST',body:file});if(!response.ok)throw Error(await response.text());const data=await response.json();if(generation!==this._generation||entry!==this.entryId)return;
-      if(!this.backgrounds.includes(data.image_id))this.backgrounds.push(data.image_id);if(this.imageUrls[data.image_id]===null)delete this.imageUrls[data.image_id];this.checkpoint();this.config.scenes[key].image_id=data.image_id;this.config.scenes[key].background='image';this.changed(true);this.flash('Bild vorbereitet. Speichern überträgt den Hintergrund auf das Display.');
+      if(!this.backgrounds.includes(data.image_id))this.backgrounds.push(data.image_id);if(this.imageUrls[data.image_id]===null)delete this.imageUrls[data.image_id];const view=this.config.views.find(v=>v.id===viewId);if(!view)return;this.checkpoint();view.scene.image_id=data.image_id;view.scene.background='image';this.changed(true);this.flash('Bild vorbereitet. Speichern überträgt den Hintergrund auf das Display.');
     }catch(_){this.flash('Bild konnte nicht importiert werden. JPEG/PNG, bis 5 MiB/20 Megapixel; maximal 24 Bilder. Entferne bei Bedarf unbenutzte Bilder.',true);}finally{this.busy=false;this.updateStatus();const input=this.shadowRoot.querySelector('#bg-upload');if(input)input.value='';}
   }
   async cleanBackgrounds() {
     if(this.busy)return;this.busy=true;this.updateStatus();const entry=this.entryId,generation=this._generation;
-    const used=new Set([this.config,this.saved,...this.history,...this.future].flatMap(config=>Object.values(config.scenes).map(scene=>scene.image_id)));
+    const used=new Set([this.config,this.saved,...this.history,...this.future].flatMap(config=>[...Object.values(config.scenes),...(config.views || []).map(view=>view.scene)].map(scene=>scene.image_id)));
     try {for(const id of [...this.backgrounds])if(!used.has(id)){await this.hass.callApi('DELETE',`lg_rs232_ip/layout_background/${entry}/${id}`);if(generation!==this._generation||entry!==this.entryId)return;URL.revokeObjectURL(this.imageUrls[id] || '');delete this.imageUrls[id];this.backgrounds=this.backgrounds.filter(value=>value!==id);}this.renderBackgrounds();this.flash('Unbenutzte Bilder entfernt. Gespeicherte Szenen und Rückgängig-Schritte bleiben erhalten.');}catch(_){this.flash('Ein Bild wird inzwischen verwendet oder konnte nicht entfernt werden.',true);}finally{this.busy=false;this.updateStatus();}
   }
   cardData(state) {
@@ -282,21 +289,64 @@ class LGDisplayStudio extends HTMLElement {
   }
   async save() {
     if(this.busy)return;this.busy=true;this.updateStatus();
-    const sent=clone(this.config);
-    try {const result=await this.hass.callApi('POST',`lg_rs232_ip/layout/${this.entryId}`,{config:sent,revision:this.revision});this.revision=result.revision;this.saved=clone(result.config);this.dirty=JSON.stringify(this.config)!==JSON.stringify(sent);if(!this.dirty)this.config=clone(result.config);this.flash(this.config.enabled?'Gespeichert. Die verbundene App übernimmt das Layout automatisch.':'Gespeichert. Eigene Layouts sind derzeit ausgeschaltet.');}
+    this.compileViews();const sent=clone(this.config);
+    try {const result=await this.hass.callApi('POST',`lg_rs232_ip/layout_library/${this.entryId}`,{config:sent,revision:this.revision});this.revision=result.revision;this.saved=clone(result.config);this.dirty=JSON.stringify(this.config)!==JSON.stringify(sent);if(!this.dirty)this.config=this.withViews(clone(result.config));this.flash(this.config.enabled?'Gespeichert. Die verbundene App übernimmt das Layout automatisch.':'Gespeichert. Eigene Layouts sind derzeit ausgeschaltet.');}
     catch(error){this.flash(error?.status_code===409?'Eine andere Sitzung hat das Layout geändert. Exportiere deinen Entwurf und lade den Editor neu.':'Speichern fehlgeschlagen. Prüfe Entitäten, Feldwerte und Verbindung. Dein Entwurf bleibt erhalten.',true);}
-    finally{this.busy=false;this.updateStatus();clearTimeout(this._dataSoon);this._dataSoon=setTimeout(()=>this.refreshValues(),2500);}
+    finally{this.busy=false;this.updateStatus();if(this.page==="overview")this.renderOverview();clearTimeout(this._dataSoon);this._dataSoon=setTimeout(()=>this.refreshValues(),2500);}
   }
   async importFile(file) {
     if(!file)return;
     try {
-      if(file.size>131072)throw Error();const config=JSON.parse(await file.text());
+      if(file.size>1048576)throw Error();const config=JSON.parse(await file.text());
       // Rendering imported CSS/text before server validation is deliberately avoided.
       const result=await this.hass.callApi('POST',`lg_rs232_ip/layout_validate`,{config});
-      this.checkpoint();this.config=result.config;this.selected=null;this.changed(true);this.flash('Layout als Entwurf importiert.');
-    }catch(_){this.flash('Keine gültige Layout-Datei. Verwende einen Export aus Display Studio (maximal 128 KiB).',true);}
+      this.checkpoint();this.config=this.withViews(result.config);this.ensureView();this.selected=null;this.changed(true);this.flash('Layout als Entwurf importiert.');
+    }catch(_){this.flash('Keine gültige Layout-Datei. Verwende einen Export aus Display Studio (maximal 1 MiB).',true);}
     finally{this.shadowRoot.querySelector('.export').value='';}
   }
-  flash(message,error=false) {const node=this.shadowRoot.querySelector('.flash');if(node){node.textContent=message;node.classList.toggle('error',error);}}
+  withViews(config) {
+    if(!Array.isArray(config.views)){config.views=Object.entries(SCENES).map(([id,name])=>({id,name,scene:clone(config.scenes[id])}));config.assignments=Object.fromEntries(Object.keys(SCENES).map(key=>[key,key]));}
+    return config;
+  }
+  compileViews() {const base=this.catalog.presets[0].layout.scenes;for(const key of Object.keys(SCENES)){const view=this.config.views.find(v=>v.id===this.config.assignments[key]);this.config.scenes[key]=clone(view?.scene || base[key]);}}
+  ensureView() {if(!this.config.views.some(v=>v.id===this.viewId))this.viewId=this.config.views[0]?.id;if(!this.viewId)this.page='overview';this.showPage();}
+  usage(id) {return Object.entries(this.config.assignments).filter(([,value])=>value===id).map(([key])=>SCENES[key]).join(' · ') || 'Noch nicht zugeordnet';}
+  showPage() {const overview=this.page==='overview';this.shadowRoot.querySelector('.overview').hidden=!overview;this.shadowRoot.querySelector('.workspace').hidden=overview;this.shadowRoot.querySelector('.editor-navigation').hidden=overview;if(!overview)this.refreshScene();}
+  openView(id) {if(!this.config.views.some(v=>v.id===id))return;this.viewId=id;this.sceneKey=Object.keys(SCENES).find(key=>this.config.assignments[key]===id) || 'dashboard';this.selected=null;this.page='editor';this.showPage();this.scrollTop=0;}
+  renderOverview() {
+    const root=this.shadowRoot, gallery=root.querySelector('.view-gallery');if(!gallery)return;
+    gallery.innerHTML=this.config.views.map(view=>`<article class="view-card"><button class="view-preview" data-open-view="${escapeHTML(view.id)}" aria-label="${escapeHTML(view.name)} bearbeiten"><div class="view-thumbnail" data-preview="${escapeHTML(view.id)}"></div></button><div class="view-card-body"><h3>${escapeHTML(view.name)}</h3><p>${escapeHTML(this.usage(view.id))}</p><div class="view-actions"><button class="small" data-open-view="${escapeHTML(view.id)}">Bearbeiten</button><button class="small" data-display-view="${escapeHTML(view.id)}">Anzeigen</button><button class="small" data-copy-view="${escapeHTML(view.id)}" aria-label="${escapeHTML(view.name)} duplizieren">Duplizieren</button><button class="small delete" data-delete-view="${escapeHTML(view.id)}" aria-label="${escapeHTML(view.name)} löschen">Löschen</button></div></div></article>`).join('') || '<div class="empty-library"><h3>Deine erste Ansicht wartet.</h3><p>Beginne mit einer Vorlage und gestalte deinen Bildschirm.</p><button class="primary" data-create-empty>Neue Ansicht anlegen</button></div>';
+    root.querySelector('[data-create-empty]')?.addEventListener('click',()=>this.showCreator());
+    root.querySelectorAll('[data-open-view]').forEach(b=>b.onclick=()=>this.openView(b.dataset.openView));
+    root.querySelectorAll('[data-copy-view]').forEach(b=>b.onclick=()=>this.duplicateView(b.dataset.copyView));
+    root.querySelectorAll('[data-delete-view]').forEach(b=>b.onclick=()=>this.deleteView(b.dataset.deleteView));
+    root.querySelectorAll('[data-display-view]').forEach(b=>{b.disabled=this.busy;b.onclick=()=>this.activateView(b.dataset.displayView);});
+    root.querySelector('.assignment-grid').innerHTML=Object.entries(SCENES).map(([key,name])=>`<label>${name}<select data-assignment="${key}" aria-label="Ansicht für ${name}"><option value="">Standard</option>${this.config.views.map(v=>`<option value="${escapeHTML(v.id)}" ${this.config.assignments[key]===v.id?'selected':''}>${escapeHTML(v.name)}</option>`).join('')}</select></label>`).join('');
+    root.querySelectorAll('[data-assignment]').forEach(select=>select.onchange=()=>{this.checkpoint();this.config.assignments[select.dataset.assignment]=select.value;this.changed();});
+    root.querySelector('.template-options').innerHTML=this.catalog.presets.map(p=>`<button class="preset" data-create-template="${p.id}"><div class="mini" style="background:${window.LGLayoutBackground(p.layout.scenes.dashboard,{sun:this.sun()})}"></div><strong>${escapeHTML(p.name)}</strong><span>${escapeHTML(p.description)}</span></button>`).join('');
+    root.querySelectorAll('[data-create-template]').forEach(b=>b.onclick=()=>this.showCreator(b.dataset.createTemplate));
+    this.paintGallery();
+  }
+  paintGallery() {
+    if(!this.config || !this.shadowRoot.querySelector('.view-gallery'))return;
+    const sun=this.sun();this.shadowRoot.querySelectorAll('[data-preview]').forEach(node=>{const view=this.config.views.find(v=>v.id===node.dataset.preview);if(!view)return;node.style.background=window.LGLayoutBackground(view.scene,{sun,imageUrl:id=>this.imageUrl(id)});if(node.dataset.layout!==JSON.stringify(view.scene)){node.dataset.layout=JSON.stringify(view.scene);node.innerHTML=view.scene.elements.map(item=>`<div class="mini-widget" style="left:${item.x}%;top:${item.y}%;width:${item.width}%;height:${item.height}%;border-radius:${Math.min(item.radius,12)}px;background:${item.kind==='hdmi'?'#07131c':item.background};color:${item.color};opacity:${Math.max(.4,item.opacity)}">${escapeHTML(item.label || KINDS[item.kind])}</div>`).join('');}});
+  }
+  showCreator(template='morning') {
+    if(this.config.views.length>=24){this.flash('Maximal 24 Ansichten. Entferne zuerst eine Ansicht.',true);return;}
+    const root=this.shadowRoot.querySelector('.view-creator');root.hidden=false;
+    root.innerHTML=`<h2>Neue Ansicht</h2><div class="creator-fields"><label>Name<input id="new-view-name" maxlength="80" value="${escapeHTML(this.catalog.presets.find(p=>p.id===template)?.name || 'Meine Ansicht')}"></label><label>Vorlage<select id="new-view-template" aria-label="Vorlage">${options(Object.fromEntries(this.catalog.presets.map(p=>[p.id,p.name])),template)}</select></label><label>Aufbau<select id="new-view-context" aria-label="Aufbau">${options(SCENES,'dashboard')}</select></label></div><p class="note">Die neue Ansicht bleibt unabhängig. Du kannst sie später einem oder mehreren Anzeigeanlässen zuordnen.</p><div class="links"><button class="primary" data-create-view>Ansicht anlegen</button><button class="secondary" data-cancel-view>Abbrechen</button></div>`;
+    root.querySelector('[data-cancel-view]').onclick=()=>root.hidden=true;
+    root.querySelector('[data-create-view]').onclick=()=>{const name=root.querySelector('#new-view-name').value.trim();if(!name){this.flash('Bitte gib der Ansicht einen Namen.',true);return;}const preset=this.catalog.presets.find(p=>p.id===root.querySelector('#new-view-template').value),key=root.querySelector('#new-view-context').value;this.checkpoint();const id='view_'+(Date.now().toString(36)+Math.random().toString(36).slice(2,12));this.config.views.push({id,name,scene:clone(preset.layout.scenes[key])});root.hidden=true;this.changed();this.openView(id);this.sceneKey=key;this.flash('Ansicht angelegt. Gestalten und speichern; zuordnen kannst du sie in der Übersicht.');};
+    root.scrollIntoView({block:'nearest'});root.querySelector('#new-view-name').focus();
+  }
+  duplicateView(id) {if(this.config.views.length>=24){this.flash('Maximal 24 Ansichten.',true);return;}const view=this.config.views.find(v=>v.id===id);if(!view)return;this.checkpoint();const copy=clone(view);copy.id='view_'+(Date.now().toString(36)+Math.random().toString(36).slice(2,12));copy.name=(copy.name.slice(0,70)+' · Kopie');this.config.views.push(copy);this.changed();this.flash('Unabhängige Kopie angelegt. Speichern übernimmt sie dauerhaft.');}
+  deleteView(id) {if(this.busy)return;this.checkpoint();this.config.views=this.config.views.filter(v=>v.id!==id);for(const key of Object.keys(SCENES))if(this.config.assignments[key]===id)this.config.assignments[key]='';this.ensureView();this.changed();this.flash('Ansicht entfernt. Betroffene Zuordnungen verwenden nach dem Speichern den Standard. Rückgängig ist möglich.');}
+  async activateView(id) {
+    if(this.busy)return;if(this.dirty){this.flash('Speichere zuerst deine Ansichten.',true);return;}
+    if(!this.config.views.some(v=>v.id===id))return;
+    if(this.config.assignments.dashboard!==id || !this.config.enabled){this.checkpoint();this.config.assignments.dashboard=id;this.config.enabled=true;this.changed();await this.save();if(this.dirty)return;}
+    try {const registry=await this.hass.callWS({type:'config/entity_registry/list'});const player=registry.find(e=>e.config_entry_id===this.entryId&&e.entity_id.startsWith('media_player.')&&!e.disabled_by);if(!player)throw Error();await this.hass.callService('media_player','select_source',{entity_id:player.entity_id,source:this.hass.states[player.entity_id]?.attributes.dashboard_source || 'Dashboard'});this.flash('Ansicht als Dashboard angezeigt.');}catch(_){this.flash('Zuordnung gespeichert, Display nicht erreichbar. Prüfe SI-Dauerbetrieb und Stromversorgung.',true);}
+  }
+  flash(message,error=false) {for(const selector of ['.flash','.gallery-flash']){const node=this.shadowRoot.querySelector(selector);if(node){node.textContent=message;node.classList.toggle('error',error);}}}
 }
 if(!customElements.get('lg-display-studio'))customElements.define('lg-display-studio',LGDisplayStudio);

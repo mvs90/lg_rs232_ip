@@ -1,21 +1,27 @@
 # LG Display Studio
 
-Ab **LG Professional Display 2.6.0** erscheint für Administratoren automatisch **LG Display Studio** in der Home-Assistant-Seitenleiste. **2.7.0** ergänzt die Quelle **Dashboard**, vollständig austauschbare Widgets, Stunden-/Tageswetter und eigene Hintergrundbilder. **2.8.0** ergänzt Medien- und Statuskarten sowie Raumvorschläge. Nach dem Update HA neu starten und die Browserseite neu laden. Kein weiteres HACS-Paket und keine manuelle Dashboard- oder Ressourcen-Konfiguration sind nötig.
+Ab **LG Professional Display 2.9.0** startet **LG Display Studio** mit einer Galerie benannter, gespeicherter Ansichten. Ansichten lassen sich aus Vorlagen anlegen, bearbeiten, duplizieren, löschen und einem oder mehreren Anzeigeanlässen zuordnen. Nach dem Update HA neu starten und die Browserseite neu laden. Kein weiteres HACS-Paket und keine manuelle Dashboard- oder Ressourcen-Konfiguration sind nötig.
 
 Der Editor gestaltet die auf dem LG laufende App. Für dauerhafte Ansichten müssen in den LG-Einstellungen **Display-App**, **SI-App** und **SI-Dauerbetrieb mit automatischem Start** aktiviert sein. Die App bleibt optional: Ohne aktivierte eigene Layouts funktionieren ihre bisherigen Ansichten weiter. Das Öffnen/Bearbeiten des Studios installiert keine SI-App und schaltet das Display nicht ein. **Dashboard anzeigen** ist dagegen eine ausdrückliche Quellenwahl und kann das mit Strom versorgte Display wecken.
 
-## In wenigen Schritten
+## Ansichten verwalten
 
-1. **LG Display Studio** öffnen und oben das gewünschte LG-Display wählen.
-2. Eine Vorlage auswählen: **Cinema**, **Aurora**, **Morgenlicht** oder **Paper & Sand**. Jede Vorlage enthält alle sechs Ansichten; Änderungen sind zunächst ein Entwurf.
-3. **Mit HDMI**, **Ohne HDMI** und **Dashboard** einzeln gestalten. Die ersten beiden folgen der Einstellung **Ansicht auf dem Display** und dem HDMI-Signal. **Dashboard** ist eine eigenständige Quelle, die auch bei vorhandenem TV-Signal gewählt bleiben kann.
-4. Elemente anklicken, verschieben und über die Ecke vergrößern. Position und Größe sind auch in Prozent einstellbar. Pfeiltasten verschieben um 1 %, Umschalt + Pfeiltaste um 0,1 %. Die Elementliste regelt die Ebenenreihenfolge.
-5. **Widget-Typ** tauscht ein ausgewähltes Element aus und behält seine Geometrie/Gestaltung. Unpassende Entitätszuordnungen werden dabei geleert. **×** in der Elementliste, **Element entfernen** bzw. Entf/Backspace bei ausgewähltem Element entfernt jedes Widget, auch HDMI und Meldungsfenster. Eine vollständig leere Szene ist erlaubt. Rückgängig/Wiederholen stellt Änderungen wieder her.
-6. Für Wetter, Kalender und weitere Informationen passende **Home-Assistant-Entitäten** auswählen. Vorlagen wählen keine privaten Entitäten automatisch aus. Zusätzliche Texte, Uhren, Kalender, Wetter- und Zustandsfelder über **+** hinzufügen.
-7. **Eigenes Layout verwenden** einschalten und **Speichern & anwenden** drücken. Eine verbundene App übernimmt Änderungen ohne erneuten App-Start oder HDMI-Eingangsbefehl. Zum Übernehmen einer Rücknahme erneut speichern.
-8. **Dashboard anzeigen** oder in der LG-Fernbedienung/Medienplayer-Quellenliste **Dashboard** wählen. Zurück zum Fernsehen den gewünschten HDMI-Eingang wählen.
+1. **LG Display Studio** öffnen und das LG-Display wählen. Die Startseite zeigt die gespeicherten Ansichten mit einer verkleinerten Layoutskizze und ihrer aktuellen Verwendung. Vorhandene Layouts werden als sechs benannte Ansichten übernommen; Wetter-, Medien-, Sensor- und Bildzuordnungen bleiben erhalten.
+2. **Neue Ansicht** oder eine vorgeschlagene Vorlage wählen: **Cinema**, **Aurora**, **Sonnenstand** oder **Paper & Sand**. Einen Namen und den gewünschten **Aufbau** wählen, beispielsweise Dashboard, HDMI/PiP oder Meldung. Die neue Ansicht wird zunächst als unabhängiger Entwurf angelegt.
+3. **Bearbeiten** öffnet genau eine Ansicht. Name, Hintergrund, Widgets, Position, Größe, Farben und Schrift anpassen. Eine Vorlage im Editor ersetzt nur diese Ansicht; andere Ansichten bleiben erhalten. **Alle Ansichten** führt zurück zur Übersicht und erhält ungespeicherte Änderungen.
+4. **Duplizieren** erstellt eine unabhängige Kopie einschließlich Widgets und Hintergrundverweis. **Löschen** entfernt eine Ansicht aus dem Entwurf. Betroffene Anzeigezuordnungen wechseln zu **Standard**; Rückgängig stellt Ansicht und Zuordnungen wieder her.
+5. Unter **Wann wird welche Ansicht angezeigt?** gespeicherte Ansichten für **Mit HDMI**, **Ohne HDMI**, **Dashboard**, **Meldung · Overlay**, **Meldung · PiP** und **Meldung · Vollbild** auswählen. Eine Ansicht darf mehrfach verwendet werden; ihre Bearbeitung gilt dann für alle diese Zuordnungen. **Standard** verwendet die integrierte Cinema-Grundansicht des jeweiligen Anlasses.
+6. **Speichern** speichert die gesamte Bibliothek, Zuordnungen und Einstellungen gemeinsam. Eine verbundene App übernimmt Änderungen an zugeordneten Ansichten sofort. Unzugeordnete Ansichten bleiben in der Bibliothek und werden nicht zum LG übertragen. **Anzeigen** auf einer gespeicherten Ansicht ordnet diese dem Dashboard zu, aktiviert eigene Layouts und wählt die Dashboard-Quelle. Ungespeicherte Änderungen müssen vorher gespeichert werden.
 
-Die Vorschau verwendet denselben Renderer und aktuelle HA-Zustände. HDMI erscheint im Editor als Platzhalter; es wird kein zusätzlicher Screenshot-Stream gestartet. Prognosen/Termine erscheinen nach Speichern und HA-Abfrage; der Editor liest deren Cache alle 30 Sekunden. Ungespeicherte Änderungen bleiben bei HA-Zustandsupdates erhalten. Vor einem Verlassen/Neuladen speichern oder exportieren.
+Bis zu **24 Ansichten pro Display**, jeweils 16 Widgets. Auch eine leere Bibliothek ist erlaubt. **Rückgängig/Wiederholen** umfasst Anlegen, Bearbeiten, Duplizieren, Löschen und Zuordnen. Der Verlauf gilt für die aktuelle Editorsitzung; nach einem Neuladen ist nur der gespeicherte Stand verfügbar. Eine Versionsprüfung verhindert das Überschreiben einer inzwischen in einer anderen Sitzung geänderten Bibliothek.
+
+## Eine Ansicht gestalten
+
+Elemente anklicken, ziehen und über die Ecke vergrößern. Position und Größe lassen sich auch in Prozent eingeben. Pfeiltasten verschieben um 1 %, Umschalt + Pfeiltaste um 0,1 %. Die Elementliste regelt die Ebenenreihenfolge. **Widget-Typ** tauscht ein Element aus und erhält seine Geometrie/Gestaltung; unpassende Entitätszuordnungen werden geleert. **×**, **Element entfernen** oder Entf/Backspace entfernen jedes Widget, auch HDMI und Meldungsfenster.
+
+Für Wetter, Kalender und weitere Informationen passende HA-Entitäten wählen oder **Karten aus deinem Raum** verwenden. Vorlagen wählen keine privaten Entitäten automatisch. Zusätzliche Widgets über **+** ergänzen. Die Vorschau nutzt denselben Renderer und aktuelle HA-Zustände; HDMI erscheint als Platzhalter ohne zusätzlichen Screenshot-Stream. Wetterprognosen und Kalenderabfragen werden nur für gespeicherte, zugeordnete Ansichten vorbereitet. Aktuelle Zustände lassen sich bereits im Entwurf sehen. Ungespeicherte Änderungen bleiben bei HA-Updates und beim Wechsel zwischen Ansichten erhalten.
+
+**Eigenes Layout verwenden**, HDMI-Signalmodus, Signalpause und Sonnenentität sind gemeinsame Einstellungen des Displays. Eine Änderung daran gilt für alle Ansichten. **Exportieren/Importieren** im Editor überträgt die gesamte Bibliothek und ihre Zuordnungen, maximal 1 MiB. Eigene Bilddateien zusätzlich übertragen. Importieren ändert zunächst nur den Entwurf; ältere Layout-Exporte werden als sechs Ansichten übernommen.
 
 ## Dashboard als eigene Quelle
 
@@ -41,12 +47,12 @@ Die reine LG-Integration schaltet keine Steckdose und keinen Zuspieler. Ein bewu
 |---|---|
 | Cinema | HDMI im Vollbild, dunkle Informationsübersichten |
 | Aurora | Grüne Lichtflächen, ruhige Karten, HDMI neben Informationen |
-| Morgenlicht | Warme Informationsleisten, separates Morgen-Dashboard mit Sonnenstand-Hintergrund |
+| Sonnenstand | Ruhige Informationsflächen; Himmel, Farben und Lichtposition folgen der Sonne |
 | Paper & Sand | Helle Typografie und Karten auf sandfarbenem Hintergrund |
 
-Jede der sechs Szenen hat eigene Hintergrund-, Farb- und Widget-Einstellungen. Neben sechs festen Hintergründen gibt es **Eigener Verlauf** (Grund-/Akzentfarbe und Winkel), **Sonnenstand** und **Eigenes Bild**. Schriftart, Textgröße/-farbe, Kartengrund, Deckkraft, Rundung, Ausrichtung, Position und Ebenenreihenfolge sind frei einstellbar.
+Jede gespeicherte Ansicht hat eigene Hintergrund-, Farb- und Widget-Einstellungen. Neben sechs festen Hintergründen gibt es **Eigener Verlauf** (Grund-/Akzentfarbe und Winkel), **Sonnenstand** und **Eigenes Bild**. Schriftart, Textgröße/-farbe, Kartengrund, Deckkraft, Rundung, Ausrichtung, Position und Ebenenreihenfolge sind frei einstellbar.
 
-**Sonnenstand** nutzt standardmäßig `sun.sun`; im Editor ist eine andere `sun.*`-Entität wählbar. Sonnenhöhe, Azimut und steigende/fallende Sonne bestimmen einen ruhigen Verlauf für Nacht, Morgendämmerung, Tag und Abend. Der Verlauf folgt Zustandsupdates, nicht einer dauernd neu berechneten Animation. Fehlt die Sonnenentität, bleibt ein dunkler Hintergrund. [HA-Sonnenintegration](https://www.home-assistant.io/integrations/sun/).
+**Sonnenstand** (früher Vorlage „Morgenlicht“) nutzt standardmäßig `sun.sun`; im Editor ist eine andere `sun.*`-Entität wählbar. Sonnenhöhe, Azimut und steigende/fallende Sonne bestimmen einen ruhigen Verlauf für Nacht, Morgendämmerung, Tag und Abend. Für `sun.sun` berechnet HA die aktuelle Sonnenhöhe und den Azimut alle **30 Sekunden** anhand seiner Standort-/Zeiteinstellungen. Die laufende App und die geöffnete Studio-Vorschau aktualisieren den Verlauf ohne Neuladen. Andere ausgewählte Sonnenentitäten folgen ihren Zustandsupdates. Es gibt keine dauernde Animation oder zusätzliche Display-Screenshot-Abfrage. Fehlt die Sonnenentität, bleibt ein dunkler Hintergrund. [HA-Sonnenintegration](https://www.home-assistant.io/integrations/sun/).
 
 **Eigene Bilder:** JPEG oder PNG bis 5 MiB und 20 Megapixel hochladen. HA entfernt Metadaten und bereitet ein JPEG mit höchstens 1920×1080 Pixeln vor; Bildverarbeitung läuft außerhalb der HA-Ereignisschleife. Im Editor Bild, Ausfüllen/Einpassen und Abdunklung wählen, dann speichern. Bis zu 24 Bilder pro Display; identische Uploads werden wiederverwendet. **Unbenutzte Bilder entfernen** bewahrt gespeicherte Szenen sowie Bilder in den aktuellen Rückgängig-/Wiederholen-Schritten. Die App lädt Bilder lokal von HA; keine externen Bild-, Schrift- oder Icon-Dienste sind erforderlich.
 
@@ -70,7 +76,7 @@ Ein Vorschlag fügt eine gestaltete Karte in die **aktuelle Ansicht** ein. Medie
 
 **Statuskarte:** Symbole und Zustandsfarben passen sich dem HA-Domain-/Gerätetyp an, etwa Temperatur, Luftfeuchte, Licht, Tür/Fenster, Schloss, Klima oder Rollladen. Helligkeit, Soll-/Isttemperatur und Öffnungsposition ergänzen den Hauptzustand, wenn verfügbar. Zustandsfarben lassen sich abschalten. Numerische Messwerte erhalten keine erfundenen Gut-/Schlecht-Grenzwerte.
 
-Alle Karten lassen sich über **×** in der Elementliste oder **Element entfernen** löschen und per Rückgängig wiederherstellen. Der zugehörige Raumvorschlag wird danach wieder auswählbar. Neue Karten suchen einen freien Platz. Ist keiner groß genug, weist Studio auf die Überlappung hin; anschließend verschieben, verkleinern oder vorhandene Karten entfernen. Erst **Speichern & anwenden** überträgt den Entwurf auf das LG.
+Alle Karten lassen sich über **×** in der Elementliste oder **Element entfernen** löschen und per Rückgängig wiederherstellen. Der zugehörige Raumvorschlag wird danach wieder auswählbar. Neue Karten suchen einen freien Platz. Ist keiner groß genug, weist Studio auf die Überlappung hin; anschließend verschieben, verkleinern oder vorhandene Karten entfernen. Erst **Speichern** überträgt den Entwurf auf das LG.
 
 **Cover und Ressourcen:** HA liest das Cover über die vorhandene Medienplayer-Integration, damit auch deren besondere Authentifizierung und Bildbeschaffung genutzt werden. Das LG erhält ausschließlich einen an diese Kopplung und gespeicherte Medienkarten gebundenen Bildabruf, keine Quell-URL, Medien-ID oder HA-Zugangsdaten. Bilder werden auf höchstens 640 × 640 Pixel verkleinert, als JPEG ohne Metadaten ausgegeben und im Arbeitsspeicher zwischengespeichert. Maximal zwei parallele Abrufe, acht Sekunden Zeitlimit, 32 Cache-Einträge/8 MiB und 30 Sekunden Wiederholungspause bei Fehlern begrenzen den Aufwand. Titelwechsel tauschen das Cover aus; unveränderte Bilder werden wiederverwendet. Fortschritt läuft lokal im vorhandenen Sekundentakt, ohne zusätzliche HA-/Sonos-Abfragen. Ob eine konkrete Integration Cover und Metadaten liefern kann, hängt von deren Unterstützung und der wiedergegebenen Quelle ab.
 
@@ -93,12 +99,14 @@ Layoutwechsel in der laufenden App brauchen keinen physischen Eingangsbefehl. Be
 - **Verbindungsverlust:** Meldungen enden nach 15 Sekunden ohne HA-Antwort. Das gespeicherte Dashboard mit zuletzt empfangenen Werten bleibt in der geladenen App sichtbar; diese Werte sind nicht live. Kaltstart der gehosteten App benötigt erreichbares HA.
 - **Zugriff:** Editor und Bildverwaltung nur für HA-Administratoren. Die gekoppelte App liest ausgewählte Daten und gespeicherten Szenen zugeordnete Bilder, kann aber keine Layouts/Bilder bearbeiten oder beliebige HA-Aktionen ausführen. Frei ausführbares HTML/Jinja und beliebige Lovelace-Karten werden nicht unterstützt.
 
+Die Galerie nutzt Layoutskizzen; die vollständige Live-Vorschau öffnet sich über **Bearbeiten**.
+
 Die Darstellung ist auf **16:9 im Querformat** ausgelegt und auf LG 75UH5F-HJ / webOS 4 geprüft. Andere Plattformen können sich bei Videoebenen, Überlagerung, Schriften und Signalstatus unterscheiden. Es werden keine fremden Schriftdateien geladen. Die ressourcenschonende Umsetzung ersetzt keine Messung von LG-Gesamtspeicher oder Langzeitstabilität.
 
 ## Diagnose und Speicherung
 
 Der Sensor **Display app** zeigt `layout_scene` (`signal`, `no_signal`, `dashboard`, `overlay`, `pip`, `fullscreen`), `layout_revision` und `dashboard_selected`. Der Fünfsekunden-Heartbeat ist eine Diagnose, keine Messung der tatsächlichen Reaktionszeit.
 
-Layout: `.storage/lg_rs232_ip.<entry_id>.layouts`. Bilder: `.storage/lg_rs232_ip.<entry_id>.backgrounds/`. Die Quellenwahl liegt im vorhandenen App-Wiederherstellungsjournal. Bei einem Update von 2.6 bleibt die Gestaltung erhalten; die neue Dashboard-Szene startet als Kopie von **Ohne HDMI**. Die neuen Morgen-Dashboard-Vorlagen lassen sich über die Vorlagenauswahl laden (ändert den gesamten Entwurf).
+Bibliothek, Zuordnungen und aktive Layouts werden gemeinsam in `.storage/lg_rs232_ip.<entry_id>.layouts` gespeichert. Bilder: `.storage/lg_rs232_ip.<entry_id>.backgrounds/`. Die Quellenwahl liegt im vorhandenen App-Wiederherstellungsjournal. Vorhandene Layouts bleiben beim Update erhalten und erscheinen als sechs Ansichten. Neue Vorlagen lassen sich als zusätzliche Ansicht anlegen oder auf die gerade bearbeitete Ansicht anwenden.
 
 Weitere Informationen: [App-Einrichtung](DISPLAY-APP.md), [Prüfergebnisse](RELEASE-TESTS.md), [Gerätereferenz](devices/LG-UH5F-H.md).

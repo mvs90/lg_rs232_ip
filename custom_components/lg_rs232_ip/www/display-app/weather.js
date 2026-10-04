@@ -30,7 +30,7 @@
     var stops=[-18,-6,0,12,40],tops=[[8,16,38],[25,31,66],r?[58,69,105]:[66,43,92],[38,104,151],[36,126,176]],bottoms=[[21,35,61],[79,58,91],r?[226,153,123]:[201,119,135],[159,197,210],[168,216,226]],i=0;
     while(i<stops.length-2 && e>stops[i+1]){i++;}
     var t=Math.max(0,Math.min(1,(e-stops[i])/(stops[i+1]-stops[i]))),x=typeof sun.azimuth === "number" ? Math.round(sun.azimuth/360*80+10) : 65;
-    return "radial-gradient(ellipse at "+x+"% "+Math.round(Math.max(15,75-e))+"%,rgba(255,205,155,"+(e>-8&&e<15?.2:0)+"),transparent 65%),linear-gradient(160deg,"+mix(tops[i],tops[i+1],t)+","+mix(bottoms[i],bottoms[i+1],t)+")";
+    return "radial-gradient(ellipse at "+x+"% "+Math.round(Math.max(15,75-e))+"%,rgba(255,205,155,"+Math.round((Math.max(0,1-Math.abs(e-3)/22)*.2+(e>0?.06:0))*1000)/1000+"),transparent 65%),linear-gradient(160deg,"+mix(tops[i],tops[i+1],t)+","+mix(bottoms[i],bottoms[i+1],t)+")";
   }
   function set(node,value){value=String(value==null?"":value);if(node.textContent!==value){node.textContent=value;}}
   function child(parent,cls){var el=document.createElement("div");el.className=cls;parent.appendChild(el);return el;}

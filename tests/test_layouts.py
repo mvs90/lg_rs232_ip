@@ -268,7 +268,7 @@ async def test_editor_routes_require_admin_and_pairing_token_cannot_edit(layouts
         ).status == 200
         assert (
             await client.post(
-                "/api/lg_rs232_ip/layout_validate", headers=headers, data=b"x" * 131073
+                "/api/lg_rs232_ip/layout_validate", headers=headers, data=b"x" * 1048577
             )
         ).status == 413
         assert (
@@ -311,6 +311,7 @@ async def test_forecast_modes_are_deduplicated_and_sun_coordinates_never_leave_h
 ):
     config = make_layout("morning")
     config["enabled"] = True
+    config["sun_entity"] = "sun.test"
     for scene in config["scenes"].values():
         for item in scene["elements"]:
             if item["kind"] == "weather":
@@ -318,7 +319,7 @@ async def test_forecast_modes_are_deduplicated_and_sun_coordinates_never_leave_h
                 item["forecast_count"] = 8 if item["forecast_type"] == "hourly" else 4
     layouts.hass.states.async_set("weather.home", "sunny", {"temperature": 20})
     layouts.hass.states.async_set(
-        "sun.sun",
+        "sun.test",
         "below_horizon",
         {"elevation": -12, "azimuth": 310, "rising": False, "secret": "hidden"},
     )

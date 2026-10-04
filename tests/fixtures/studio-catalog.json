@@ -1360,8 +1360,8 @@
     },
     {
       "id": "morning",
-      "name": "Morgenlicht",
-      "description": "Warme Farben · ein ruhiger Start in den Tag",
+      "name": "Sonnenstand",
+      "description": "Lebendiger Himmel · Farben und Licht folgen der Sonne",
       "layout": {
         "schema": 1,
         "enabled": false,
@@ -1370,7 +1370,7 @@
         "sun_entity": "sun.sun",
         "scenes": {
           "signal": {
-            "background": "dawn",
+            "background": "solar",
             "color": "#382033",
             "accent": "#ffcfaa",
             "elements": [
@@ -1555,7 +1555,7 @@
             "gradient_angle": 135
           },
           "no_signal": {
-            "background": "dawn",
+            "background": "solar",
             "color": "#382033",
             "accent": "#ffcfaa",
             "elements": [
@@ -1867,7 +1867,7 @@
             "gradient_angle": 135
           },
           "overlay": {
-            "background": "dawn",
+            "background": "solar",
             "color": "#382033",
             "accent": "#ffcfaa",
             "elements": [
@@ -1936,7 +1936,7 @@
             "gradient_angle": 135
           },
           "pip": {
-            "background": "dawn",
+            "background": "solar",
             "color": "#382033",
             "accent": "#ffcfaa",
             "elements": [
@@ -2034,7 +2034,7 @@
             "gradient_angle": 135
           },
           "fullscreen": {
-            "background": "dawn",
+            "background": "solar",
             "color": "#382033",
             "accent": "#ffcfaa",
             "elements": [

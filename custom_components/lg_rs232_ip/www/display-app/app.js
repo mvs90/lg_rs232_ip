@@ -1,7 +1,7 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.5.0", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.6.0", video = null, sourceNode = null, videoSource = null;
   var dashboardSelected = false, design = null, designer = null, currentContent = null, signalLost = 0, sceneKey = null, serverOffset = 0;
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
   var captureBusy = false, lastCapture = null, cancelCapture = null;

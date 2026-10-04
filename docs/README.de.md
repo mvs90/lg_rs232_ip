@@ -65,4 +65,8 @@ Die App hält ein einziges HDMI-Videoelement offen. Lange HTTP-Abfragen warten a
 
 ### Medien- und Statuskarten (2.8.0)
 
-Im **LG Display Studio** unter **Karten aus deinem Raum** einen HA-Raum wählen und passende Vorschläge einzeln übernehmen. Sonos und andere `media_player` erhalten Cover, Titel, Interpret und Wiedergabestatus; Raumzustände passende Symbole und Farben. Karten sind frei gestaltbar und über **×** entfernbar. Über **Medienplayer → +** ist auch eine manuelle Zuordnung möglich. Erst **Speichern & anwenden** ändert die Anzeige. [Anleitung und Grenzen](DISPLAY-STUDIO.md#medienplayer-und-raumvorschläge).
+Im **LG Display Studio** unter **Karten aus deinem Raum** einen HA-Raum wählen und passende Vorschläge einzeln übernehmen. Sonos und andere `media_player` erhalten Cover, Titel, Interpret und Wiedergabestatus; Raumzustände passende Symbole und Farben. Karten sind frei gestaltbar und über **×** entfernbar. Über **Medienplayer → +** ist auch eine manuelle Zuordnung möglich. Erst **Speichern** ändert die Anzeige. [Anleitung und Grenzen](DISPLAY-STUDIO.md#medienplayer-und-raumvorschläge).
+
+### Gespeicherte Ansichten (2.9.0)
+
+Das Studio startet mit einer Galerie. Über **Neue Ansicht** ein benanntes Design aus einer Vorlage anlegen; bestehende Ansichten lassen sich bearbeiten, unabhängig duplizieren und löschen. In der Übersicht die Verwendung für Dashboard, HDMI und Meldungen zuordnen und **Speichern**. Die Vorlage **Sonnenstand** ersetzt „Morgenlicht“ und aktualisiert Farben und Lichtposition auch während der laufenden Anzeige. [Ansichten verwalten](DISPLAY-STUDIO.md#ansichten-verwalten).

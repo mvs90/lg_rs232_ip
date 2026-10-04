@@ -86,7 +86,7 @@ def make_layout(style="cinema"):
     palettes = {
         "cinema": ("midnight", "#101827", "#8fb6ff"),
         "aurora": ("aurora", "#0b2228", "#79e5c0"),
-        "morning": ("dawn", "#382033", "#ffcfaa"),
+        "morning": ("solar", "#382033", "#ffcfaa"),
         "sand": ("sand", "#e9e0cf", "#76654c"),
     }
     background, color, accent = palettes[style]
@@ -205,7 +205,11 @@ def presets():
                 "Aurora",
                 "Grüne Lichtflächen · HDMI neben Uhr, Wetter und Terminen",
             ),
-            ("morning", "Morgenlicht", "Warme Farben · ein ruhiger Start in den Tag"),
+            (
+                "morning",
+                "Sonnenstand",
+                "Lebendiger Himmel · Farben und Licht folgen der Sonne",
+            ),
             (
                 "sand",
                 "Paper & Sand",

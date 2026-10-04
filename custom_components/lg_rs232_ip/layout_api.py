@@ -19,8 +19,8 @@ async def read_document(request):
     raw = bytearray()
     async for part in request.content.iter_chunked(8192):
         raw.extend(part)
-        if len(raw) > 131072:
-            raise web.HTTPRequestEntityTooLarge(max_size=131072, actual_size=len(raw))
+        if len(raw) > 1048576:
+            raise web.HTTPRequestEntityTooLarge(max_size=1048576, actual_size=len(raw))
     try:
         data = json.loads(raw)
         if not isinstance(data, dict):
@@ -40,6 +40,11 @@ class LayoutValidateView(HomeAssistantView):
         data = await read_document(request)
         try:
             config = validate_layout(data.get("config"))
+            if "views" in data.get("config", {}):
+                from .layout_library import validate_library
+
+                config, library = validate_library(data["config"], config)
+                config.update(library)
         except (ValueError, TypeError, KeyError, AttributeError) as err:
             raise web.HTTPBadRequest(text=str(err)) from None
         return web.json_response(
@@ -79,6 +84,7 @@ class LayoutListView(HomeAssistantView):
 
 class LayoutEntryView(HomeAssistantView):
     """Shared authorization without inherited mutation handlers."""
+
     requires_auth = True
 
     def __init__(self, hass):
@@ -165,10 +171,7 @@ class LayoutBackgroundView(LayoutEditorView):
         manager = self.manager(request, entry_id)
         # Share the save lock: referenced images cannot disappear during a save.
         async with manager._lock:
-            if any(
-                scene["image_id"] == image_id
-                for scene in manager.config["scenes"].values()
-            ):
+            if any(scene["image_id"] == image_id for scene in manager.all_scenes()):
                 raise web.HTTPConflict(text="This background is still in use")
             try:
                 await manager.backgrounds.async_delete(image_id)
@@ -209,4 +212,41 @@ class LayoutMediaView(LayoutEntryView):
             status=200 if data else 204,
             content_type="image/jpeg",
             headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+        )
+
+
+class LayoutLibraryView(LayoutEditorView):
+    url = "/api/lg_rs232_ip/layout_library/{entry_id}"
+    name = "api:lg_rs232_ip:layout_library"
+
+    async def get(self, request, entry_id):
+        manager = self.manager(request, entry_id)
+        return web.json_response(
+            {
+                **manager.editor_document(),
+                "values": manager.values(),
+                "sun": manager.sun(),
+                "backgrounds": await manager.backgrounds.async_list(),
+                "timezone": str(self.hass.config.time_zone),
+            },
+            headers={"Cache-Control": "no-store"},
+        )
+
+    async def post(self, request, entry_id):
+        manager = self.manager(request, entry_id)
+        data = await read_document(request)
+        try:
+            if type(data.get("revision")) is not int:
+                raise ValueError("Supply the current layout revision")
+            config = data.get("config")
+            from .layout_library import validate_library
+
+            runtime, library = validate_library(config, config)
+            await manager.async_save(runtime, data["revision"], library=library)
+        except LayoutConflict as err:
+            raise web.HTTPConflict(text=str(err)) from None
+        except (ValueError, TypeError, KeyError, AttributeError) as err:
+            raise web.HTTPBadRequest(text=str(err)) from None
+        return web.json_response(
+            manager.editor_document(), headers={"Cache-Control": "no-store"}
         )

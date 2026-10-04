@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.9.0
+
+- Start Studio with a gallery of named views. Create from templates, edit, rename, independently duplicate or delete views; assign them to Dashboard, HDMI signal/no-signal and notification contexts. Preserve existing layouts, bindings and backgrounds as six named views.
+- Save the bounded library and assignments atomically with revision checks. Retain undo/redo, protect backgrounds referenced by inactive views and send only assigned scenes/data to the paired display. Add administrator-only library editing alongside the existing runtime layout endpoint.
+- Keep widget controls bound to the current draft after saving, so continued edits to the selected widget are retained.
+- Rename the Morgenlicht template to Sonnenstand and use a solar background in every template variant. Calculate live solar elevation/azimuth on HA every 30 seconds and update the open editor and display without reload. Keep coordinates on HA and stop timers when layouts are disabled/unloaded.
+- Release display app 1.6.0; existing dashboard-source, OSD and AV behavior is retained.
+
 ## 2.8.0
 
 - Add compact and large-cover media cards for Sonos and other HA media players: artwork, title, artist, album, playback state and optional progress/volume. Use the existing HA media entity API for artwork, with bounded conversion/cache and no upstream media credentials in the panel payload.
