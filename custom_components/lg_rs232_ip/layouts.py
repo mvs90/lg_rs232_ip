@@ -16,6 +16,8 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .layout_backgrounds import LayoutBackgrounds
+from .layout_media import LayoutMedia
+from .layout_cards import card_metadata
 from .layout_config import layout_entities, make_layout, validate_layout
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,6 +32,7 @@ class DisplayLayouts:
         self.hass, self.entry = hass, entry
         self.store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.layouts")
         self.backgrounds = LayoutBackgrounds(hass, entry.entry_id)
+        self.media = LayoutMedia(hass)
         self.config = make_layout()
         self.revision = 0
         self.changed = lambda: None
@@ -54,6 +57,7 @@ class DisplayLayouts:
 
     async def async_close(self):
         self._closed = True
+        await self.media.async_close()
         for name in ("_unsub", "_timer", "_debounce"):
             if unsub := getattr(self, name):
                 unsub()
@@ -281,8 +285,25 @@ class DisplayLayouts:
         if revision == self.revision and not self._closed:
             self.changed()
 
+    def media_entities(self):
+        return {
+            item["entity_id"]
+            for scene in self.config["scenes"].values()
+            for item in scene["elements"]
+            if item["kind"] == "media"
+            and item.get("show_cover", True)
+            and item["entity_id"]
+        }
+
     def values(self, config=None):
         selected = config or self.config
+        cards = {
+            item["entity_id"]
+            for scene in selected["scenes"].values()
+            for item in scene["elements"]
+            if item["kind"] in ("media", "status")
+        }
+        media_entities = self.media_entities()
         values = {}
         for entity_id in layout_entities(selected):
             state = self.hass.states.get(entity_id)
@@ -299,6 +320,10 @@ class DisplayLayouts:
                 "name": str(attrs.get("friendly_name", entity_id))[:100],
                 "unit": str(attrs.get("unit_of_measurement", ""))[:30],
             }
+            if entity_id in cards:
+                value.update(card_metadata(state))
+            if entity_id in media_entities:
+                value["artwork"] = self.media.key(entity_id)
             if entity_id.startswith("weather."):
                 for key in (
                     "temperature",

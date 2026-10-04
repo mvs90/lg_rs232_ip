@@ -6,7 +6,7 @@ async function mount(page,width=1500) {
   const root=path.resolve('custom_components/lg_rs232_ip/www');
   await page.route('http://studio.test/**',route=>{
     const file=new URL(route.request().url()).pathname.split('/').pop();
-    const mapping={'studio.js':'studio.js','studio.css':'studio.css','weather.js':'display-app/weather.js','layout-runtime.js':'display-app/layout.js','layout.css':'display-app/layout.css'};
+    const mapping={'studio.js':'studio.js','studio.css':'studio.css','weather.js':'display-app/weather.js','cards.js':'display-app/cards.js','layout-runtime.js':'display-app/layout.js','layout.css':'display-app/layout.css'};
     return route.fulfill({contentType:file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'text/html',body:mapping[file]?fs.readFileSync(path.join(root,mapping[file])):'<body style="margin:0"></body>'});
   });
   await page.goto('http://studio.test/');
@@ -21,6 +21,7 @@ async function mount(page,width=1500) {
     },callApi:async(method,url,data)=>{
       window.calls.push([method,url,data]);
       if(url==='lg_rs232_ip/layouts')return catalog;
+      if(url.startsWith('lg_rs232_ip/layout_suggestions/'))return {areas:[{area_id:'living',name:'Wohnzimmer'}],area_id:'living',suggestions:[{entity_id:'media_player.sonos',kind:'media',name:'Sonos Wohnzimmer',state:'idle'},{entity_id:'sensor.temperature',kind:'status',name:'Raumtemperatur',state:'22.5',unit:'°C'}]};
       if(method==='POST'){
         if(window.failSave)throw {status_code:409};
         if(url==='lg_rs232_ip/layout_validate')return {config:data.config};
@@ -148,4 +149,29 @@ test('own background uploads preview locally, survive save and undo, and cleanup
   expect(await page.evaluate(()=>studio.config.scenes.dashboard.image_id)).toBe('');
   await page.getByTitle('Wiederholen',{exact:true}).click();
   expect(await page.evaluate(()=>studio.config.scenes.dashboard.image_id)).toBe('a'.repeat(64));
+});
+
+
+test('room suggestions add styled media/status cards once, support editing and removal, and never auto-save',async({page})=>{
+  await mount(page);
+  await page.getByRole('tab',{name:'Dashboard',exact:true}).click();
+  await expect(page.getByLabel('Raum für Kartenvorschläge')).toHaveValue('living');
+  await page.getByRole('button',{name:/Medienplayer Sonos Wohnzimmer/}).click();
+  await expect(page.locator('.scene .lg-media')).toHaveCount(1);
+  await expect(page.getByLabel('Home-Assistant-Entität')).toHaveValue('media_player.sonos');
+  await page.getByLabel('Mediengestaltung').selectOption('poster');
+  await expect(page.locator('.scene .lg-media')).toHaveAttribute('data-media-style','poster');
+  await expect(page.getByRole('button',{name:/Medienplayer Sonos Wohnzimmer/})).toBeDisabled();
+  expect(await page.evaluate(()=>calls.some(c=>c[0]==='POST'))).toBe(false);
+  await page.getByRole('button',{name:/Statuskarte Raumtemperatur/}).click();
+  await expect(page.locator('.scene .lg-status')).toContainText('22.5 °C');
+  await page.getByRole('button',{name:'Raumtemperatur entfernen',exact:true}).click();
+  await expect(page.locator('.scene .lg-status')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:/Statuskarte Raumtemperatur/})).toBeEnabled();
+  await page.getByRole('button',{name:'Sonos Wohnzimmer entfernen',exact:true}).click();
+  await expect(page.locator('.scene .lg-media')).toHaveCount(0);
+  await page.getByTitle('Rückgängig',{exact:true}).click();
+  await expect(page.locator('.scene .lg-media')).toHaveCount(1);
+  await page.getByRole('button',{name:'Speichern & anwenden'}).click();
+  expect(await page.evaluate(()=>saved.scenes.dashboard.elements.some(i=>i.kind==='media'&&i.media_style==='poster'))).toBe(true);
 });

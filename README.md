@@ -19,6 +19,8 @@ Requires Home Assistant 2025.3 or later; tested on 2025.3.4 and 2026.9.4. Availa
 
 **LG Display Studio** appears automatically in the HA sidebar for administrators. Choose Cinema, Aurora, Morgenlicht or Paper & Sand, arrange HDMI and widgets by dragging/resizing, select your HA weather/calendar/sensor entities, enable custom layouts and save. Six independent scenes cover HDMI signal present/absent, the separate **Dashboard** source, and overlay/PiP/fullscreen notifications. Every widget can be removed or changed to another type. Daily/hourly weather includes local animated current icons and day/night forecasts; backgrounds include sun-position gradients and your own uploaded JPEG/PNG images. Colours, typography, card opacity and layer order are editable; layouts can be exported/imported (images separately).
 
+**Media and room cards:** add a Sonos or other HA media player with album artwork, title, artist, playback state and optional progress/volume, in compact or large-cover form. Room-based suggestions use HA entity/device areas to propose media, weather/calendar and styled status cards. Add or remove each card individually; changes apply only after saving.
+
 Persistent dashboards need the optional SI resident app. One HDMI video element is retained through layout changes, and selected data is prepared on HA. The editor uses a video placeholder; it does not start another camera stream. **[Studio setup, controls and limits](docs/DISPLAY-STUDIO.md)**.
 
 ## What belongs to this integration

@@ -5,7 +5,17 @@ import math
 import re
 
 SCENES = ("signal", "no_signal", "dashboard", "overlay", "pip", "fullscreen")
-KINDS = ("hdmi", "clock", "weather", "calendar", "entity", "text", "message")
+KINDS = (
+    "hdmi",
+    "clock",
+    "weather",
+    "calendar",
+    "entity",
+    "status",
+    "media",
+    "text",
+    "message",
+)
 BACKGROUNDS = (
     "solid",
     "aurora",
@@ -44,6 +54,12 @@ def element(kind, x, y, width, height):
         forecast_count=4,
         animate=True,
         weather_style="glass",
+        media_style="compact",
+        show_cover=True,
+        show_progress=True,
+        show_volume=True,
+        status_coloring=True,
+        accent_color="#79e5c0",
     )
 
 
@@ -248,7 +264,7 @@ def validate_layout(value):
         scenes={},
     )
     if not isinstance(value.get("scenes"), dict):
-        raise ValueError("Supply all five layout scenes")
+        raise ValueError("Supply all layout scenes")
     if result["sun_entity"] and not re.fullmatch(
         r"sun\.[a-z0-9_]+", result["sun_entity"]
     ):
@@ -330,6 +346,19 @@ def validate_layout(value):
                     item.get("weather_style", "glass"), ("glass", "sky", "minimal")
                 ),
             )
+            for flag in (
+                "show_cover",
+                "show_progress",
+                "show_volume",
+                "status_coloring",
+            ):
+                if type(item.get(flag, True)) is not bool:
+                    raise ValueError("Invalid card option")
+                obj[flag] = item.get(flag, True)
+            obj["media_style"] = _choice(
+                item.get("media_style", "compact"), ("compact", "poster")
+            )
+            obj["accent_color"] = _color(item.get("accent_color", "#79e5c0"))
             if type(item.get("show_label")) is not bool:
                 raise ValueError("Invalid label visibility")
             obj["show_label"] = item["show_label"]
@@ -337,10 +366,14 @@ def validate_layout(value):
             if entity_id:
                 if not ENTITY.fullmatch(entity_id) or kind not in (
                     "entity",
+                    "status",
+                    "media",
                     "weather",
                     "calendar",
                 ):
                     raise ValueError("Invalid entity binding")
+                if kind == "media" and not entity_id.startswith("media_player."):
+                    raise ValueError("Select a media player")
                 if kind in ("weather", "calendar") and not entity_id.startswith(
                     kind + "."
                 ):

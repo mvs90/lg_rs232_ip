@@ -1190,3 +1190,71 @@ async def test_dashboard_source_does_not_hide_a_custom_hdmi_label(app):
         assert not app.dashboard_selected
     finally:
         await layouts.async_close()
+
+
+async def test_paired_media_artwork_only_exposes_selected_saved_players(app):
+    from custom_components.lg_rs232_ip.layout_config import element
+    from custom_components.lg_rs232_ip.layout_api import (
+        LayoutMediaView,
+        LayoutSuggestionsView,
+    )
+    from tests.test_layout_cards import cover
+
+    layouts = await configure_dashboard(app)
+    app.hass.data["lg_rs232_ip"]["test"]["layouts"] = layouts
+    app.hass.states.async_set(
+        "media_player.sonos",
+        "playing",
+        {"entity_picture": "/private", "media_title": "One"},
+    )
+    layouts.media._cache["media_player.sonos"] = (
+        layouts.media.key("media_player.sonos"),
+        cover(),
+        0,
+    )
+
+    @web.middleware
+    async def auth(request, handler):
+        request["ha_authenticated"] = request.headers.get("X-Auth") == "yes"
+        request["hass_user"] = SimpleNamespace(
+            is_admin=request.headers.get("X-Admin") == "yes"
+        )
+        return await handler(request)
+
+    http = web.Application(middlewares=[auth])
+    DisplayAppView(app.hass).register(app.hass, http, http.router)
+    LayoutMediaView(app.hass).register(app.hass, http, http.router)
+    LayoutSuggestionsView(app.hass).register(app.hass, http, http.router)
+    url = f"/api/lg_rs232_ip/display_app/test/{app.token}/cover.jpg?entity=media_player.sonos&v={layouts.media.key('media_player.sonos')}"
+    try:
+        async with TestClient(TestServer(http)) as client:
+            editor = "/api/lg_rs232_ip/layout_media/test/media_player.sonos"
+            assert (await client.get(editor)).status == 401
+            assert (await client.get(editor, headers={"X-Auth": "yes"})).status == 403
+            assert (
+                await client.get(editor, headers={"X-Auth": "yes", "X-Admin": "yes"})
+            ).status == 200
+            for endpoint in (editor, "/api/lg_rs232_ip/layout_suggestions/test"):
+                assert (
+                    await client.post(
+                        endpoint, headers={"X-Auth": "yes", "X-Admin": "yes"}
+                    )
+                ).status == 405
+            suggestions = "/api/lg_rs232_ip/layout_suggestions/test"
+            assert (await client.get(suggestions)).status == 401
+            assert (
+                await client.get(suggestions, headers={"X-Auth": "yes"})
+            ).status == 403
+            assert (await client.get(url)).status == 404
+            cfg = layouts.document()["config"]
+            item = element("media", 4, 4, 50, 30)
+            item["entity_id"] = "media_player.sonos"
+            cfg["scenes"]["dashboard"]["elements"] = [item]
+            await layouts.async_save(cfg, layouts.revision)
+            assert (await client.get(url)).status == 200
+            assert (await client.get(url.replace(app.token, "wrong"))).status == 404
+            cfg["scenes"]["dashboard"]["elements"] = []
+            await layouts.async_save(cfg, layouts.revision)
+            assert (await client.get(url)).status == 404
+    finally:
+        await layouts.async_close()

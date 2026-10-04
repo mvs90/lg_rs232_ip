@@ -9,14 +9,15 @@ async function mount(page, state) {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.4.0', revision: 1, dashboard: state.dashboard || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.5.0', revision: 1, dashboard: state.dashboard || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
     }
+    if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
       const event = route.request().postDataJSON(); events.push(event);
       if (event.type === 'rendered' && state.content) state.content.rendered = true;
       return route.fulfill({contentType: 'application/json', body: '{"ok":true}'});
     }
-    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html', body: fs.readFileSync(path.join(assets, name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; media-src ext:; frame-ancestors 'none'"}});
+    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html', body: fs.readFileSync(path.join(assets, name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src ext:; frame-ancestors 'none'"}});
   });
   await page.goto('http://display-app.test/index.html');
   return events;
@@ -324,4 +325,47 @@ test('weather shows hourly night icons, bounded forecasts, solar gradients and s
   state.layout.values['weather.test'].state='unavailable';
   await expect(page.locator('.lg-forecast-period')).toHaveCount(0);
   await expect(page.locator('.lg-weather>.lg-weather-icon')).toBeHidden();
+});
+
+test('media cards render artwork and status, advance only playing progress and clear stale metadata',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',dashboard:true,layout:designed()};
+  state.layout.now=null; // Use the live browser clock instead of this fixture's frozen server time.
+  const base=state.layout.config.scenes.dashboard.elements[0];
+  const card={...base,id:'music',kind:'media',entity_id:'media_player.music',label:'WOHNZIMMER',x:4,y:6,width:59,height:35,font_size:5,opacity:1,background:'#162938',media_style:'compact',show_cover:true,show_progress:true,show_volume:true,accent_color:'#80d4b7'};
+  state.layout.config.scenes.dashboard.elements=[card,{...card,id:'poster',x:68,width:28,height:86,media_style:'poster',font_size:5}, {...card,id:'door',kind:'status',entity_id:'binary_sensor.door',label:'TERRASSE',x:4,y:50,width:28,height:42},{...card,id:'temp',kind:'status',entity_id:'sensor.temp',label:'RAUMKLIMA',x:35,y:50,width:28,height:42}];
+  const media=state.layout.values['media_player.music']={state:'playing',domain:'media_player',name:'Sonos Wohnzimmer',media_title:'Morning Light',media_artist:'North Collective',media_album_name:'Slow Sundays',media_duration:240,media_position:60,media_position_updated_at:new Date().toISOString(),volume_level:.28,artwork:'one'};
+  state.layout.values['binary_sensor.door']={domain:'binary_sensor',device_class:'door',state:'off'};
+  state.layout.values['sensor.temp']={domain:'sensor',device_class:'temperature',state:'21.8',unit:'°C'};
+  await page.setViewportSize({width:1280,height:720});await mount(page,state);
+  await expect(page.locator('[data-layout-id=music] .lg-value')).toHaveText('Morning Light');
+  await expect(page.locator('.lg-media-art.loaded')).toHaveCount(2);
+  await expect(page.locator('[data-layout-id=door] .lg-value')).toHaveText('Geschlossen');
+  await expect(page.locator('[data-layout-id=temp] .lg-value')).toHaveText('21.8 °C');
+  await expect(page.locator('[data-layout-id=music] .lg-media-volume')).toHaveText('Lautstärke 28 %');
+  const elapsed=await page.locator('[data-layout-id=music] .lg-media-elapsed').textContent();
+  await expect(page.locator('[data-layout-id=music] .lg-media-elapsed')).not.toHaveText(elapsed,{timeout:3500});
+  await page.screenshot({path:'test-results/media-dashboard-'+test.info().project.name+'.png'});
+  await page.evaluate(()=>window.artNode=document.querySelector('.lg-media-art img'));
+  media.state='paused';media.media_position=81;
+  await expect(page.locator('[data-layout-id=music] .lg-media-state')).toHaveText('Pausiert');
+  await expect(page.locator('[data-layout-id=music] .lg-media-elapsed')).toHaveText('1:21');
+  await page.waitForTimeout(1300);await expect(page.locator('[data-layout-id=music] .lg-media-elapsed')).toHaveText('1:21');
+  expect(await page.evaluate(()=>window.artNode===document.querySelector('.lg-media-art img'))).toBe(true);
+  state.layout.values['binary_sensor.door'].state='on';await expect(page.locator('[data-layout-id=door]')).toHaveAttribute('data-tone','warning');
+  media.state='off';media.artwork=null;
+  await expect(page.locator('[data-layout-id=music] .lg-value')).toHaveText('Sonos Wohnzimmer');
+  await expect(page.locator('.lg-media-art.loaded')).toHaveCount(0);
+  await expect(page.locator('[data-layout-id=music] .lg-media-progress')).toBeHidden();
+  state.layout.config.scenes.dashboard.elements=[];await expect(page.locator('.lg-media')).toHaveCount(0);
+});
+
+test('missing cover uses local placeholder; media metadata is plain text',async({page})=>{
+  const state={content:null,dashboard:true,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  state.layout.config.scenes.dashboard.elements=[{...state.layout.config.scenes.dashboard.elements[0],id:'media',kind:'media',entity_id:'media_player.music',x:5,y:5,width:80,height:60,show_cover:true}];
+  state.layout.values['media_player.music']={state:'playing',media_title:'<img src=x onerror=window.injected=true>',media_artist:'Example',artwork:'missing'};
+  await mount(page,state);
+  await expect(page.locator('.lg-media .lg-value')).toContainText('<img');
+  await expect(page.locator('.lg-media-art')).not.toHaveClass(/loaded/);
+  await expect(page.locator('.lg-media-placeholder')).toBeVisible();
+  expect(await page.evaluate(()=>window.injected)).toBeUndefined();
 });

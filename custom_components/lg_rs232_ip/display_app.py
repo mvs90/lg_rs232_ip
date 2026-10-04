@@ -23,7 +23,7 @@ from .const import DOMAIN
 from .resident_app import ResidentApp, SI_APP_ID
 from .web_manager import LGWebError
 
-APP_VERSION = "1.4.0"
+APP_VERSION = "1.5.0"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -110,6 +110,7 @@ class DisplayAppManager(ResidentApp):
                         "app.css",
                         "layout.js",
                         "weather.js",
+                        "cards.js",
                         "layout.css",
                     )
                 }
@@ -583,6 +584,22 @@ class DisplayAppView(HomeAssistantView):
             return web.json_response(
                 await manager.async_state(request.query.get("since")), headers=headers
             )
+        if resource == "cover.jpg" and manager.layouts:
+            entity = request.query.get("entity", "")
+            if (
+                not manager.layouts.config["enabled"]
+                or entity not in manager.layouts.media_entities()
+            ):
+                raise web.HTTPNotFound()
+            data = await manager.layouts.media.async_image(
+                entity, request.query.get("v")
+            )
+            return web.Response(
+                body=data,
+                status=200 if data else 204,
+                content_type="image/jpeg",
+                headers=headers,
+            )
         if resource == "background.jpg" and manager.layouts:
             identifier = request.query.get("id", "")
             if not any(
@@ -605,6 +622,7 @@ class DisplayAppView(HomeAssistantView):
             "app.css": "text/css",
             "layout.js": "application/javascript",
             "weather.js": "application/javascript",
+            "cards.js": "application/javascript",
             "layout.css": "text/css",
         }
         if resource not in mime:

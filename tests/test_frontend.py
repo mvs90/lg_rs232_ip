@@ -25,7 +25,7 @@ async def test_bundled_module_registered_without_dashboard_mutation():
     )
     assert await async_setup(hass, {})
     paths = hass.http.async_register_static_paths.await_args.args[0]
-    assert len(paths) == 6
+    assert len(paths) == 7
     assert paths[0].url_path == CARD_PATH
     assert Path(paths[0].path).is_file()
     assert paths[0].cache_headers is False

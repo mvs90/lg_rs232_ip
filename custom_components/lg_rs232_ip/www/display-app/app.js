@@ -1,7 +1,7 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.4.0", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.5.0", video = null, sourceNode = null, videoSource = null;
   var dashboardSelected = false, design = null, designer = null, currentContent = null, signalLost = 0, sceneKey = null, serverOffset = 0;
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
   var captureBusy = false, lastCapture = null, cancelCapture = null;
@@ -121,7 +121,7 @@
     else { key = ready || Date.now() - signalLost < design.config.signal_delay * 1000 ? "signal" : "no_signal"; }
     sceneKey = key;
     layout("designed");
-    designer.render(design.config.scenes[key], design.values, {message:content, timezone:design.timezone, sun:design.sun, hideHdmi:dashboardSelected && !design.config.scenes.dashboard.elements.some(function (item) { return item.kind === "hdmi"; }), imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date(Date.now()+serverOffset)});
+    designer.render(design.config.scenes[key], design.values, {message:content, timezone:design.timezone, sun:design.sun, hideHdmi:dashboardSelected && !design.config.scenes.dashboard.elements.some(function (item) { return item.kind === "hdmi"; }), mediaUrl:function(entity,id) {return "cover.jpg?entity="+encodeURIComponent(entity)+"&v="+encodeURIComponent(id);}, imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date(Date.now()+serverOffset)});
     return true;
   }
   function clear(message) {

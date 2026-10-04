@@ -46,7 +46,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -80,7 +86,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "weather",
@@ -103,7 +115,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "calendar",
@@ -126,7 +144,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "entity",
@@ -149,7 +173,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "text",
@@ -172,7 +202,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -206,7 +242,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "weather",
@@ -229,7 +271,13 @@
                 "forecast_type": "hourly",
                 "forecast_count": 6,
                 "animate": true,
-                "weather_style": "sky"
+                "weather_style": "sky",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "calendar",
@@ -252,7 +300,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "entity",
@@ -275,7 +329,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "text",
@@ -298,7 +358,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -332,7 +398,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "message",
@@ -355,7 +427,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -389,7 +467,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "message",
@@ -412,7 +496,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "clock",
@@ -435,7 +525,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -469,7 +565,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "clock",
@@ -492,7 +594,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -540,7 +648,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "weather",
@@ -563,7 +677,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "calendar",
@@ -586,7 +706,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "hdmi",
@@ -609,7 +735,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "entity",
@@ -632,7 +764,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "text",
@@ -655,7 +793,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -689,7 +833,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "weather",
@@ -712,7 +862,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "calendar",
@@ -735,7 +891,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "entity",
@@ -758,7 +920,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "text",
@@ -781,7 +949,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -815,7 +989,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "weather",
@@ -838,7 +1018,13 @@
                 "forecast_type": "hourly",
                 "forecast_count": 6,
                 "animate": true,
-                "weather_style": "sky"
+                "weather_style": "sky",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "calendar",
@@ -861,7 +1047,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "entity",
@@ -884,7 +1076,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "text",
@@ -907,7 +1105,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -941,7 +1145,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "message",
@@ -964,7 +1174,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -998,7 +1214,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "message",
@@ -1021,7 +1243,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "clock",
@@ -1044,7 +1272,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -1078,7 +1312,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "clock",
@@ -1101,7 +1341,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -1149,7 +1395,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "weather",
@@ -1172,7 +1424,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "calendar",
@@ -1195,7 +1453,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "hdmi",
@@ -1218,7 +1482,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "entity",
@@ -1241,7 +1511,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "text",
@@ -1264,7 +1540,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -1298,7 +1580,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "weather",
@@ -1321,7 +1609,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "calendar",
@@ -1344,7 +1638,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "entity",
@@ -1367,7 +1667,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "text",
@@ -1390,7 +1696,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -1424,7 +1736,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "weather",
@@ -1447,7 +1765,13 @@
                 "forecast_type": "hourly",
                 "forecast_count": 6,
                 "animate": true,
-                "weather_style": "sky"
+                "weather_style": "sky",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "calendar",
@@ -1470,7 +1794,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "entity",
@@ -1493,7 +1823,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "text",
@@ -1516,7 +1852,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -1550,7 +1892,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "message",
@@ -1573,7 +1921,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -1607,7 +1961,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "message",
@@ -1630,7 +1990,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "clock",
@@ -1653,7 +2019,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -1687,7 +2059,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "clock",
@@ -1710,7 +2088,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -1758,7 +2142,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "weather",
@@ -1781,7 +2171,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "calendar",
@@ -1804,7 +2200,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "hdmi",
@@ -1827,7 +2229,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "entity",
@@ -1850,7 +2258,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "text",
@@ -1873,7 +2287,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -1907,7 +2327,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "weather",
@@ -1930,7 +2356,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "calendar",
@@ -1953,7 +2385,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "entity",
@@ -1976,7 +2414,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "text",
@@ -1999,7 +2443,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -2033,7 +2483,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "weather",
@@ -2056,7 +2512,13 @@
                 "forecast_type": "hourly",
                 "forecast_count": 6,
                 "animate": true,
-                "weather_style": "sky"
+                "weather_style": "sky",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "calendar",
@@ -2079,7 +2541,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "entity",
@@ -2102,7 +2570,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "text",
@@ -2125,7 +2599,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -2159,7 +2639,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "message",
@@ -2182,7 +2668,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -2216,7 +2708,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "message",
@@ -2239,7 +2737,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "clock",
@@ -2262,7 +2766,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",
@@ -2296,7 +2806,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               },
               {
                 "id": "clock",
@@ -2319,7 +2835,13 @@
                 "forecast_type": "daily",
                 "forecast_count": 4,
                 "animate": true,
-                "weather_style": "glass"
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
               }
             ],
             "image_id": "",

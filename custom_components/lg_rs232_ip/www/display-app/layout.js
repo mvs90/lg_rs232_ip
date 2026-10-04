@@ -72,6 +72,7 @@
       style(node,"textAlign",item.align); style(node,"fontFamily",FONTS[item.font]);
       style(node._label,"fontSize",(height*.014)+"px");
       self.fill(node,item);
+      if(item.kind === "media" && window.LGCards){window.LGCards.geometry(node,item);}
     });
     Object.keys(this.nodes).forEach(function (key) { if (!wanted[key]) { root.removeChild(self.nodes[key]); delete self.nodes[key]; } });
     if (!found && this.hdmi) {
@@ -114,11 +115,13 @@
     text(node._label,item.show_label ? label || (data && data.name) || "" : "");
     style(node._label,"display",node._label.textContent ? "block" : "none");
     text(node._value,value); text(node._detail,detail+(data && data.stale ? " · Letzter Stand" : "")); if(item.kind !== "weather"){rows(node._list,list);}
+    if(item.kind === "media" && window.LGCards){window.LGCards.renderMedia(node,item,data,this.options);}
+    if(item.kind === "status" && window.LGCards){window.LGCards.renderStatus(node,item,data);}
     if(item.kind === "weather" && window.LGWeather){window.LGWeather.render(node,item,data,this.options);}
   };
   Renderer.prototype.tick = function (now) {
     if (!this.scene) { return; } this.options.now=now;
-    var self=this; this.scene.elements.forEach(function (item) {if (item.kind === "clock" && self.nodes[item.id]) {self.fill(self.nodes[item.id],item);}});
+    var self=this; this.scene.elements.forEach(function (item) {if (item.kind === "clock" && self.nodes[item.id]) {self.fill(self.nodes[item.id],item);}if(item.kind === "media" && self.nodes[item.id] && window.LGCards){window.LGCards.tickMedia(self.nodes[item.id],item,self.data[item.entity_id],self.options);}});
   };
   Renderer.prototype.clear = function () {
     var self=this; Object.keys(this.nodes).forEach(function (key) {self.root.removeChild(self.nodes[key]);}); this.nodes={}; this.scene=null;

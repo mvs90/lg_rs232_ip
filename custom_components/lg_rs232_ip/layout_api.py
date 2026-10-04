@@ -77,9 +77,8 @@ class LayoutListView(HomeAssistantView):
         )
 
 
-class LayoutEditorView(HomeAssistantView):
-    url = "/api/lg_rs232_ip/layout/{entry_id}"
-    name = "api:lg_rs232_ip:layout"
+class LayoutEntryView(HomeAssistantView):
+    """Shared authorization without inherited mutation handlers."""
     requires_auth = True
 
     def __init__(self, hass):
@@ -91,6 +90,11 @@ class LayoutEditorView(HomeAssistantView):
         if not manager:
             raise web.HTTPNotFound()
         return manager
+
+
+class LayoutEditorView(LayoutEntryView):
+    url = "/api/lg_rs232_ip/layout/{entry_id}"
+    name = "api:lg_rs232_ip:layout"
 
     async def get(self, request, entry_id):
         manager = self.manager(request, entry_id)
@@ -171,3 +175,38 @@ class LayoutBackgroundView(LayoutEditorView):
             except (ValueError, FileNotFoundError):
                 raise web.HTTPNotFound() from None
         return web.json_response({"ok": True})
+
+
+class LayoutSuggestionsView(LayoutEntryView):
+    url = "/api/lg_rs232_ip/layout_suggestions/{entry_id}"
+    name = "api:lg_rs232_ip:layout_suggestions"
+
+    async def get(self, request, entry_id):
+        self.manager(request, entry_id)
+        from .layout_cards import room_suggestions
+
+        try:
+            result = room_suggestions(self.hass, entry_id, request.query.get("area_id"))
+        except ValueError as err:
+            raise web.HTTPBadRequest(text=str(err)) from None
+        return web.json_response(result, headers={"Cache-Control": "no-store"})
+
+
+class LayoutMediaView(LayoutEntryView):
+    url = "/api/lg_rs232_ip/layout_media/{entry_id}/{entity_id}"
+    name = "api:lg_rs232_ip:layout_media"
+
+    async def get(self, request, entry_id, entity_id):
+        manager = self.manager(request, entry_id)
+        # Only administrators may preview a not-yet-saved media binding.
+        key = manager.media.key(entity_id)
+        requested = request.query.get("v", "preview")
+        data = await manager.media.async_image(
+            entity_id, key if requested == "preview" else requested
+        )
+        return web.Response(
+            body=data,
+            status=200 if data else 204,
+            content_type="image/jpeg",
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+        )

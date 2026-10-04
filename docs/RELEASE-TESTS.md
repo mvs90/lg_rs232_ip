@@ -1,5 +1,19 @@
 # Release acceptance
 
+## LG 2.8.0: media cards and room suggestions — 2026-10-04
+
+**291 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 88 browser tests pass across Chromium and WebKit.** Ruff and whitespace checks pass. Coverage includes exact entity/device room inheritance, disabled/hidden/diagnostic exclusions, no automatic saves, media binding validation, bounded image conversion, coalesced concurrent fetches, cancellation isolation, stale-cover races, failed-cover backoff, plaintext metadata, selected-entity privacy, administrator-only previews, paired saved-binding checks, GET-only routes, compact/poster artwork, playing/paused progress, off/absent covers and removal/undo.
+
+Using the existing **`unifi-air-quality-ha-dev` HA 2026.9.4 container**, without creating another HA instance, and the physical **75UH5F-HJ / firmware 04.13.50 / webOS 4.0.1-136 / app 1.5.0**:
+
+- A temporary test integration supplied a real registered HA `MediaPlayerEntity` with a local owned cover image and temperature/door entities. A temporary device area produced exactly the expected media/status suggestions through HA's real registries. No real Sonos is configured in this test installation; these are explicitly synthetic media fixtures, not a Sonos-device compatibility claim.
+- In the real Studio UI, selecting the room showed the proposed cards. Adding the media card displayed its cover, title, artist, album, progress and volume in the draft; its duplicate suggestion became disabled. Removing it restored the suggestion and the unchanged saved configuration. The preview used the authenticated HA media image API.
+- The real HA media entity API returned a resized 640×640 JPEG. Native LG captures visually verified compact and large-cover layouts, selected state icons, playing → paused (1:21), changed title/cover, off-state cleanup and a completely empty scene after removing all cards. The SI launcher stayed foreground throughout.
+- Old artwork keys returned HTTP 204 after the track changed. After cards were removed their entity no longer appeared in the display payload. No artwork URLs, media-content IDs or HA credentials are passed to the panel.
+- The original user layout, real weather/sensor bindings and selected Dashboard source were restored. Temporary entities, the test integration and its room were removed. Existing AV Companion was unchanged. Private captures and local authentication are excluded from Git.
+
+The tests validate the shared HA media contract and actual display rendering. Metadata completeness still depends on the installed media integration/source; these tests do not measure total LG CPU/RAM or multi-day operation.
+
 ## LG 2.7.0: Dashboard source, weather and own backgrounds — 2026-10-04
 
 **284 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 82 browser tests pass across Chromium and WebKit.** Ruff and whitespace checks pass. Coverage includes persisted Dashboard selection, same-HDMI return, acknowledged rollback, AV standby/supply protection, source-label collisions, empty scenes, message removal/type changes, daily/hourly request deduplication and provider failure, astronomical night flags, unchanged DOM, animated/static icons, failed-weather cleanup, image bounds/metadata stripping, authenticated upload, per-entry paired reads, referenced-image deletion protection and editor undo/cleanup.

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.0
+
+- Add compact and large-cover media cards for Sonos and other HA media players: artwork, title, artist, album, playback state and optional progress/volume. Use the existing HA media entity API for artwork, with bounded conversion/cache and no upstream media credentials in the panel payload.
+- Suggest cards using actual HA entity/device area assignments. Offer styled status cards with local SVG icons for room climate, lights, doors, locks and other selected states; skip hidden/disabled/diagnostic entities and never add or publish suggestions automatically.
+- Add per-card removal directly in the layer list, retain undo/redo, and place new cards in available space when possible. Release the shared display renderer as app 1.5.0.
+- Cover playback transitions, missing/changed artwork, concurrent requests, privacy boundaries, exact room inheritance and editor removal in backend/browser regression tests.
+
 ## 2.7.0
 
 - Add Dashboard as a persistent LG media-player source with an independent sixth scene, retained across HA restart/standby and acknowledged in the resident app without leaving SI. Explicit HDMI selection exits it and retains the existing OSD guard.

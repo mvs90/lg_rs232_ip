@@ -62,3 +62,7 @@ Die [Display-App](DISPLAY-APP.md) wird direkt von Home Assistant bereitgestellt 
 Im Dauerbetrieb wechseln HDMI-Auswahlen aus Home Assistant jetzt den Eingang **innerhalb der App**. Ein vorübergehend fehlendes HDMI-Signal beendet die App nicht. Neue normale App-Meldungen ersetzen sofort die vorherige; eine dringende Meldung bleibt vor normalen Meldungen geschützt, während nur die neueste normale Meldung wartet. Native Bild-/Video-/Website-Wiedergaben behalten ihre Warteschlange und erfordern weiterhin einen App-Wechsel.
 
 Die App hält ein einziges HDMI-Videoelement offen. Lange HTTP-Abfragen warten auf Änderungen, unveränderte Inhalte erzeugen keine neuen DOM-Knoten, und Screenshots laufen nur auf HA-Anforderung einzeln mit anschließender Freigabe der Plattformverbindung. Die vorhandene OSD-Unterdrückung schützt auch HDMI-Wechsel innerhalb der App und erhält ein manuell ausgeschaltetes OSD.
+
+### Medien- und Statuskarten (2.8.0)
+
+Im **LG Display Studio** unter **Karten aus deinem Raum** einen HA-Raum wählen und passende Vorschläge einzeln übernehmen. Sonos und andere `media_player` erhalten Cover, Titel, Interpret und Wiedergabestatus; Raumzustände passende Symbole und Farben. Karten sind frei gestaltbar und über **×** entfernbar. Über **Medienplayer → +** ist auch eine manuelle Zuordnung möglich. Erst **Speichern & anwenden** ändert die Anzeige. [Anleitung und Grenzen](DISPLAY-STUDIO.md#medienplayer-und-raumvorschläge).
