@@ -31,7 +31,26 @@ class DisplayAPI:
 
     @property
     def presentation_active(self):
-        return self.ready and self.controller.presentation_active
+        return self.ready and (
+            self.controller.presentation_active or self.dashboard_active
+        )
+
+    @property
+    def dashboard_available(self):
+        app = self.hass.data.get(DOMAIN, {}).get(self.entry_id, {}).get("display_app")
+        return bool(self.ready and app and app.dashboard_available)
+
+    @property
+    def dashboard_active(self):
+        if not self.ready:
+            return False
+        app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
+        return bool(
+            app and app.dashboard_selected and self.controller.power is not False
+        )
+
+    async def async_select_dashboard(self):
+        await self.controller.async_select_dashboard()
 
     @property
     def is_available(self):
@@ -68,6 +87,8 @@ class DisplayAPI:
     async def async_get_input(self, *, use_cache=True):
         if self.ready:
             app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
+            if app and app.dashboard_selected:
+                return None
             if app and app.logical_input is not None:
                 return app.logical_input
         return (
@@ -77,6 +98,8 @@ class DisplayAPI:
         )
 
     async def async_get_signal_status(self):
+        if self.dashboard_active:
+            return None
         return await self.display.async_get_signal_status() if self.ready else None
 
     async def async_get_volume(self):
@@ -101,6 +124,7 @@ class DisplayAPI:
                     controller._source = controller._resolve_source_name(args[0])
                     controller.async_write_ha_state()
                     return True
+                app.saved.pop("dashboard", None)
                 await app.async_pause_resident(leave=False)
             return await getattr(self.display, method)(*args)
 

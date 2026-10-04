@@ -9,7 +9,7 @@ async function mount(page, state) {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.3.2', revision: 1, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.4.0', revision: 1, dashboard: state.dashboard || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
     }
     if (name === 'event') {
       const event = route.request().postDataJSON(); events.push(event);
@@ -283,4 +283,45 @@ test('unchanged dashboard polls do not repeat calendar date formatting', async (
   expect(await page.evaluate(()=>window.dateFormats)).toBe(count);
   state.layout.values['calendar.family'].events[0].summary='Latest';
   await expect(page.locator('.lg-calendar')).toContainText('Latest');
+});
+
+test('Dashboard source ignores HDMI signal, uses its own scene and preserves video identity on return', async ({page}) => {
+  const state={content:null,idle_hdmi:'ext://hdmi:1',dashboard:true,layout:designed('auto')};
+  state.layout.config.scenes.dashboard.elements=[];
+  await mount(page,state);
+  await expect(page.locator('body')).toHaveClass('designed');
+  await expect(page.locator('#hdmi-slot')).toBeHidden();
+  await page.evaluate(()=>window.originalHDMI=document.querySelector('video'));
+  state.content={...content(),layout:'overlay',duration:1};
+  await expect(page.locator('.lg-message')).toBeVisible();
+  await expect(page.locator('#hdmi-slot')).toBeHidden();
+  await expect(page.locator('.lg-message')).toHaveCount(0,{timeout:3000});
+  state.dashboard=false;state.layout.config.mode='signal';
+  await expect(page.locator('#hdmi-slot')).toBeVisible();
+  expect(await page.evaluate(()=>document.querySelector('video')===window.originalHDMI)).toBe(true);
+});
+
+test('weather shows hourly night icons, bounded forecasts, solar gradients and switchable animation', async ({page}) => {
+  const state={content:null,idle_hdmi:'ext://hdmi:1',dashboard:true,layout:designed()};
+  const cfg=state.layout.config, weather=cfg.scenes.dashboard.elements.find(i=>i.kind==='weather');
+  weather.entity_id='weather.test';weather.forecast_type='hourly';weather.forecast_count=6;weather.weather_style='sky';
+  cfg.scenes.dashboard.background='solar';
+  state.layout.sun={elevation:-14,azimuth:330,rising:false,is_daytime:false};
+  state.layout.values['weather.test']={state:'clear-night',temperature:'8',temperature_unit:'°C',forecasts:{hourly:Array.from({length:12},(_,i)=>({datetime:'2026-10-04T'+String(i).padStart(2,'0')+':00:00+02:00',condition:'sunny',temperature:String(8+i),is_daytime:i>5,precipitation_probability:'5'}))}};
+  await page.setViewportSize({width:1280,height:720});
+  await mount(page,state);
+  await expect(page.locator('.lg-weather .lg-value')).toHaveText('8 °C');
+  await expect(page.locator('.lg-forecast-period')).toHaveCount(6);
+  expect(await page.locator('.lg-weather>.lg-weather-icon').evaluate(node=>node._wxType)).toBe('moon');
+  const night=await page.locator('#layout-root').evaluate(node=>node.style.background);
+  await page.screenshot({path:'test-results/weather-dashboard-night-'+test.info().project.name+'.png'});
+  state.layout.sun={elevation:35,azimuth:160,rising:true,is_daytime:true};state.layout.values['weather.test'].state='sunny';
+  await expect.poll(()=>page.locator('#layout-root').evaluate(node=>node.style.background)).not.toBe(night);
+  await expect(page.locator('.lg-weather>.lg-weather-icon')).toHaveClass(/wx-animated/);
+  weather.animate=false;
+  await expect(page.locator('.lg-weather>.lg-weather-icon')).not.toHaveClass(/wx-animated/);
+  await page.screenshot({path:'test-results/weather-dashboard-day-'+test.info().project.name+'.png'});
+  state.layout.values['weather.test'].state='unavailable';
+  await expect(page.locator('.lg-forecast-period')).toHaveCount(0);
+  await expect(page.locator('.lg-weather>.lg-weather-icon')).toBeHidden();
 });

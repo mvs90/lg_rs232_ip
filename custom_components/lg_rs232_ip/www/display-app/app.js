@@ -1,8 +1,8 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.3.2", video = null, sourceNode = null, videoSource = null;
-  var design = null, designer = null, currentContent = null, signalLost = 0, sceneKey = null, serverOffset = 0;
+  var VERSION = "1.4.0", video = null, sourceNode = null, videoSource = null;
+  var dashboardSelected = false, design = null, designer = null, currentContent = null, signalLost = 0, sceneKey = null, serverOffset = 0;
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
   var captureBusy = false, lastCapture = null, cancelCapture = null;
   var active = null, dismissed = null, expires = 0, lastSuccess = Date.now();
@@ -116,11 +116,12 @@
     var key, ready = !!(video && video.videoWidth && video.videoHeight && !video.error);
     if (ready) { signalLost = 0; } else if (!signalLost) { signalLost = Date.now(); }
     if (content) { key = content.layout || "fullscreen"; }
+    else if (dashboardSelected) { key = "dashboard"; }
     else if (design.config.mode !== "auto") { key = design.config.mode; }
     else { key = ready || Date.now() - signalLost < design.config.signal_delay * 1000 ? "signal" : "no_signal"; }
     sceneKey = key;
     layout("designed");
-    designer.render(design.config.scenes[key], design.values, {message:content, timezone:design.timezone, now:new Date(Date.now()+serverOffset)});
+    designer.render(design.config.scenes[key], design.values, {message:content, timezone:design.timezone, sun:design.sun, hideHdmi:dashboardSelected && !design.config.scenes.dashboard.elements.some(function (item) { return item.kind === "hdmi"; }), imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date(Date.now()+serverOffset)});
     return true;
   }
   function clear(message) {
@@ -176,7 +177,7 @@
         text("connection", "Mit Home Assistant verbunden");
         var first = revision === null;
         revision = data.revision; idleHdmi = data.idle_hdmi || null; inputRequest = data.input_request;
-        design = data.layout || null;
+        design = data.layout || null; dashboardSelected = data.dashboard === true;
         if (design && design.now) { serverOffset = new Date(design.now).getTime() - Date.now(); }
         try {
           render(data.content);
@@ -198,7 +199,7 @@
     acknowledgeInput();
     if (designer) {
       // Clock updates are cheap; automatic signal changes only patch the scene.
-      if (!active && design.config.mode === "auto") {
+      if (!active && !dashboardSelected && design.config.mode === "auto") {
         var ready = !!(video && video.videoWidth && video.videoHeight && !video.error);
         if (ready) { signalLost = 0; } else if (!signalLost) { signalLost = Date.now(); }
         var key = ready || Date.now()-signalLost < design.config.signal_delay*1000 ? "signal" : "no_signal";

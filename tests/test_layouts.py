@@ -38,7 +38,7 @@ async def layouts(tmp_path):
 @pytest.mark.parametrize("preset", presets(), ids=lambda p: p["id"])
 def test_presets_have_valid_independent_signal_and_notification_scenes(preset):
     config = validate_layout(preset["layout"])
-    assert len(config["scenes"]) == 5
+    assert len(config["scenes"]) == 6
     assert config["scenes"]["signal"]["elements"][0]["kind"] in ("hdmi", "clock")
     assert not any(
         item["kind"] == "hdmi" for item in config["scenes"]["no_signal"]["elements"]
@@ -55,7 +55,6 @@ def test_presets_have_valid_independent_signal_and_notification_scenes(preset):
         lambda c: c["scenes"]["signal"].update(color="url(https://evil.test)"),
         lambda c: c["scenes"]["signal"]["elements"][0].update(x=50),
         lambda c: c["scenes"]["signal"]["elements"][0].update(font_size=float("inf")),
-        lambda c: c["scenes"]["overlay"].update(elements=[]),
         lambda c: c["scenes"]["signal"]["elements"].append(
             deepcopy(c["scenes"]["signal"]["elements"][0])
         ),
@@ -290,3 +289,99 @@ async def test_bad_stored_layout_fails_closed_without_breaking_device_setup(layo
     await second.async_start()
     assert second.payload() is None and second.config == make_layout()
     await second.async_close()
+
+
+async def test_all_scenes_can_be_empty_and_old_documents_gain_independent_dashboard(
+    layouts,
+):
+    config = make_layout()
+    del config["scenes"]["dashboard"]
+    validated = validate_layout(config)
+    assert validated["scenes"]["dashboard"] == validated["scenes"]["no_signal"]
+    validated["scenes"]["dashboard"]["elements"].clear()
+    assert validated["scenes"]["no_signal"]["elements"]
+    for scene in validated["scenes"].values():
+        scene["elements"].clear()
+    await layouts.async_save(validated, 0)
+    assert all(not scene["elements"] for scene in layouts.config["scenes"].values())
+
+
+async def test_forecast_modes_are_deduplicated_and_sun_coordinates_never_leave_ha(
+    layouts,
+):
+    config = make_layout("morning")
+    config["enabled"] = True
+    for scene in config["scenes"].values():
+        for item in scene["elements"]:
+            if item["kind"] == "weather":
+                item["entity_id"] = "weather.home"
+                item["forecast_count"] = 8 if item["forecast_type"] == "hourly" else 4
+    layouts.hass.states.async_set("weather.home", "sunny", {"temperature": 20})
+    layouts.hass.states.async_set(
+        "sun.sun",
+        "below_horizon",
+        {"elevation": -12, "azimuth": 310, "rising": False, "secret": "hidden"},
+    )
+    await layouts.async_save(config, 0)
+    calls = []
+
+    async def forecasts(call):
+        calls.append(call.data["type"])
+        return {
+            "weather.home": {
+                "forecast": [
+                    {
+                        "datetime": "2026-10-04T12:00:00+00:00",
+                        "temperature": 21,
+                        "condition": "sunny",
+                        "description": "hidden",
+                    }
+                ]
+                * 20
+            }
+        }
+
+    layouts.hass.services.async_register(
+        "weather", "get_forecasts", forecasts, supports_response=SupportsResponse.ONLY
+    )
+    await layouts.async_refresh_data()
+    value = layouts.values()["weather.home"]
+    assert sorted(calls) == ["daily", "hourly"]
+    assert len(value["forecasts"]["daily"]) == 4
+    assert len(value["forecasts"]["hourly"]) == 8
+    assert type(value["forecasts"]["hourly"][0]["is_daytime"]) is bool
+    assert layouts.payload()["sun"] == {
+        "elevation": -12.0,
+        "azimuth": 310.0,
+        "rising": False,
+        "is_daytime": False,
+    }
+    assert "hidden" not in str(layouts.payload()) and "latitude" not in str(
+        layouts.payload()
+    )
+
+
+async def test_unsupported_hourly_forecast_does_not_hide_current_or_daily_weather(
+    layouts,
+):
+    config = make_layout("morning")
+    config["enabled"] = True
+    for scene in config["scenes"].values():
+        for item in scene["elements"]:
+            if item["kind"] == "weather":
+                item["entity_id"] = "weather.home"
+    layouts.hass.states.async_set("weather.home", "sunny", {"temperature": 0})
+    await layouts.async_save(config, 0)
+
+    async def forecasts(call):
+        if call.data["type"] == "hourly":
+            raise ValueError("unsupported")
+        return {"weather.home": {"forecast": [{"temperature": 2}]}}
+
+    layouts.hass.services.async_register(
+        "weather", "get_forecasts", forecasts, supports_response=SupportsResponse.ONLY
+    )
+    await layouts.async_refresh_data()
+    value = layouts.values()["weather.home"]
+    assert value["temperature"] == "0" and value["forecast_unavailable"] == ["hourly"]
+    assert value["forecasts"]["daily"][0]["temperature"] == "2"

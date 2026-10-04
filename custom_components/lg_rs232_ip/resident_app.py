@@ -37,6 +37,35 @@ class ResidentApp:
         )
 
     @property
+    def dashboard_available(self):
+        return bool(self.resident and self.layouts and self.layouts.config["enabled"])
+
+    @property
+    def dashboard_selected(self):
+        return bool(
+            self.dashboard_available
+            and self.saved.get("dashboard")
+            and not self.saved.get("paused")
+        )
+
+    async def async_select_dashboard(self):
+        if not self.dashboard_available or not self.resident_connected:
+            raise HomeAssistantError(
+                "Enable custom layouts and connect the resident display app first"
+            )
+        if self.dashboard_selected:
+            return
+        from .native_presentations import settle_mutation
+
+        _, cancelled = await settle_mutation(
+            self._async_apply_hdmi(
+                self.selected_input, self.selected_app, dashboard=True
+            )
+        )
+        if cancelled:
+            raise asyncio.CancelledError
+
+    @property
     def logical_input(self):
         return self.selected_input if self.resident_connected else None
 
@@ -70,7 +99,11 @@ class ResidentApp:
         if not self.resident_connected or input_id not in (0x90, 0x91, 0x92):
             return False
         target_app = f"com.webos.app.hdmi{input_id - 0x90 + 1}"
-        if self.selected_input == input_id and self.selected_app == target_app:
+        if (
+            self.selected_input == input_id
+            and self.selected_app == target_app
+            and not self.saved.get("dashboard")
+        ):
             return True
         from .native_presentations import settle_mutation
 
@@ -83,13 +116,15 @@ class ResidentApp:
             raise asyncio.CancelledError
         return True
 
-    async def _async_apply_hdmi(self, input_id, target_app):
+    async def _async_apply_hdmi(self, input_id, target_app, *, dashboard=False):
+        previous_dashboard = self.saved.get("dashboard", False)
         previous = self.selected_input
         previous_app = self.selected_app
         self._input_request = secrets.token_hex(16)
         self._input_applied.clear()
         try:
             async with self.controller._lg_display.async_suppress_osd_for_switch():
+                self.saved["dashboard"] = dashboard
                 self.saved["selected_input"] = input_id
                 self.saved["selected_app"] = target_app
                 if self.content:
@@ -99,6 +134,7 @@ class ResidentApp:
                     await asyncio.wait_for(self._input_applied.wait(), 5)
                 except TimeoutError:
                     # Publish rollback before the guard restores OSD.
+                    self.saved["dashboard"] = previous_dashboard
                     self.saved["selected_input"] = previous
                     self.saved["selected_app"] = previous_app
                     self._input_request = None

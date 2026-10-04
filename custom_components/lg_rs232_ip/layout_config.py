@@ -4,9 +4,19 @@ from copy import deepcopy
 import math
 import re
 
-SCENES = ("signal", "no_signal", "overlay", "pip", "fullscreen")
+SCENES = ("signal", "no_signal", "dashboard", "overlay", "pip", "fullscreen")
 KINDS = ("hdmi", "clock", "weather", "calendar", "entity", "text", "message")
-BACKGROUNDS = ("solid", "aurora", "dawn", "ocean", "sand", "midnight")
+BACKGROUNDS = (
+    "solid",
+    "aurora",
+    "dawn",
+    "ocean",
+    "sand",
+    "midnight",
+    "solar",
+    "gradient",
+    "image",
+)
 COLORS = re.compile(r"^#[0-9a-fA-F]{6}$")
 ENTITY = re.compile(r"^[a-z_]+\.[a-z0-9_]+$")
 
@@ -30,12 +40,23 @@ def element(kind, x, y, width, height):
         align="left",
         font="sans",
         show_label=True,
+        forecast_type="daily",
+        forecast_count=4,
+        animate=True,
+        weather_style="glass",
     )
 
 
 def scene(background="aurora", elements=None, color="#101e30", accent="#6ee7d5"):
     return dict(
-        background=background, color=color, accent=accent, elements=elements or []
+        background=background,
+        color=color,
+        accent=accent,
+        elements=elements or [],
+        image_id="",
+        image_fit="cover",
+        image_dim=0.25,
+        gradient_angle=135,
     )
 
 
@@ -107,14 +128,49 @@ def make_layout(style="cinema"):
         block("message", 8, 14, 84, 70, font_size=6, opacity=0),
         block("clock", 66, 2, 30, 12, font_size=4, opacity=0),
     ]
+    dashboard = [
+        block("clock", 5, 5, 32, 28, font_size=9, opacity=0, label="GUTEN MORGEN"),
+        block(
+            "weather",
+            42,
+            6,
+            53,
+            50,
+            font_size=7,
+            label="Dein Wetter",
+            forecast_type="hourly",
+            forecast_count=6,
+            weather_style="sky",
+        ),
+        block("calendar", 5, 42, 32, 51, font_size=3.5, label="DEIN TAG"),
+        block("entity", 42, 66, 24, 27, font_size=5, label="ZUHAUSE"),
+        block(
+            "text",
+            71,
+            66,
+            24,
+            27,
+            font_size=2.8,
+            opacity=0,
+            text="Zeit für einen guten Start.",
+        ),
+    ]
     return {
         "schema": 1,
         "enabled": False,
         "mode": "auto",
         "signal_delay": 5,
+        "sun_entity": "sun.sun",
         "scenes": {
-            key: scene(background, items, color, accent)
-            for key, items in zip(SCENES, (signal, overview, overlay, pip, fullscreen))
+            key: scene(
+                "solar" if style == "morning" and key == "dashboard" else background,
+                items,
+                color,
+                accent,
+            )
+            for key, items in zip(
+                SCENES, (signal, overview, dashboard, overlay, pip, fullscreen)
+            )
         },
     }
 
@@ -188,13 +244,22 @@ def validate_layout(value):
         enabled=value["enabled"],
         mode=_choice(value.get("mode"), ("auto", "signal", "no_signal")),
         signal_delay=_number(value.get("signal_delay"), 0, 30),
+        sun_entity=_text(value.get("sun_entity", "sun.sun"), 255),
         scenes={},
     )
     if not isinstance(value.get("scenes"), dict):
         raise ValueError("Supply all five layout scenes")
+    if result["sun_entity"] and not re.fullmatch(
+        r"sun\.[a-z0-9_]+", result["sun_entity"]
+    ):
+        raise ValueError("Select a sun entity")
     entities = set()
     for key in SCENES:
         raw = value.get("scenes", {}).get(key)
+        if key == "dashboard" and raw is None:
+            raw = deepcopy(
+                value["scenes"].get("no_signal")
+            )  # Read existing 2.6 documents.
         if (
             not isinstance(raw, dict)
             or not isinstance(raw.get("elements"), list)
@@ -206,6 +271,17 @@ def validate_layout(value):
             [],
             _color(raw.get("color")),
             _color(raw.get("accent")),
+        )
+        image_id = raw.get("image_id", "")
+        if not isinstance(image_id, str) or (
+            image_id and not re.fullmatch(r"[a-f0-9]{64}", image_id)
+        ):
+            raise ValueError("Invalid background image")
+        normalized.update(
+            image_id=image_id,
+            image_fit=_choice(raw.get("image_fit", "cover"), ("cover", "contain")),
+            image_dim=_number(raw.get("image_dim", 0.25), 0, 0.9),
+            gradient_angle=_number(raw.get("gradient_angle", 135), 0, 360),
         )
         ids, hdmi, messages = set(), 0, 0
         for item in raw["elements"]:
@@ -239,6 +315,21 @@ def validate_layout(value):
                 font=_choice(item.get("font"), ("sans", "serif", "mono")),
                 align=_choice(item.get("align"), ("left", "center", "right")),
             )
+            if type(item.get("animate", True)) is not bool:
+                raise ValueError("Invalid animation setting")
+            count = item.get("forecast_count", 4)
+            if type(count) is not int or not 1 <= count <= 8:
+                raise ValueError("Use 1–8 forecast periods")
+            obj.update(
+                forecast_type=_choice(
+                    item.get("forecast_type", "daily"), ("current", "daily", "hourly")
+                ),
+                forecast_count=count,
+                animate=item.get("animate", True),
+                weather_style=_choice(
+                    item.get("weather_style", "glass"), ("glass", "sky", "minimal")
+                ),
+            )
             if type(item.get("show_label")) is not bool:
                 raise ValueError("Invalid label visibility")
             obj["show_label"] = item["show_label"]
@@ -257,14 +348,8 @@ def validate_layout(value):
                 entities.add(entity_id)
             obj["entity_id"] = entity_id
             normalized["elements"].append(obj)
-        if (
-            hdmi > 1
-            or messages > 1
-            or (key in ("overlay", "pip", "fullscreen") and messages != 1)
-        ):
-            raise ValueError(
-                "Use one HDMI element at most, and one message element per notification scene"
-            )
+        if hdmi > 1 or messages > 1:
+            raise ValueError("Use one HDMI and one message element at most per scene")
         result["scenes"][key] = normalized
     if len(entities) > 32:
         raise ValueError("Select no more than 32 distinct entities")

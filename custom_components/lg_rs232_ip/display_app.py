@@ -23,7 +23,7 @@ from .const import DOMAIN
 from .resident_app import ResidentApp, SI_APP_ID
 from .web_manager import LGWebError
 
-APP_VERSION = "1.3.2"
+APP_VERSION = "1.4.0"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -109,6 +109,7 @@ class DisplayAppManager(ResidentApp):
                         "app.js",
                         "app.css",
                         "layout.js",
+                        "weather.js",
                         "layout.css",
                     )
                 }
@@ -214,6 +215,7 @@ class DisplayAppManager(ResidentApp):
         return {
             "launch_mode": self.mode,
             "resident_enabled": self.resident,
+            "dashboard_selected": self.dashboard_selected,
             "resident_connected": self.resident_connected,
             "resident_paused": bool(self.saved.get("paused")),
             "capture_capable": self.connected and self.capture_capable,
@@ -438,6 +440,7 @@ class DisplayAppManager(ResidentApp):
             "version": APP_VERSION,
             "revision": self._revision,
             "idle_hdmi": self.idle_hdmi(),
+            "dashboard": self.dashboard_selected,
             "capture": self._capture,
             "input_request": self._input_request,
             "layout": self.layouts.payload() if self.layouts else None,
@@ -500,7 +503,8 @@ class DisplayAppManager(ResidentApp):
             revision = value.get("layout_revision")
             self.client_layout_scene = (
                 scene
-                if scene in ("signal", "no_signal", "overlay", "pip", "fullscreen")
+                if scene
+                in ("signal", "no_signal", "dashboard", "overlay", "pip", "fullscreen")
                 else None
             )
             self.client_layout_revision = (
@@ -579,11 +583,28 @@ class DisplayAppView(HomeAssistantView):
             return web.json_response(
                 await manager.async_state(request.query.get("since")), headers=headers
             )
+        if resource == "background.jpg" and manager.layouts:
+            identifier = request.query.get("id", "")
+            if not any(
+                scene.get("image_id") == identifier and identifier
+                for scene in manager.layouts.config["scenes"].values()
+            ):
+                raise web.HTTPNotFound()
+            try:
+                data = await manager.layouts.backgrounds.async_read(identifier)
+            except (ValueError, FileNotFoundError):
+                raise web.HTTPNotFound() from None
+            return web.Response(
+                body=data,
+                content_type="image/jpeg",
+                headers={**headers, "Cache-Control": "private, max-age=86400"},
+            )
         mime = {
             "index.html": "text/html",
             "app.js": "application/javascript",
             "app.css": "text/css",
             "layout.js": "application/javascript",
+            "weather.js": "application/javascript",
             "layout.css": "text/css",
         }
         if resource not in mime:

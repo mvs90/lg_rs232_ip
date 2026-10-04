@@ -2,7 +2,7 @@
 
 LG 2.6 includes an optional app hosted by Home Assistant and launched by the panel's existing **SI app launcher**. No SuperSign server, Crestron controller, developer-mode login, IPK packaging or extra HACS repository is required. It remains part of the independent LG integration; AV Companion retains player/sound/socket orchestration.
 
-The automatically registered **[LG Display Studio](DISPLAY-STUDIO.md)** sidebar panel adds configurable persistent dashboards with/without HDMI and individually designed notification windows. The fixed layouts described below remain the default when custom layouts are disabled. With custom layouts enabled, each action's layout name selects the matching Studio scene.
+The automatically registered **[LG Display Studio](DISPLAY-STUDIO.md)** sidebar panel adds configurable persistent dashboards with/without HDMI and individually designed notification windows. The fixed layouts described below remain the default when custom layouts are disabled. With custom layouts enabled, each action's layout name selects the matching Studio scene. From 2.7.0, select **Dashboard** on the LG media player to show its independent persistent scene even while HDMI has a signal. Selecting HDMI returns to television within the same app; the Dashboard choice survives a normal standby or HA restart. The Studio supports removable/changeable widgets, daily/hourly weather, solar gradients and private uploaded backgrounds.
 
 ## Setup in Home Assistant
 

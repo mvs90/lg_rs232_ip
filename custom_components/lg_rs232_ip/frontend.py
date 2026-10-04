@@ -8,7 +8,7 @@ from homeassistant.components.frontend import (
 )
 from homeassistant.components.http import StaticPathConfig
 
-CARD_VERSION = "2.6.0"
+CARD_VERSION = "2.7.0"
 CARD_PATH = "/lg_rs232_ip/lg-display-remote.js"
 CARD_URL = f"{CARD_PATH}?v={CARD_VERSION}"
 
@@ -30,6 +30,11 @@ async def async_register_card(hass):
             StaticPathConfig(
                 "/lg_rs232_ip/layout-runtime.js",
                 str(root / "display-app" / "layout.js"),
+                False,
+            ),
+            StaticPathConfig(
+                "/lg_rs232_ip/weather.js",
+                str(root / "display-app" / "weather.js"),
                 False,
             ),
             StaticPathConfig(

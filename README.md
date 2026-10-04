@@ -1,6 +1,6 @@
 # LG Professional Display
 
-Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.6.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
+Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.7.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
 
 [Deutsche Anleitung](docs/README.de.md) · [Display Studio](docs/DISPLAY-STUDIO.md) · [Dashboard remote](docs/DASHBOARD-CARD.md) · [Features and actions](docs/FEATURES.md) · [Device reference](docs/devices/LG-UH5F-H.md) · [MIT license](LICENSE)
 
@@ -17,7 +17,7 @@ Requires Home Assistant 2025.3 or later; tested on 2025.3.4 and 2026.9.4. Availa
 
 ## Design your display
 
-**LG Display Studio** appears automatically in the HA sidebar for administrators. Choose Cinema, Aurora, Morgenlicht or Paper & Sand, arrange HDMI and widgets by dragging/resizing, select your HA weather/calendar/sensor entities, enable custom layouts and save. Five independent scenes cover HDMI signal present/absent and overlay/PiP/fullscreen notifications. Backgrounds, colours, typography, card opacity and layer order are editable; templates can be exported/imported.
+**LG Display Studio** appears automatically in the HA sidebar for administrators. Choose Cinema, Aurora, Morgenlicht or Paper & Sand, arrange HDMI and widgets by dragging/resizing, select your HA weather/calendar/sensor entities, enable custom layouts and save. Six independent scenes cover HDMI signal present/absent, the separate **Dashboard** source, and overlay/PiP/fullscreen notifications. Every widget can be removed or changed to another type. Daily/hourly weather includes local animated current icons and day/night forecasts; backgrounds include sun-position gradients and your own uploaded JPEG/PNG images. Colours, typography, card opacity and layer order are editable; layouts can be exported/imported (images separately).
 
 Persistent dashboards need the optional SI resident app. One HDMI video element is retained through layout changes, and selected data is prepared on HA. The editor uses a video placeholder; it does not start another camera stream. **[Studio setup, controls and limits](docs/DISPLAY-STUDIO.md)**.
 

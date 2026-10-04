@@ -6,7 +6,7 @@ async function mount(page,width=1500) {
   const root=path.resolve('custom_components/lg_rs232_ip/www');
   await page.route('http://studio.test/**',route=>{
     const file=new URL(route.request().url()).pathname.split('/').pop();
-    const mapping={'studio.js':'studio.js','studio.css':'studio.css','layout-runtime.js':'display-app/layout.js','layout.css':'display-app/layout.css'};
+    const mapping={'studio.js':'studio.js','studio.css':'studio.css','weather.js':'display-app/weather.js','layout-runtime.js':'display-app/layout.js','layout.css':'display-app/layout.css'};
     return route.fulfill({contentType:file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'text/html',body:mapping[file]?fs.readFileSync(path.join(root,mapping[file])):'<body style="margin:0"></body>'});
   });
   await page.goto('http://studio.test/');
@@ -80,11 +80,15 @@ test('HA updates preserve text editing; error keeps draft and prevents silent ov
   await expect(page.locator('.flash')).toContainText('andere Sitzung');await expect(page.getByRole('status')).toHaveText('Ungespeichert');
 });
 
-test('notification scene is editable, mandatory message cannot be deleted, test targets this display',async({page})=>{
+test('notification scene is editable, every widget can be deleted and restored',async({page})=>{
   await mount(page);
   await page.getByRole('tab',{name:'Meldung · Overlay',exact:true}).click();
   await page.locator('.layer .name').filter({hasText:'Meldungsfenster'}).click();
-  await expect(page.getByRole('button',{name:'Element entfernen'})).toBeDisabled();
+  await expect(page.getByRole('button',{name:'Element entfernen'})).toBeEnabled();
+  await page.getByRole('button',{name:'Element entfernen'}).click();
+  await expect(page.locator('.scene .lg-message')).toHaveCount(0);
+  await page.getByTitle('Rückgängig',{exact:true}).click();
+  await page.locator('.layer .name').filter({hasText:'Meldungsfenster'}).click();
   await page.getByLabel('Breite (%)',{exact:true}).fill('30');await page.getByLabel('Breite (%)',{exact:true}).press('Tab');
   await page.getByRole('button',{name:'Speichern & anwenden'}).click();
   await page.getByRole('button',{name:'10 Sekunden anzeigen'}).click();
@@ -99,4 +103,49 @@ test('editor fits mobile and supports adding, ordering and deleting a selected e
   await expect(page.locator('.scene .lg-entity')).toContainText('22.5 °C');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
   await page.getByRole('button',{name:'Element entfernen'}).click();await expect(page.locator('.scene .lg-entity')).toHaveCount(0);
+});
+
+test('widgets can change type and every element including messages can be removed; Dashboard is a source',async({page})=>{
+  await mount(page);
+  await page.getByRole('tab',{name:'Dashboard',exact:true}).click();
+  await page.locator('.layer .name').filter({hasText:'Dein Wetter'}).click();
+  await page.getByLabel('Widget-Typ').selectOption('text');
+  await page.getByLabel('Text',{exact:true}).fill('Guten Morgen');await page.getByLabel('Text',{exact:true}).press('Tab');
+  await expect(page.locator('.scene [data-layout-id=weather]')).toContainText('Guten Morgen');
+  await page.getByLabel('Widget-Typ').selectOption('weather');
+  await page.getByLabel('Wetteransicht').selectOption('hourly');
+  await page.getByLabel('Aktuelles Wettersymbol animieren').uncheck();
+  await page.getByLabel('Eigenes Layout verwenden').check();
+  await page.getByRole('button',{name:'Speichern & anwenden'}).click();
+  await page.getByRole('button',{name:'Dashboard anzeigen'}).click();
+  expect(await page.evaluate(()=>calls.some(c=>c[0]==='media_player'&&c[1]==='select_source'&&c[2].source==='Dashboard'))).toBe(true);
+  expect(await page.evaluate(()=>saved.scenes.dashboard.elements.find(i=>i.kind==='weather').animate)).toBe(false);
+  await page.getByRole('button',{name:'Element entfernen'}).click();
+  await expect(page.locator('.scene .lg-weather')).toHaveCount(0);
+});
+
+test('own background uploads preview locally, survive save and undo, and cleanup preserves used images',async({page})=>{
+  await mount(page);
+  await page.evaluate(()=>{
+    const id='a'.repeat(64), unused='b'.repeat(64), api=hass.callApi;
+    studio.backgrounds=[unused];studio.imageUrls[id]=null;
+    hass.fetchWithAuth=async(url,options)=>{
+      calls.push([options?.method || 'GET',url]);
+      if(options?.method==='POST')return new Response(JSON.stringify({image_id:id}));
+      return new Response(new Uint8Array([137,80,78,71]),{headers:{'Content-Type':'image/png'}});
+    };
+    hass.callApi=async(method,url,data)=>method==='DELETE' ? (calls.push([method,url]),{ok:true}):api(method,url,data);
+  });
+  await page.getByRole('tab',{name:'Dashboard',exact:true}).click();
+  await page.locator('#bg-upload').setInputFiles({name:'morning.png',mimeType:'image/png',buffer:Buffer.from([137,80,78,71])});
+  await expect(page.locator('.flash')).toContainText('Bild vorbereitet');
+  await expect.poll(()=>page.locator('.scene').evaluate(node=>node.style.background)).toContain('blob:');
+  await page.getByRole('button',{name:'Speichern & anwenden'}).click();
+  expect(await page.evaluate(()=>saved.scenes.dashboard.image_id)).toBe('a'.repeat(64));
+  await page.locator('[data-action=clean-backgrounds]').click();
+  expect(await page.evaluate(()=>calls.filter(c=>c[0]==='DELETE').map(c=>c[1]))).toEqual(['lg_rs232_ip/layout_background/one/'+ 'b'.repeat(64)]);
+  await page.getByTitle('Rückgängig',{exact:true}).click();
+  expect(await page.evaluate(()=>studio.config.scenes.dashboard.image_id)).toBe('');
+  await page.getByTitle('Wiederholen',{exact:true}).click();
+  expect(await page.evaluate(()=>studio.config.scenes.dashboard.image_id)).toBe('a'.repeat(64));
 });

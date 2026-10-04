@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.7.0
+
+- Add Dashboard as a persistent LG media-player source with an independent sixth scene, retained across HA restart/standby and acknowledged in the resident app without leaving SI. Explicit HDMI selection exits it and retains the existing OSD guard.
+- Protect an intentionally selected dashboard from AV Companion's automatic standby/supply decisions through the device API; explicit power/source control remains available.
+- Allow removal and type changes for every widget, including messages and HDMI; support empty scenes, undo/redo and existing 2.6 layouts.
+- Add daily/hourly forecasts (1–8 periods), locally animated current weather symbols, provider/HA-derived night icons, configurable weather styles and sun-position backgrounds. Fetch only selected data, deduplicate requests and keep forecast symbols static.
+- Add configurable gradient angles and private JPEG/PNG uploads, bounded and resized on HA; per-display image libraries support referenced-image protection and unused-image cleanup.
+- Release display app 1.4.0 with the shared Studio renderer; no separate HACS frontend package is required.
+
 ## 2.6.0
 
 - Automatically register the administrator-only LG Display Studio sidebar panel, with a shared editor/display renderer and four editable templates.

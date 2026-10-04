@@ -1,57 +1,90 @@
 # LG Display Studio
 
-Ab **LG Professional Display 2.6.0** erscheint für Administratoren automatisch **LG Display Studio** in der Home-Assistant-Seitenleiste. Nach dem Update HA neu starten und die Browserseite neu laden. Kein weiteres HACS-Paket und keine manuelle Dashboard- oder Ressourcen-Konfiguration sind nötig.
+Ab **LG Professional Display 2.6.0** erscheint für Administratoren automatisch **LG Display Studio** in der Home-Assistant-Seitenleiste. **2.7.0** ergänzt die Quelle **Dashboard**, vollständig austauschbare Widgets, Stunden-/Tageswetter und eigene Hintergrundbilder. Nach dem Update HA neu starten und die Browserseite neu laden. Kein weiteres HACS-Paket und keine manuelle Dashboard- oder Ressourcen-Konfiguration sind nötig.
 
-Der Editor gestaltet die auf dem LG laufende App. Für dauerhafte Ansichten müssen in den LG-Einstellungen **Display-App**, **SI-App** und **SI-Dauerbetrieb mit automatischem Start** aktiviert sein. Die App bleibt optional: Ohne aktivierte eigene Layouts funktionieren ihre bisherigen Ansichten weiter. Das Studio schaltet weder das Display ein noch installiert es ungefragt eine SI-App.
+Der Editor gestaltet die auf dem LG laufende App. Für dauerhafte Ansichten müssen in den LG-Einstellungen **Display-App**, **SI-App** und **SI-Dauerbetrieb mit automatischem Start** aktiviert sein. Die App bleibt optional: Ohne aktivierte eigene Layouts funktionieren ihre bisherigen Ansichten weiter. Das Öffnen/Bearbeiten des Studios installiert keine SI-App und schaltet das Display nicht ein. **Dashboard anzeigen** ist dagegen eine ausdrückliche Quellenwahl und kann das mit Strom versorgte Display wecken.
 
 ## In wenigen Schritten
 
 1. **LG Display Studio** öffnen und oben das gewünschte LG-Display wählen.
-2. Eine Vorlage auswählen: **Cinema**, **Aurora**, **Morgenlicht** oder **Paper & Sand**. Jede Vorlage enthält alle fünf Ansichten; Auswahl und Änderungen sind zunächst nur ein Entwurf.
-3. **Mit HDMI** und **Ohne HDMI** einzeln gestalten. Unter **Ansicht auf dem Display** automatische Signalerkennung oder eine dauerhaft erzwungene Ansicht wählen. So lässt sich das Dashboard auch bei vorhandenem HDMI-Signal ohne Videofenster anzeigen.
-4. Elemente anklicken, verschieben und über die Ecke vergrößern. Rechts sind Position und Größe auch in Prozent einstellbar. Pfeiltasten verschieben um 1 %, Umschalt + Pfeiltaste um 0,1 %. Die Elementliste regelt die Ebenenreihenfolge.
-5. Für Wetter, Kalender und weitere Informationen die passende **Home-Assistant-Entität** auswählen. Vorlagen wählen keine privaten Entitäten automatisch aus. Zusätzliche Texte, Uhren, Kalender, Wetter- und Zustandsfelder über **+** hinzufügen.
-6. **Eigenes Layout verwenden** einschalten und **Speichern & anwenden** drücken. Eine verbundene App übernimmt die Änderung ohne erneuten App-Start oder HDMI-Eingangsbefehl. Rückgängig/Wiederholen betrifft den lokalen Entwurf; nach einer Rücknahme erneut speichern, wenn auch das Display zurückgesetzt werden soll.
+2. Eine Vorlage auswählen: **Cinema**, **Aurora**, **Morgenlicht** oder **Paper & Sand**. Jede Vorlage enthält alle sechs Ansichten; Änderungen sind zunächst ein Entwurf.
+3. **Mit HDMI**, **Ohne HDMI** und **Dashboard** einzeln gestalten. Die ersten beiden folgen der Einstellung **Ansicht auf dem Display** und dem HDMI-Signal. **Dashboard** ist eine eigenständige Quelle, die auch bei vorhandenem TV-Signal gewählt bleiben kann.
+4. Elemente anklicken, verschieben und über die Ecke vergrößern. Position und Größe sind auch in Prozent einstellbar. Pfeiltasten verschieben um 1 %, Umschalt + Pfeiltaste um 0,1 %. Die Elementliste regelt die Ebenenreihenfolge.
+5. **Widget-Typ** tauscht ein ausgewähltes Element aus und behält seine Geometrie/Gestaltung. Unpassende Entitätszuordnungen werden dabei geleert. **Element entfernen** bzw. Entf/Backspace bei ausgewähltem Element entfernt jedes Widget, auch HDMI und Meldungsfenster. Eine vollständig leere Szene ist erlaubt. Rückgängig/Wiederholen stellt Änderungen wieder her.
+6. Für Wetter, Kalender und weitere Informationen passende **Home-Assistant-Entitäten** auswählen. Vorlagen wählen keine privaten Entitäten automatisch aus. Zusätzliche Texte, Uhren, Kalender, Wetter- und Zustandsfelder über **+** hinzufügen.
+7. **Eigenes Layout verwenden** einschalten und **Speichern & anwenden** drücken. Eine verbundene App übernimmt Änderungen ohne erneuten App-Start oder HDMI-Eingangsbefehl. Zum Übernehmen einer Rücknahme erneut speichern.
+8. **Dashboard anzeigen** oder in der LG-Fernbedienung/Medienplayer-Quellenliste **Dashboard** wählen. Zurück zum Fernsehen den gewünschten HDMI-Eingang wählen.
 
-Die Vorschau zeigt dieselbe Darstellung wie die App und aktuelle HA-Zustände. HDMI wird im Editor als Platzhalter angezeigt, damit kein zusätzlicher Screenshot-Stream nötig ist. Forecasts und kommende Termine erscheinen nach dem Speichern und der HA-Abfrage; der Editor holt deren Cache alle 30 Sekunden ab. Nicht gespeicherte Änderungen bleiben bei normalen HA-Zustandsupdates erhalten. Vor einem Verlassen/Neuladen des Editors den Entwurf speichern oder exportieren.
+Die Vorschau verwendet denselben Renderer und aktuelle HA-Zustände. HDMI erscheint im Editor als Platzhalter; es wird kein zusätzlicher Screenshot-Stream gestartet. Prognosen/Termine erscheinen nach Speichern und HA-Abfrage; der Editor liest deren Cache alle 30 Sekunden. Ungespeicherte Änderungen bleiben bei HA-Zustandsupdates erhalten. Vor einem Verlassen/Neuladen speichern oder exportieren.
+
+## Dashboard als eigene Quelle
+
+Das Dashboard ist unabhängig von der automatischen Ansicht **Ohne HDMI**. Die Quellenwahl bleibt über einen HA-Neustart und einen normalen Display-Standby erhalten. Auch im Dashboard darf ein frei positioniertes HDMI-/PiP-Element ergänzt werden. Ohne HDMI-Element bleibt die Videoebene verborgen; eine Meldung holt das TV-Bild dann nicht ungewollt zurück. Nach einer Meldung erscheint wieder das Dashboard.
+
+Beispielaktion für eine Morgen-Automation:
+
+```yaml
+action: media_player.select_source
+target:
+  entity_id: media_player.lg_display_display
+data:
+  source: Dashboard
+```
+
+Entity-ID anpassen. Die Quelle erscheint, wenn eigene Layouts und SI-Dauerbetrieb aktiviert sind. Ist ein physischer HDMI-Eingang schon „Dashboard“ genannt, erhält die App-Quelle einen eindeutigen Zusatz „(App)“; der aktuelle Name steht im Attribut `dashboard_source`. Die Studio-Schaltfläche berücksichtigt diesen Namen automatisch.
+
+Die reine LG-Integration schaltet keine Steckdose und keinen Zuspieler. Ein bewusst stromlos geschaltetes Display muss zuerst über das AV-System versorgt werden. Die vorhandene AV-Companion-Schutzabfrage erkennt das ausgewählte Dashboard als aktive Anzeige und beendet es nicht wegen eines inaktiven Zuspielers. Explizites Ausschalten und die Wahl eines HDMI-Eingangs bleiben möglich. Nach bestätigtem Ausschalten darf die vorhandene Steckdosenlogik die Versorgung wieder trennen. Ab **AV Companion 1.1.0** erscheint die Quelle auch am kombinierten AV-Mediaplayer und damit in dessen HomeKit-Quellenliste. Ältere AV-Versionen schützen die Anzeige bereits vor automatischem Standby, bieten die zusätzliche Quelle aber nur über die LG-Entität an. Ein HDMI-Zuspieler wird durch die Dashboard-Wahl nicht automatisch pausiert oder ausgeschaltet.
 
 ## Vorlagen und Hintergründe
 
-| Vorlage | Mit HDMI | Ohne HDMI |
-|---|---|---|
-| Cinema | HDMI im Vollbild | Dunkle Übersicht mit Uhr, Wetter, Terminen und Raumklima |
-| Aurora | HDMI neben Uhr, Wetter und Kalender | Grüne Lichtflächen und ruhige Informationskarten |
-| Morgenlicht | HDMI mit warmer Informationsleiste | Warme Farbverläufe für eine Morgenübersicht |
-| Paper & Sand | Helle Flächen mit HDMI-Fenster | Helle Typografie auf sandfarbenem Hintergrund |
+| Vorlage | Gestaltung |
+|---|---|
+| Cinema | HDMI im Vollbild, dunkle Informationsübersichten |
+| Aurora | Grüne Lichtflächen, ruhige Karten, HDMI neben Informationen |
+| Morgenlicht | Warme Informationsleisten, separates Morgen-Dashboard mit Sonnenstand-Hintergrund |
+| Paper & Sand | Helle Typografie und Karten auf sandfarbenem Hintergrund |
 
-Jede Szene lässt sich unabhängig anpassen: sechs Hintergründe (einschließlich Ozean und einfarbig), Grund-/Akzentfarbe, Schriftart, Textgröße/-farbe, Kartengrund, Deckkraft, Rundung und Ausrichtung. Hintergründe werden als lokale CSS-Farbverläufe erzeugt; es gibt keine externen Bilddownloads oder Videoschleifen. Eigene Hintergrundbilder, frei ausführbares HTML/Jinja und beliebige Lovelace-Karten sind in dieser Version nicht vorgesehen.
+Jede der sechs Szenen hat eigene Hintergrund-, Farb- und Widget-Einstellungen. Neben sechs festen Hintergründen gibt es **Eigener Verlauf** (Grund-/Akzentfarbe und Winkel), **Sonnenstand** und **Eigenes Bild**. Schriftart, Textgröße/-farbe, Kartengrund, Deckkraft, Rundung, Ausrichtung, Position und Ebenenreihenfolge sind frei einstellbar.
 
-**Exportieren/Importieren** überträgt eine JSON-Vorlage zwischen Installationen. Ein Export enthält die Gestaltung und ausgewählte Entity-IDs, keine HA-Zugangsdaten, LG-Passwörter, aktuellen Zustände oder Kalendertermine. Importierte Entitäten müssen in der Zielinstallation vorhanden sein. Ein Import verändert zunächst nur den Entwurf. Gleichzeitige Bearbeitung wird über eine Versionsprüfung abgesichert: Ein älterer Editor darf eine neuere Speicherung nicht still überschreiben.
+**Sonnenstand** nutzt standardmäßig `sun.sun`; im Editor ist eine andere `sun.*`-Entität wählbar. Sonnenhöhe, Azimut und steigende/fallende Sonne bestimmen einen ruhigen Verlauf für Nacht, Morgendämmerung, Tag und Abend. Der Verlauf folgt Zustandsupdates, nicht einer dauernd neu berechneten Animation. Fehlt die Sonnenentität, bleibt ein dunkler Hintergrund. [HA-Sonnenintegration](https://www.home-assistant.io/integrations/sun/).
+
+**Eigene Bilder:** JPEG oder PNG bis 5 MiB und 20 Megapixel hochladen. HA entfernt Metadaten und bereitet ein JPEG mit höchstens 1920×1080 Pixeln vor; Bildverarbeitung läuft außerhalb der HA-Ereignisschleife. Im Editor Bild, Ausfüllen/Einpassen und Abdunklung wählen, dann speichern. Bis zu 24 Bilder pro Display; identische Uploads werden wiederverwendet. **Unbenutzte Bilder entfernen** bewahrt gespeicherte Szenen sowie Bilder in den aktuellen Rückgängig-/Wiederholen-Schritten. Die App lädt Bilder lokal von HA; keine externen Bild-, Schrift- oder Icon-Dienste sind erforderlich.
+
+**Exportieren/Importieren** überträgt JSON mit Gestaltung und Entity-IDs, ohne Zugangsdaten oder aktuelle Zustände/Termine. Eigene Bilddateien sind **nicht im JSON enthalten**: auf einer anderen Installation dieselben Originalbilder zusätzlich hochladen. Fehlende Bilder verhindern das Speichern, damit kein unvollständiges Layout unbemerkt übernommen wird. Ein Import ändert nur den Entwurf. Eine Versionsprüfung verhindert stilles Überschreiben durch einen veralteten Editor.
+
+## Wetter
+
+Pro Wetter-Widget sind **Aktuelles Wetter**, **Tagesvorschau** oder **Stundenvorschau**, **1–8 Prognosezeiträume**, Karten-/Himmel-/transparente Gestaltung und ein animiertes aktuelles Symbol wählbar. Die Prognose zeigt Zeitpunkt, Wettersymbol, Temperatur, bei Tageswerten Tiefstwert sowie die vom Anbieter gelieferte Niederschlagswahrscheinlichkeit. Gleiche Entitäten dürfen in mehreren Widgets mit unterschiedlichen Prognosetypen erscheinen.
+
+HA fragt nur benötigte Typen mit `weather.get_forecasts` ab. Nicht jeder Anbieter unterstützt beide Typen. Bei fehlender Prognose bleiben die aktuellen Werte mit einem entsprechenden Hinweis sichtbar; es werden keine Prognosen erfunden. [HA-Wetterprognosen](https://www.home-assistant.io/actions/weather.get_forecasts/).
+
+Das aktuelle Symbol berücksichtigt `sun.sun`. Stundenwerte verwenden die Tag-/Nacht-Angabe des Anbieters oder eine Berechnung auf HA anhand der eingestellten Position/Zeitzone. Die Standortkoordinaten werden dabei nicht an die Display-App übertragen. Nur das große aktuelle Symbol wird dezent animiert; kleine Prognosesymbole bleiben statisch. Animationen sind abschaltbar und berücksichtigen „Bewegung reduzieren“ in unterstützenden Browsern. Auf kleinen Widgets weniger Zeiträume oder eine kleinere Schrift wählen.
 
 ## Meldungsfenster
 
-Die Tabs **Meldung · Overlay**, **Meldung · PiP** und **Meldung · Vollbild** gestalten die drei Nachrichtenansichten unabhängig. Position, Größe, Farben, Schrift und Hintergrund des Meldungsfensters sind frei einstellbar. Auch HDMI und zusätzliche Informationsfelder lassen sich dort verschieben, entfernen oder ergänzen. Das eigentliche Meldungsfenster bleibt als Pflichtbestandteil erhalten.
+**Meldung · Overlay**, **Meldung · PiP** und **Meldung · Vollbild** gestalten Nachrichtenansichten unabhängig. Position, Größe, Farben und Schrift des Meldungsfensters sind frei einstellbar. Auch hier dürfen alle Elemente entfernt oder ergänzt werden. **Ohne Meldungsfenster ist der Nachrichtentext bewusst unsichtbar**; die Szene läuft trotzdem für die angeforderte Dauer und kehrt danach zurück.
 
-Die Aktion `lg_rs232_ip.show_display_app` verwendet mit `layout: overlay`, `pip` oder `fullscreen` die entsprechende gespeicherte Ansicht. Titel und Nachricht kommen weiterhin aus der Aktion. Nach Ablauf oder Abbruch erscheint die aktuelle Daueransicht wieder. **Meldung ausprobieren** sendet eine zehnsekündige Nachricht an das ausgewählte Display; vorher speichern. Der vorhandene Schutz für dringende Meldungen, Ruhezeiten und den Energiezustand bleibt wirksam.
+`lg_rs232_ip.show_display_app` nutzt mit `layout: overlay`, `pip` oder `fullscreen` die passende Szene. Titel und Nachricht kommen aus der Aktion. **Meldung ausprobieren** sendet eine zehnsekündige Nachricht; vorher speichern. Schutz für dringende Meldungen, Ruhezeiten und Energiezustand bleibt wirksam.
 
-Ein Layoutwechsel innerhalb der laufenden App braucht keinen Eingangsbefehl. Wo ein echter App-/Eingangswechsel nötig ist, etwa bei nativen Videos/Websites oder einem App-Neustart, gilt weiterhin die OSD-Unterdrückung mit Wiederherstellung des zuvor ermittelten Zustands.
+Layoutwechsel in der laufenden App brauchen keinen physischen Eingangsbefehl. Bei einer echten App-/Eingangsumschaltung, beispielsweise nativen Videos/Websites oder App-Neustart, gilt die OSD-Unterdrückung mit Wiederherstellung des zuvor ermittelten Zustands. Sie gilt auch bei der bewussten Dashboard-/HDMI-Quellenwahl.
 
 ## Daten, Signal und Ressourcen
 
-- **HDMI:** Ein externes Videoelement pro Szene; frei positionierbar von 2–100 % des Bildschirms. Es bleibt bei Layoutwechseln erhalten. Ohne HDMI-Element wird die Videoebene verborgen. PiP bedeutet ein HDMI-Bild neben/unter App-Inhalten, nicht zwei HDMI-Eingänge gleichzeitig.
-- **Signalerkennung:** Die App nutzt die vom Videoelement gemeldete Bildbereitschaft. Nach der einstellbaren Signalpause (0–30 Sekunden, Standard 5) erscheint die Ansicht ohne HDMI. Ein zurückkehrendes Signal zeigt wieder die HDMI-Ansicht. Auf Firmware mit unzuverlässiger Video-Signalmeldung kann die gewünschte Ansicht fest eingestellt werden. Das schaltet das Display nicht in Standby; AV Companion behält seine eigene Standby-/Steckdosenlogik.
-- **Uhr:** Uhrzeit und Datum verwenden die Zeitzone von HA. Formatierungen werden minutenweise zwischengespeichert; die Uhr braucht keine HA-Abfrage pro Sekunde.
-- **Wetter:** Aktueller Zustand, Temperatur und Feuchte sowie bis zu vier tägliche Vorhersagen über `weather.get_forecasts`. Ohne Unterstützung dieser Aktion bleiben die aktuellen Werte sichtbar.
-- **Kalender:** Bis zu sechs Termine aus den nächsten sieben Tagen über `calendar.get_events`; ohne unterstützte Aktion wird der aktuelle/nächste Termin aus den Kalenderattributen verwendet. Ganztagstermine behalten ihr Datum. Lange Listen werden innerhalb des Elements abgeschnitten; Größe und Schrift an den Inhalt anpassen.
-- **HA-Entität:** Name, Zustand und Einheit einer explizit gewählten Entität, etwa Temperatur, Luftqualität, Energie, Anwesenheit oder Türstatus. Zustandsanzeige ohne interaktive Steuerung auf dem LG. Keine vollständigen Attribute oder Historien werden übertragen.
-- **Begrenzung:** 16 Elemente pro Szene, insgesamt 32 verschiedene Entity-IDs. HA bündelt schnelle Zustandsänderungen; Kalender/Wetter werden alle zehn Minuten mit höchstens zwei parallelen Abfragen und jeweils acht Sekunden Zeitlimit aktualisiert. Fehler können bis zu eine Stunde alte, als letzter Stand markierte Daten erhalten; danach gilt der Attribut-Fallback.
-- **Verbindungsverlust:** Eine laufende Meldung endet nach 15 Sekunden ohne erfolgreiche HA-Antwort. Das gespeicherte Dashboard mit seinen zuletzt empfangenen Werten bleibt wie HDMI in der geladenen App sichtbar; diese Werte sind dann nicht live. Ein Kaltstart der gehosteten App benötigt erreichbares HA.
-- **Zugriff:** Der Editor und seine API sind nur für HA-Administratoren zugänglich. Die gekoppelte LG-App kann nur die dafür ausgewählten Daten lesen und begrenzte Status-/Bildantworten senden; sie kann keine Layouts bearbeiten oder beliebige HA-Aktionen ausführen.
+- **HDMI:** Ein externes Videoelement pro Szene, frei positionierbar von 2–100 %. Es bleibt bei Layoutwechseln erhalten. PiP bedeutet ein HDMI-Bild neben/unter App-Inhalten, nicht zwei HDMI-Eingänge gleichzeitig.
+- **Automatische Signalerkennung:** Nutzt die vom Videoelement gemeldete Bildbereitschaft. Nach einer Pause von 0–30 Sekunden (Standard 5) erscheint **Ohne HDMI**, bei Rückkehr wieder **Mit HDMI**. Alternativ fest erzwingen. Diese automatische Ansicht allein verhindert keinen AV-Standby; nur die ausdrücklich gewählte Dashboard-Quelle gilt als aktive Anzeige.
+- **Uhr:** HA-Zeitzone, minutenweise zwischengespeicherte Formatierung, keine HA-Abfrage pro Sekunde.
+- **Kalender:** Bis zu sechs Termine der nächsten sieben Tage über `calendar.get_events`; sonst aktueller/nächster Termin aus Attributen. Ganztagstermine behalten ihr Datum. Listen bleiben auf die Widgetgröße begrenzt.
+- **HA-Entität:** Name, Zustand und Einheit einer explizit gewählten Entität, etwa Temperatur, Luftqualität, Energie, Anwesenheit oder Türstatus. Zustandsanzeige ohne interaktive Steuerung auf dem LG, keine vollständigen Attribute oder Historien.
+- **Begrenzung:** 16 Elemente pro Szene, 32 verschiedene Widget-Entity-IDs plus eine Sonnenentität. Schnelle Zustandsänderungen werden gebündelt. Kalender/Wetter alle zehn Minuten, maximal zwei parallele Abfragen mit je acht Sekunden Zeitlimit, doppelte Prognoseabfragen zusammengefasst. Fehler können bis zu eine Stunde alte, als letzter Stand markierte Daten erhalten. Nicht verfügbare Wetterentitäten verbergen ihre Prognosen.
+- **Verbindungsverlust:** Meldungen enden nach 15 Sekunden ohne HA-Antwort. Das gespeicherte Dashboard mit zuletzt empfangenen Werten bleibt in der geladenen App sichtbar; diese Werte sind nicht live. Kaltstart der gehosteten App benötigt erreichbares HA.
+- **Zugriff:** Editor und Bildverwaltung nur für HA-Administratoren. Die gekoppelte App liest ausgewählte Daten und gespeicherten Szenen zugeordnete Bilder, kann aber keine Layouts/Bilder bearbeiten oder beliebige HA-Aktionen ausführen. Frei ausführbares HTML/Jinja und beliebige Lovelace-Karten werden nicht unterstützt.
 
-Die aktuelle Gestaltung ist auf **16:9 im Querformat** ausgelegt. Getestet auf LG 75UH5F-HJ / webOS 4; andere Plattformen können sich bei nativen Videoebenen, Überlagerung und Signalstatus unterscheiden. Kleine Unterschiede durch verfügbare Systemschriften sind möglich. Es werden keine fremden Schriftdateien geladen.
+Die Darstellung ist auf **16:9 im Querformat** ausgelegt und auf LG 75UH5F-HJ / webOS 4 geprüft. Andere Plattformen können sich bei Videoebenen, Überlagerung, Schriften und Signalstatus unterscheiden. Es werden keine fremden Schriftdateien geladen. Die ressourcenschonende Umsetzung ersetzt keine Messung von LG-Gesamtspeicher oder Langzeitstabilität.
 
-## Diagnose
+## Diagnose und Speicherung
 
-Der Sensor **Display app** zeigt `layout_scene` (signal, no_signal, overlay, pip, fullscreen) und `layout_revision` aus dem letzten App-Heartbeat. Die Rückmeldung folgt innerhalb des üblichen Fünfsekunden-Heartbeat-Intervalls; sie ist keine Messung der tatsächlichen Reaktionszeit einer Nachricht. Bei getrennter Verbindung sind diese Attribute leer. Einstellungen liegen getrennt von den Zugangsdaten in HA unter `.storage/lg_rs232_ip.<entry_id>.layouts`.
+Der Sensor **Display app** zeigt `layout_scene` (`signal`, `no_signal`, `dashboard`, `overlay`, `pip`, `fullscreen`), `layout_revision` und `dashboard_selected`. Der Fünfsekunden-Heartbeat ist eine Diagnose, keine Messung der tatsächlichen Reaktionszeit.
+
+Layout: `.storage/lg_rs232_ip.<entry_id>.layouts`. Bilder: `.storage/lg_rs232_ip.<entry_id>.backgrounds/`. Die Quellenwahl liegt im vorhandenen App-Wiederherstellungsjournal. Bei einem Update von 2.6 bleibt die Gestaltung erhalten; die neue Dashboard-Szene startet als Kopie von **Ohne HDMI**. Die neuen Morgen-Dashboard-Vorlagen lassen sich über die Vorlagenauswahl laden (ändert den gesamten Entwurf).
 
 Weitere Informationen: [App-Einrichtung](DISPLAY-APP.md), [Prüfergebnisse](RELEASE-TESTS.md), [Gerätereferenz](devices/LG-UH5F-H.md).

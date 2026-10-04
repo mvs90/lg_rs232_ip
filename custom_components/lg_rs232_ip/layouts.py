@@ -4,6 +4,9 @@ import asyncio
 from copy import deepcopy
 from datetime import timedelta
 import logging
+import math
+from astral import Observer
+from astral.sun import elevation
 import time
 
 from homeassistant.core import callback
@@ -12,6 +15,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
+from .layout_backgrounds import LayoutBackgrounds
 from .layout_config import layout_entities, make_layout, validate_layout
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,6 +29,7 @@ class DisplayLayouts:
     def __init__(self, hass, entry):
         self.hass, self.entry = hass, entry
         self.store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.layouts")
+        self.backgrounds = LayoutBackgrounds(hass, entry.entry_id)
         self.config = make_layout()
         self.revision = 0
         self.changed = lambda: None
@@ -68,6 +73,15 @@ class DisplayLayouts:
                 raise LayoutConflict(
                     "Layout changed in another editor. Reload before saving."
                 )
+            images = {
+                scene["image_id"]
+                for scene in config["scenes"].values()
+                if scene["image_id"]
+            }
+            if images and not images.issubset(set(await self.backgrounds.async_list())):
+                raise ValueError(
+                    "Upload the missing background image on this installation first"
+                )
             revision = self.revision + 1
             await self.store.async_save({"config": config, "revision": revision})
             self.config, self.revision = config, revision
@@ -92,6 +106,8 @@ class DisplayLayouts:
             self._debounce = None
         if self.config["enabled"] and not self._closed:
             entities = layout_entities(self.config)
+            if self.config.get("sun_entity"):
+                entities.add(self.config["sun_entity"])
             if entities:
                 self._unsub = async_track_state_change_event(
                     self.hass, entities, self._state_changed
@@ -126,24 +142,74 @@ class DisplayLayouts:
         if not self._closed and self.config["enabled"] and self._timer is None:
             self._schedule_fetch()
 
+    def forecast_requests(self):
+        requests = {}
+        for scene in self.config["scenes"].values():
+            for item in scene["elements"]:
+                entity = item["entity_id"]
+                if not entity:
+                    continue
+                if item["kind"] == "calendar":
+                    requests[entity, "calendar"] = 6
+                elif item["kind"] == "weather" and item["forecast_type"] != "current":
+                    key = entity, item["forecast_type"]
+                    requests[key] = max(requests.get(key, 0), item["forecast_count"])
+        return requests
+
+    def sun(self):
+        state = self.hass.states.get(self.config.get("sun_entity", "sun.sun"))
+        if not state or state.state in ("unknown", "unavailable"):
+            return None
+        attrs = state.attributes
+
+        def number(key):
+            try:
+                value = float(attrs.get(key))
+                return round(value, 1) if math.isfinite(value) else None
+            except (ValueError, TypeError):
+                return None
+
+        return {
+            "elevation": number("elevation"),
+            "azimuth": number("azimuth"),
+            "rising": attrs.get("rising") is True,
+            "is_daytime": state.state == "above_horizon",
+        }
+
+    def _forecast_daytime(self, value):
+        try:
+            date = dt_util.parse_datetime(str(value))
+            if date is None:
+                return None
+            if date.tzinfo is None:
+                date = date.replace(
+                    tzinfo=dt_util.get_time_zone(self.hass.config.time_zone)
+                )
+            observer = Observer(
+                self.hass.config.latitude,
+                self.hass.config.longitude,
+                self.hass.config.elevation,
+            )
+            return elevation(observer, date) > -0.833
+        except (ValueError, TypeError):
+            return None
+
     async def async_refresh_data(self):
-        """Calendar/forecast calls run on HA, never on the limited display CPU."""
+        """Fetch only requested forecast types; astronomy and decoding stay on HA."""
         if not self.config["enabled"] or not self.entry.options.get(
             "display_app_enabled", False
         ):
             return
         revision = self.revision
-        ids = layout_entities(self.config)
+        requests = self.forecast_requests()
         semaphore = asyncio.Semaphore(2)
 
-        async def fetch(entity_id):
-            domain = entity_id.split(".")[0]
-            if domain not in ("calendar", "weather"):
-                return
+        async def fetch(key, count):
+            entity_id, kind = key
             async with semaphore:
                 try:
                     async with asyncio.timeout(8):
-                        if domain == "calendar":
+                        if kind == "calendar":
                             start = dt_util.now()
                             result = await self.hass.services.async_call(
                                 "calendar",
@@ -158,51 +224,60 @@ class DisplayLayouts:
                                 blocking=True,
                                 return_response=True,
                             )
-                            events = result.get(entity_id, {}).get("events", [])
-                            value = {
-                                "events": [
-                                    {
-                                        k: str(event.get(k, ""))[:200]
-                                        for k in ("summary", "start", "end", "location")
-                                    }
-                                    for event in events[:6]
-                                ]
-                            }
+                            items = [
+                                {
+                                    k: str(event.get(k, ""))[:200]
+                                    for k in ("summary", "start", "end", "location")
+                                }
+                                for event in result.get(entity_id, {}).get(
+                                    "events", []
+                                )[:count]
+                            ]
                         else:
                             result = await self.hass.services.async_call(
                                 "weather",
                                 "get_forecasts",
-                                {
-                                    "entity_id": entity_id,
-                                    "type": "daily",
-                                },
+                                {"entity_id": entity_id, "type": kind},
                                 blocking=True,
                                 return_response=True,
                             )
-                            items = result.get(entity_id, {}).get("forecast", [])
-                            value = {
-                                "forecast": [
-                                    {
-                                        k: str(item.get(k, ""))[:60]
-                                        for k in (
-                                            "datetime",
-                                            "condition",
-                                            "temperature",
-                                            "templow",
-                                        )
-                                    }
-                                    for item in items[:4]
-                                ]
-                            }
+                            items = []
+                            for row in result.get(entity_id, {}).get("forecast", [])[
+                                :count
+                            ]:
+                                item = {
+                                    k: str(row.get(k, ""))[:60]
+                                    for k in (
+                                        "datetime",
+                                        "condition",
+                                        "temperature",
+                                        "templow",
+                                        "precipitation_probability",
+                                        "precipitation",
+                                        "wind_speed",
+                                    )
+                                }
+                                if kind == "hourly":
+                                    item["is_daytime"] = (
+                                        row.get("is_daytime")
+                                        if type(row.get("is_daytime")) is bool
+                                        else self._forecast_daytime(row.get("datetime"))
+                                    )
+                                items.append(item)
                     if revision == self.revision and not self._closed:
-                        self._cache[entity_id] = {**value, "updated": time.time()}
+                        self._cache[key] = {"items": items, "updated": time.time()}
                 except Exception:
-                    # Keep a bounded old forecast briefly; never include upstream
-                    # errors, event descriptions or credentials in panel payloads.
-                    if revision == self.revision and entity_id in self._cache:
-                        self._cache[entity_id]["stale"] = True
+                    if revision == self.revision and not self._closed:
+                        if key in self._cache:
+                            self._cache[key]["stale"] = True
+                        else:
+                            self._cache[key] = {
+                                "items": [],
+                                "updated": time.time(),
+                                "unavailable": True,
+                            }
 
-        await asyncio.gather(*(fetch(entity_id) for entity_id in ids))
+        await asyncio.gather(*(fetch(key, count) for key, count in requests.items()))
         if revision == self.revision and not self._closed:
             self.changed()
 
@@ -245,9 +320,21 @@ class DisplayLayouts:
                     if attrs.get("message")
                     else []
                 )
-            cached = self._cache.get(entity_id)
-            if cached and time.time() - cached["updated"] < 3600:
-                value.update({k: v for k, v in cached.items() if k != "updated"})
+            for kind in ("calendar", "daily", "hourly"):
+                cached = self._cache.get((entity_id, kind))
+                if not cached or time.time() - cached["updated"] >= 3600:
+                    continue
+                if cached.get("stale"):
+                    value["stale"] = True
+                if cached.get("unavailable"):
+                    value.setdefault("forecast_unavailable", []).append(kind)
+                    continue
+                if kind == "calendar":
+                    value["events"] = cached["items"]
+                else:
+                    value.setdefault("forecasts", {})[kind] = cached["items"]
+                    if kind == "daily":
+                        value["forecast"] = cached["items"]
             values[entity_id] = value
         return values
 
@@ -271,6 +358,7 @@ class DisplayLayouts:
         return {
             **self.document(),
             "values": self.values(),
+            "sun": self.sun(),
             "timezone": str(self.hass.config.time_zone),
             "now": dt_util.utcnow().isoformat(),
         }

@@ -4,7 +4,11 @@
   var FONTS = {sans:"Arial, sans-serif",serif:"Georgia, serif",mono:"monospace"};
   var CONDITIONS = {sunny:"Sonnig",clear:"Klar", "clear-night":"Klare Nacht",cloudy:"Bewölkt",partlycloudy:"Wolkig",rainy:"Regen",pouring:"Starker Regen",snowy:"Schnee",fog:"Nebel",windy:"Windig",lightning:"Gewitter","lightning-rainy":"Gewitter"};
   function rgba(hex, opacity) { return "rgba("+parseInt(hex.slice(1,3),16)+","+parseInt(hex.slice(3,5),16)+","+parseInt(hex.slice(5,7),16)+","+opacity+")"; }
-  function background(scene) {
+  function background(scene, options) {
+    options=options || {};
+    if(scene.background === "solar" && window.LGWeather){return window.LGWeather.sky(options.sun);}
+    if(scene.background === "gradient"){return "linear-gradient("+(scene.gradient_angle || 0)+"deg,"+scene.color+","+scene.accent+")";}
+    if(scene.background === "image" && scene.image_id && options.imageUrl){var url=options.imageUrl(scene.image_id);if(url){return "linear-gradient(rgba(0,0,0,"+scene.image_dim+"),rgba(0,0,0,"+scene.image_dim+")),url(\""+url+"\") center / "+scene.image_fit+" no-repeat "+scene.color;}}
     var color = scene.color, accent = scene.accent;
     var styles = {
       solid:color,
@@ -45,10 +49,10 @@
   Renderer.prototype.render = function (scene, data, options) {
     this.scene = scene; this.data = data || {}; this.options = options || {};
     var root=this.root, height=root.clientHeight || 720, wanted={}, found=false, self=this;
-    root.classList.add("lg-scene"); style(root,"background",background(scene));
+    root.classList.add("lg-scene"); style(root,"background",background(scene, this.options));
     scene.elements.forEach(function (item,index) {
       var node, hdmi=item.kind === "hdmi";
-      if (hdmi) { node=self.hdmi; found=true; }
+      if (hdmi) { if(self.options.hideHdmi){return;} node=self.hdmi; found=true; }
       else {
         node=self.nodes[item.id];
         if (node && node._lgKind !== item.kind) { root.removeChild(node); delete self.nodes[item.id]; node=null; }
@@ -63,7 +67,7 @@
       style(node,"position","absolute"); style(node,"left",item.x+"%"); style(node,"top",item.y+"%"); style(node,"width",item.width+"%"); style(node,"height",item.height+"%"); style(node,"zIndex",String(index+1));
       style(node,"fontSize",(height*item.font_size/100)+"px");
       if (hdmi) { return; }
-      style(node,"color",item.color); style(node,"backgroundColor",rgba(item.background,item.opacity));
+      style(node,"color",item.color); style(node,"background",item.kind === "weather" && item.weather_style === "sky" && window.LGWeather ? window.LGWeather.sky(self.options.sun) : rgba(item.background,item.kind === "weather" && item.weather_style === "minimal" ? 0 : item.opacity));
       style(node,"borderRadius",(height*item.radius/1080)+"px"); style(node,"padding",(height*.018)+"px "+(height*.026)+"px");
       style(node,"textAlign",item.align); style(node,"fontFamily",FONTS[item.font]);
       style(node._label,"fontSize",(height*.014)+"px");
@@ -80,7 +84,7 @@
     var now=this.options.now || new Date();
     // Camera tickets can arrive frequently. Unchanged widgets do no formatting
     // or DOM work; only a clock's minute and its selected data invalidate it.
-    var fillKey=JSON.stringify([item,data,timezone,item.kind === "clock" ? Math.floor(now.getTime()/60000) : null,item.kind === "message" ? this.options.message : null]);
+    var fillKey=JSON.stringify([item,data,timezone,item.kind === "clock" ? Math.floor(now.getTime()/60000) : null,item.kind === "message" ? this.options.message : null,item.kind === "weather" ? this.options.sun : null]);
     if (node._fillKey === fillKey) { return; } node._fillKey=fillKey;
     if (item.kind === "clock") {
       var clockKey=Math.floor(now.getTime()/60000)+"/"+timezone;
@@ -99,7 +103,7 @@
     else if (item.kind === "weather") {
       value=(data.temperature || "–")+" "+(data.temperature_unit || "°C");
       detail=(CONDITIONS[data.state] || data.state)+(data.humidity ? " · "+data.humidity+" %" : "");
-      list=(data.forecast || []).slice(0,4).map(function (row) {return [dateText(row.datetime,timezone,false),row.temperature+"° · "+(CONDITIONS[row.condition] || row.condition)];});
+
     } else if (item.kind === "calendar") {
       value=(data.events || []).length ? "" : "Keine Termine";
       list=(data.events || []).slice(0,6).map(function (row) {return [dateText(row.start,timezone,true),row.summary];});
@@ -109,7 +113,8 @@
     }
     text(node._label,item.show_label ? label || (data && data.name) || "" : "");
     style(node._label,"display",node._label.textContent ? "block" : "none");
-    text(node._value,value); text(node._detail,detail+(data && data.stale ? " · Letzter Stand" : "")); rows(node._list,list);
+    text(node._value,value); text(node._detail,detail+(data && data.stale ? " · Letzter Stand" : "")); if(item.kind !== "weather"){rows(node._list,list);}
+    if(item.kind === "weather" && window.LGWeather){window.LGWeather.render(node,item,data,this.options);}
   };
   Renderer.prototype.tick = function (now) {
     if (!this.scene) { return; } this.options.now=now;

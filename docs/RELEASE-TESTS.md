@@ -1,5 +1,20 @@
 # Release acceptance
 
+## LG 2.7.0: Dashboard source, weather and own backgrounds — 2026-10-04
+
+**284 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 82 browser tests pass across Chromium and WebKit.** Ruff and whitespace checks pass. Coverage includes persisted Dashboard selection, same-HDMI return, acknowledged rollback, AV standby/supply protection, source-label collisions, empty scenes, message removal/type changes, daily/hourly request deduplication and provider failure, astronomical night flags, unchanged DOM, animated/static icons, failed-weather cleanup, image bounds/metadata stripping, authenticated upload, per-entry paired reads, referenced-image deletion protection and editor undo/cleanup.
+
+On the physical **75UH5F-HJ / 04.13.50 / webOS 4.0.1-136**, using the shared **HA 2026.9.4 Docker instance** and display app **1.4.0**:
+
+- The LG media player offers **Dashboard** while HDMI 1 still has a signal. Selecting it renders the separate scene and keeps the SI launcher foreground. Returning to the same HDMI restores the signal scene.
+- Temporary, explicitly synthetic HA weather/calendar/temperature and sun states rendered the current SVG weather icon, real widget geometry, morning/day/night gradients and calendar fallback. Native captures verified the actual LG rendering. Daily/hourly service responses and populated forecast rows were tested with HA fixtures and Chromium/WebKit; no external forecast provider is configured in this test instance. The hardware correctly showed the unsupported-forecast hint.
+- Overlay messages on a Dashboard without HDMI stayed free of a TV video rectangle, then returned to Dashboard. A fully empty Dashboard rendered its background without errors.
+- A generated PNG was uploaded through the real administrator API, converted and displayed as a background. Deletion while referenced returned HTTP 409. The disposable image was removed after restoring the configuration.
+- A HA restart preserved **Dashboard** selection and reconnected the resident app. A separate physical standby/wake also restored Dashboard. HDMI 1 could then be selected normally.
+- The real Studio panel exposed the sixth scene, weather controls and image library. Unauthorized editor requests returned HTTP 401. The test source was installed in the running container; private captures, credentials and transient test entities are excluded from Git.
+
+Existing signal/no-signal/notification scenes were preserved. Only the new Dashboard scene is prepared with the Morgenlicht template; no private weather/calendar entities were auto-selected. The final output returns to HDMI 1. AV Companion 1.1.0 adds the same source to the combined player, using the optional public API extension; its separate acceptance is documented in that repository. No Apple Home/iPhone pairing is part of these tests. These tests do not establish total LG process RAM/CPU, multi-day stability, arbitrary weather-provider support or mains-loss behaviour.
+
 ## LG 2.6.0: Display Studio
 
 **275 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14. All 74 browser cases passed across Chromium and WebKit** (72 in the full run, followed by the expanded 26-case app suite after the last widget-cache optimization). Coverage includes layout bounds, plain-text rendering, authenticated/admin-only real HTTP routes, optimistic-save conflicts, persistence, removed bindings during in-flight fetches, bounded service results, HA timezone/all-day fallback, editor drag/resize/undo, responsive editing, safe text and preservation of the HDMI element through scene changes. Unchanged calendar widgets perform no repeated date formatting during capture-style polls.

@@ -192,16 +192,47 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         )
 
     @property
+    def display_app(self):
+        return (
+            self.controller.hass.data.get(DOMAIN, {})
+            .get(self.entry.entry_id, {})
+            .get("display_app")
+        )
+
+    @property
+    def dashboard_source(self):
+        labels = {
+            self.entry.options.get(f"input_name_hdmi{i}", f"HDMI {i}")
+            for i in range(1, 4)
+        }
+        name = "Dashboard"
+        while name in labels:
+            name += " (App)"
+        return name
+
+    @property
     def source(self):
+        app = self.display_app
+        if app and app.dashboard_selected and app.resident_connected:
+            return self.dashboard_source
+        if (
+            self.controller._source == "Dashboard"
+            and app
+            and not app.dashboard_selected
+        ):
+            return self.controller._resolve_source_name(app.selected_input)
         return self.controller._source
 
     @property
     def source_list(self):
-        return [
+        sources = [
             self.entry.options.get(f"input_name_hdmi{i}", f"HDMI {i}")
             for i in range(1, 4)
             if self.entry.options.get(f"show_input_hdmi{i}", True)
         ]
+        if self.display_app and self.display_app.dashboard_available:
+            sources.append(self.dashboard_source)
+        return sources
 
     @property
     def volume_level(self):
@@ -228,6 +259,9 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             "presentation_error": self.controller._presentation_error,
             "osd_restore_error": self.controller._lg_display.osd_restore_error,
             "signal_present": self.controller.signal,
+            "dashboard_source": self.dashboard_source
+            if self.display_app and self.display_app.dashboard_available
+            else None,
         }
 
     async def async_added_to_hass(self):
@@ -262,6 +296,13 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         await self.controller.async_turn_off()
 
     async def async_select_source(self, source):
+        if (
+            source == self.dashboard_source
+            and self.display_app
+            and self.display_app.dashboard_available
+        ):
+            await self.controller.async_select_dashboard()
+            return
         for i in range(1, 4):
             if source == self.entry.options.get(f"input_name_hdmi{i}", f"HDMI {i}"):
                 await self.controller.async_select_input(INPUT_SOURCES[f"HDMI {i}"])

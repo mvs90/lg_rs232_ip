@@ -30,11 +30,17 @@ async def async_setup(hass, config):
     from .display_app import DisplayAppView
 
     hass.http.register_view(DisplayAppView(hass))
-    from .layout_api import LayoutEditorView, LayoutListView, LayoutValidateView
+    from .layout_api import (
+        LayoutBackgroundView,
+        LayoutEditorView,
+        LayoutListView,
+        LayoutValidateView,
+    )
 
     hass.http.register_view(LayoutListView(hass))
     hass.http.register_view(LayoutEditorView(hass))
     hass.http.register_view(LayoutValidateView())
+    hass.http.register_view(LayoutBackgroundView(hass))
     return True
 
 

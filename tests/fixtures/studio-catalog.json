@@ -18,6 +18,7 @@
         "enabled": false,
         "mode": "auto",
         "signal_delay": 5,
+        "sun_entity": "sun.sun",
         "scenes": {
           "signal": {
             "background": "midnight",
@@ -41,9 +42,17 @@
                 "radius": 0,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "no_signal": {
             "background": "midnight",
@@ -67,7 +76,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "weather",
@@ -86,7 +99,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "calendar",
@@ -105,7 +122,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "entity",
@@ -124,7 +145,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "text",
@@ -143,9 +168,143 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
+          },
+          "dashboard": {
+            "background": "midnight",
+            "color": "#101827",
+            "accent": "#8fb6ff",
+            "elements": [
+              {
+                "id": "clock",
+                "kind": "clock",
+                "x": 5,
+                "y": 5,
+                "width": 32,
+                "height": 28,
+                "label": "GUTEN MORGEN",
+                "text": "",
+                "entity_id": "",
+                "font_size": 9,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              },
+              {
+                "id": "weather",
+                "kind": "weather",
+                "x": 42,
+                "y": 6,
+                "width": 53,
+                "height": 50,
+                "label": "Dein Wetter",
+                "text": "",
+                "entity_id": "",
+                "font_size": 7,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0.88,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "hourly",
+                "forecast_count": 6,
+                "animate": true,
+                "weather_style": "sky"
+              },
+              {
+                "id": "calendar",
+                "kind": "calendar",
+                "x": 5,
+                "y": 42,
+                "width": 32,
+                "height": 51,
+                "label": "DEIN TAG",
+                "text": "",
+                "entity_id": "",
+                "font_size": 3.5,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0.88,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              },
+              {
+                "id": "entity",
+                "kind": "entity",
+                "x": 42,
+                "y": 66,
+                "width": 24,
+                "height": 27,
+                "label": "ZUHAUSE",
+                "text": "",
+                "entity_id": "",
+                "font_size": 5,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0.88,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              },
+              {
+                "id": "text",
+                "kind": "text",
+                "x": 71,
+                "y": 66,
+                "width": 24,
+                "height": 27,
+                "label": "",
+                "text": "Zeit für einen guten Start.",
+                "entity_id": "",
+                "font_size": 2.8,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              }
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "overlay": {
             "background": "midnight",
@@ -169,7 +328,11 @@
                 "radius": 0,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "message",
@@ -188,9 +351,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "pip": {
             "background": "midnight",
@@ -214,7 +385,11 @@
                 "radius": 0,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "message",
@@ -233,7 +408,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "clock",
@@ -252,9 +431,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "fullscreen": {
             "background": "midnight",
@@ -278,7 +465,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "clock",
@@ -297,9 +488,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           }
         }
       }
@@ -313,6 +512,7 @@
         "enabled": false,
         "mode": "auto",
         "signal_delay": 5,
+        "sun_entity": "sun.sun",
         "scenes": {
           "signal": {
             "background": "aurora",
@@ -336,7 +536,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "weather",
@@ -355,7 +559,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "calendar",
@@ -374,7 +582,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "hdmi",
@@ -393,7 +605,11 @@
                 "radius": 0,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "entity",
@@ -412,7 +628,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "text",
@@ -431,9 +651,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "no_signal": {
             "background": "aurora",
@@ -457,7 +685,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "weather",
@@ -476,7 +708,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "calendar",
@@ -495,7 +731,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "entity",
@@ -514,7 +754,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "text",
@@ -533,9 +777,143 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
+          },
+          "dashboard": {
+            "background": "aurora",
+            "color": "#0b2228",
+            "accent": "#79e5c0",
+            "elements": [
+              {
+                "id": "clock",
+                "kind": "clock",
+                "x": 5,
+                "y": 5,
+                "width": 32,
+                "height": 28,
+                "label": "GUTEN MORGEN",
+                "text": "",
+                "entity_id": "",
+                "font_size": 9,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              },
+              {
+                "id": "weather",
+                "kind": "weather",
+                "x": 42,
+                "y": 6,
+                "width": 53,
+                "height": 50,
+                "label": "Dein Wetter",
+                "text": "",
+                "entity_id": "",
+                "font_size": 7,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0.88,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "hourly",
+                "forecast_count": 6,
+                "animate": true,
+                "weather_style": "sky"
+              },
+              {
+                "id": "calendar",
+                "kind": "calendar",
+                "x": 5,
+                "y": 42,
+                "width": 32,
+                "height": 51,
+                "label": "DEIN TAG",
+                "text": "",
+                "entity_id": "",
+                "font_size": 3.5,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0.88,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              },
+              {
+                "id": "entity",
+                "kind": "entity",
+                "x": 42,
+                "y": 66,
+                "width": 24,
+                "height": 27,
+                "label": "ZUHAUSE",
+                "text": "",
+                "entity_id": "",
+                "font_size": 5,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0.88,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              },
+              {
+                "id": "text",
+                "kind": "text",
+                "x": 71,
+                "y": 66,
+                "width": 24,
+                "height": 27,
+                "label": "",
+                "text": "Zeit für einen guten Start.",
+                "entity_id": "",
+                "font_size": 2.8,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              }
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "overlay": {
             "background": "aurora",
@@ -559,7 +937,11 @@
                 "radius": 0,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "message",
@@ -578,9 +960,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "pip": {
             "background": "aurora",
@@ -604,7 +994,11 @@
                 "radius": 0,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "message",
@@ -623,7 +1017,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "clock",
@@ -642,9 +1040,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "fullscreen": {
             "background": "aurora",
@@ -668,7 +1074,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "clock",
@@ -687,9 +1097,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           }
         }
       }
@@ -703,6 +1121,7 @@
         "enabled": false,
         "mode": "auto",
         "signal_delay": 5,
+        "sun_entity": "sun.sun",
         "scenes": {
           "signal": {
             "background": "dawn",
@@ -726,7 +1145,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "weather",
@@ -745,7 +1168,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "calendar",
@@ -764,7 +1191,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "hdmi",
@@ -783,7 +1214,11 @@
                 "radius": 0,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "entity",
@@ -802,7 +1237,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "text",
@@ -821,9 +1260,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "no_signal": {
             "background": "dawn",
@@ -847,7 +1294,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "weather",
@@ -866,7 +1317,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "calendar",
@@ -885,7 +1340,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "entity",
@@ -904,7 +1363,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "text",
@@ -923,9 +1386,143 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
+          },
+          "dashboard": {
+            "background": "solar",
+            "color": "#382033",
+            "accent": "#ffcfaa",
+            "elements": [
+              {
+                "id": "clock",
+                "kind": "clock",
+                "x": 5,
+                "y": 5,
+                "width": 32,
+                "height": 28,
+                "label": "GUTEN MORGEN",
+                "text": "",
+                "entity_id": "",
+                "font_size": 9,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              },
+              {
+                "id": "weather",
+                "kind": "weather",
+                "x": 42,
+                "y": 6,
+                "width": 53,
+                "height": 50,
+                "label": "Dein Wetter",
+                "text": "",
+                "entity_id": "",
+                "font_size": 7,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0.88,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "hourly",
+                "forecast_count": 6,
+                "animate": true,
+                "weather_style": "sky"
+              },
+              {
+                "id": "calendar",
+                "kind": "calendar",
+                "x": 5,
+                "y": 42,
+                "width": 32,
+                "height": 51,
+                "label": "DEIN TAG",
+                "text": "",
+                "entity_id": "",
+                "font_size": 3.5,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0.88,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              },
+              {
+                "id": "entity",
+                "kind": "entity",
+                "x": 42,
+                "y": 66,
+                "width": 24,
+                "height": 27,
+                "label": "ZUHAUSE",
+                "text": "",
+                "entity_id": "",
+                "font_size": 5,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0.88,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              },
+              {
+                "id": "text",
+                "kind": "text",
+                "x": 71,
+                "y": 66,
+                "width": 24,
+                "height": 27,
+                "label": "",
+                "text": "Zeit für einen guten Start.",
+                "entity_id": "",
+                "font_size": 2.8,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              }
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "overlay": {
             "background": "dawn",
@@ -949,7 +1546,11 @@
                 "radius": 0,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "message",
@@ -968,9 +1569,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "pip": {
             "background": "dawn",
@@ -994,7 +1603,11 @@
                 "radius": 0,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "message",
@@ -1013,7 +1626,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "clock",
@@ -1032,9 +1649,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "fullscreen": {
             "background": "dawn",
@@ -1058,7 +1683,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "clock",
@@ -1077,9 +1706,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           }
         }
       }
@@ -1093,6 +1730,7 @@
         "enabled": false,
         "mode": "auto",
         "signal_delay": 5,
+        "sun_entity": "sun.sun",
         "scenes": {
           "signal": {
             "background": "sand",
@@ -1116,7 +1754,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "weather",
@@ -1135,7 +1777,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "calendar",
@@ -1154,7 +1800,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "hdmi",
@@ -1173,7 +1823,11 @@
                 "radius": 0,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "entity",
@@ -1192,7 +1846,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "text",
@@ -1211,9 +1869,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "no_signal": {
             "background": "sand",
@@ -1237,7 +1903,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "weather",
@@ -1256,7 +1926,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "calendar",
@@ -1275,7 +1949,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "entity",
@@ -1294,7 +1972,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "text",
@@ -1313,9 +1995,143 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
+          },
+          "dashboard": {
+            "background": "sand",
+            "color": "#e9e0cf",
+            "accent": "#76654c",
+            "elements": [
+              {
+                "id": "clock",
+                "kind": "clock",
+                "x": 5,
+                "y": 5,
+                "width": 32,
+                "height": 28,
+                "label": "GUTEN MORGEN",
+                "text": "",
+                "entity_id": "",
+                "font_size": 9,
+                "color": "#302c26",
+                "background": "#fffaf0",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              },
+              {
+                "id": "weather",
+                "kind": "weather",
+                "x": 42,
+                "y": 6,
+                "width": 53,
+                "height": 50,
+                "label": "Dein Wetter",
+                "text": "",
+                "entity_id": "",
+                "font_size": 7,
+                "color": "#302c26",
+                "background": "#fffaf0",
+                "opacity": 0.88,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "hourly",
+                "forecast_count": 6,
+                "animate": true,
+                "weather_style": "sky"
+              },
+              {
+                "id": "calendar",
+                "kind": "calendar",
+                "x": 5,
+                "y": 42,
+                "width": 32,
+                "height": 51,
+                "label": "DEIN TAG",
+                "text": "",
+                "entity_id": "",
+                "font_size": 3.5,
+                "color": "#302c26",
+                "background": "#fffaf0",
+                "opacity": 0.88,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              },
+              {
+                "id": "entity",
+                "kind": "entity",
+                "x": 42,
+                "y": 66,
+                "width": 24,
+                "height": 27,
+                "label": "ZUHAUSE",
+                "text": "",
+                "entity_id": "",
+                "font_size": 5,
+                "color": "#302c26",
+                "background": "#fffaf0",
+                "opacity": 0.88,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              },
+              {
+                "id": "text",
+                "kind": "text",
+                "x": 71,
+                "y": 66,
+                "width": 24,
+                "height": 27,
+                "label": "",
+                "text": "Zeit für einen guten Start.",
+                "entity_id": "",
+                "font_size": 2.8,
+                "color": "#302c26",
+                "background": "#fffaf0",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
+              }
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "overlay": {
             "background": "sand",
@@ -1339,7 +2155,11 @@
                 "radius": 0,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "message",
@@ -1358,9 +2178,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "pip": {
             "background": "sand",
@@ -1384,7 +2212,11 @@
                 "radius": 0,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "message",
@@ -1403,7 +2235,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "clock",
@@ -1422,9 +2258,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           },
           "fullscreen": {
             "background": "sand",
@@ -1448,7 +2292,11 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               },
               {
                 "id": "clock",
@@ -1467,9 +2315,17 @@
                 "radius": 24,
                 "align": "left",
                 "font": "sans",
-                "show_label": true
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass"
               }
-            ]
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135
           }
         }
       }

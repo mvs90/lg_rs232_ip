@@ -1037,3 +1037,156 @@ async def test_layout_heartbeat_reports_only_supported_scene_and_revision(app):
     )
     assert app.attributes["layout_scene"] is None
     assert app.attributes["layout_revision"] is None
+
+
+async def configure_dashboard(app):
+    from custom_components.lg_rs232_ip.layouts import DisplayLayouts
+
+    await resident_app(app)
+    manager = DisplayLayouts(app.hass, app.entry)
+    await manager.async_start()
+    config = manager.document()["config"]
+    config["enabled"] = True
+    await manager.async_save(config, 0)
+    app.layouts = manager
+    app.controller.hass = app.hass
+    app.hass.data["lg_rs232_ip"]["test"]["controller"] = app.controller
+    return manager
+
+
+async def acknowledge_selection(app, operation):
+    task = asyncio.create_task(operation)
+    async with asyncio.timeout(1):
+        while not app._input_request:
+            await asyncio.sleep(0)
+    app.event({"type": "input_applied", "id": app._input_request})
+    await task
+
+
+async def test_dashboard_source_is_persistent_excludes_av_standby_and_hdmi_selection_exits(
+    app,
+):
+    from custom_components.lg_rs232_ip.api import get_display_api
+    from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
+
+    layouts = await configure_dashboard(app)
+    try:
+        entity = LGDisplayMediaPlayer(
+            app.controller, SimpleNamespace(entry_id="test", options={})
+        )
+        api = get_display_api(app.hass, "test")
+        assert entity.source_list[-1] == "Dashboard"
+        assert api.dashboard_available
+        app.web.reset_mock()
+        app.controller._lg_display.async_set_input.reset_mock()
+        await acknowledge_selection(app, entity.async_select_source("Dashboard"))
+        assert app.state()["dashboard"] and entity.source == "Dashboard"
+        assert api.presentation_active and not app.controller.presentation_active
+        assert (
+            await api.async_get_input() is None
+            and await api.async_get_signal_status() is None
+        )
+        assert (await app.store.async_load())["dashboard"] is True
+        app.web.async_launch_app.assert_not_awaited()
+        app.controller._lg_display.async_set_input.assert_not_awaited()
+        # Choosing the same physical input must still leave the Dashboard source.
+        await acknowledge_selection(app, api.async_set_input(0x90))
+        assert not app.state()["dashboard"] and entity.source == "HDMI 1"
+        assert not api.presentation_active and await api.async_get_input() == 0x90
+        assert app.saved["original_input"] == 0x90
+    finally:
+        await layouts.async_close()
+
+
+async def test_dashboard_selection_rolls_back_on_missing_ack_and_respects_external_owner(
+    app,
+):
+    layouts = await configure_dashboard(app)
+
+    async def timeout_without_waiting(awaitable, _timeout):
+        awaitable.close()
+        raise TimeoutError
+
+    try:
+        with patch(
+            "custom_components.lg_rs232_ip.resident_app.asyncio.wait_for",
+            timeout_without_waiting,
+        ):
+            with pytest.raises(HomeAssistantError, match="confirm"):
+                await app.async_select_dashboard()
+        assert not app.dashboard_selected and app.selected_input == 0x90
+        app.controller.external_owner = "someone"
+        with pytest.raises(HomeAssistantError, match="external"):
+            await app.controller.async_select_dashboard()
+        assert not app.dashboard_selected
+    finally:
+        await layouts.async_close()
+
+
+async def test_confirmed_power_off_releases_dashboard_standby_protection(app):
+    from custom_components.lg_rs232_ip.api import get_display_api
+
+    layouts = await configure_dashboard(app)
+    try:
+        await acknowledge_selection(app, app.controller.async_select_dashboard())
+        api = get_display_api(app.hass, "test")
+        assert api.dashboard_active
+        app.controller.power = False
+        app.controller._lg_display.async_get_power_status.return_value = False
+        await app.async_maintain_resident(power=False)
+        assert not api.dashboard_active
+        async with api.supply_guard() as allowed:
+            assert allowed
+        assert (
+            app.saved["dashboard"] is True
+        )  # Restore the user's chosen source on wake.
+    finally:
+        await layouts.async_close()
+
+
+async def test_paired_background_access_is_limited_to_this_displays_saved_images(app):
+    from tests.test_layout_backgrounds import png
+
+    layouts = await configure_dashboard(app)
+    try:
+        image_id = await layouts.backgrounds.async_upload(png())
+        http = web.Application()
+        DisplayAppView(app.hass).register(app.hass, http, http.router)
+        base = f"/api/lg_rs232_ip/display_app/test/{app.token}"
+        async with TestClient(TestServer(http)) as client:
+            path = base + "/background.jpg?id=" + image_id
+            assert (await client.get(path)).status == 404
+            config = layouts.document()["config"]
+            config["scenes"]["dashboard"].update(background="image", image_id=image_id)
+            await layouts.async_save(config, layouts.revision)
+            response = await client.get(path)
+            assert response.status == 200 and response.content_type == "image/jpeg"
+            assert "img-src 'self'" in response.headers["Content-Security-Policy"]
+            assert (await client.get(path.replace("/test/", "/other/"))).status == 404
+            assert (await client.get(path.replace(app.token, "wrong"))).status == 404
+            assert (await client.post(path, data=png())).status != 200
+    finally:
+        await layouts.async_close()
+
+
+async def test_dashboard_source_does_not_hide_a_custom_hdmi_label(app):
+    from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
+
+    layouts = await configure_dashboard(app)
+    try:
+        entity = LGDisplayMediaPlayer(
+            app.controller,
+            SimpleNamespace(entry_id="test", options={"input_name_hdmi1": "Dashboard"}),
+        )
+        assert entity.source_list == [
+            "Dashboard",
+            "HDMI 2",
+            "HDMI 3",
+            "Dashboard (App)",
+        ]
+        await acknowledge_selection(app, entity.async_select_source("Dashboard (App)"))
+        assert entity.source == "Dashboard (App)"
+        await acknowledge_selection(app, entity.async_select_source("Dashboard"))
+        assert not app.dashboard_selected
+    finally:
+        await layouts.async_close()

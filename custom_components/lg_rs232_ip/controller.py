@@ -127,7 +127,11 @@ class DisplayController(NativeControls):
                 self._current_input_id = await self._lg_display.async_get_input()
                 if app and app.logical_input is not None:
                     self._current_input_id = app.logical_input
-                self._source = self._resolve_source_name(self._current_input_id)
+                self._source = (
+                    "Dashboard"
+                    if app and app.dashboard_selected and app.resident_connected
+                    else self._resolve_source_name(self._current_input_id)
+                )
                 self.volume = await self._lg_display.async_get_volume()
                 raw = await self._lg_display.async_send_command("k", "e", 0xFF)
                 self.muted = raw == 0 if raw is not None else None
@@ -168,6 +172,38 @@ class DisplayController(NativeControls):
                 raise HomeAssistantError("LG rejected power off")
         await self.async_refresh()
 
+    async def async_select_dashboard(self):
+        app = (
+            self.hass.data.get(DOMAIN, {})
+            .get(self._config_entry.entry_id, {})
+            .get("display_app")
+        )
+        if not app or not app.dashboard_available:
+            raise HomeAssistantError(
+                "Enable custom layouts and resident SI mode in LG settings first"
+            )
+        if self.external_owner:
+            raise HomeAssistantError("An external presentation owns the display")
+        await self.async_clear_content()
+        async with self._control_lock:
+            await self.async_ensure_on("dashboard selection")
+        if not app.resident_connected:
+            await app.async_resume()
+            try:
+                async with asyncio.timeout(30):
+                    while not app.resident_connected:
+                        await asyncio.sleep(0.2)
+            except TimeoutError:
+                raise HomeAssistantError(
+                    "Display app did not connect for dashboard selection"
+                ) from None
+        async with self._control_lock:
+            if self.external_owner or self.presentation_active:
+                raise HomeAssistantError("Display is busy with another presentation")
+            await app.async_select_dashboard()
+            self._source = "Dashboard"
+            self.async_write_ha_state()
+
     async def async_select_input(self, input_id):
         await self.async_clear_content()
         async with self._control_lock:
@@ -182,6 +218,7 @@ class DisplayController(NativeControls):
                     self._source = self._resolve_source_name(input_id)
                     self.async_write_ha_state()
                     return
+                app.saved.pop("dashboard", None)
                 await app.async_pause_resident(leave=False)
             if not await self._lg_display.async_set_input(input_id):
                 raise HomeAssistantError("LG rejected input")
