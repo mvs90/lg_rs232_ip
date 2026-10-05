@@ -6,7 +6,7 @@ import logging
 import re
 import time
 
-from .device_profile import decode_model, decode_software, ok_payload
+from .device_profile import ASPECT_RATIOS, decode_model, decode_software, ok_payload
 from typing import Optional
 
 _LOGGER = logging.getLogger(__name__)
@@ -70,11 +70,42 @@ class LGDisplay:
         self.software_version: str | None = None
         self._query_cache = {}
         self._unsupported_until = {}
+        self._picture_listeners = set()
+        self._aspect_listeners = set()
+        self.aspect_ratio = None
+        self._backlight_context = None
         self.suppress_osd_during_switch = False
         self.osd_restore_error = False
         self._osd_transition_lock = asyncio.Lock()
         self._osd_user_revision = 0
         self._osd_pending_restore_revision = None
+
+    def subscribe_picture_settings(self, listener):
+        self._picture_listeners.add(listener)
+        return lambda: self._picture_listeners.discard(listener)
+
+    def subscribe_aspect_ratio(self, listener):
+        self._aspect_listeners.add(listener)
+        return lambda: self._aspect_listeners.discard(listener)
+
+    def _picture_settings_changed(self):
+        # NG may mean temporarily locked by a mode, not unsupported hardware.
+        affected = {
+            ("m", "g"),
+            ("k", "c"),
+            ("d", "x"),
+            ("j", "q"),
+            ("s", "m"),
+            ("s", "v"),
+            ("k", "d"),
+        }
+        self._unsupported_until = {
+            key: expiry
+            for key, expiry in self._unsupported_until.items()
+            if key[:2] not in affected
+        }
+        for listener in tuple(self._picture_listeners):
+            listener()
 
     def set_power_supply_state(self, is_on: bool | None) -> None:
         """False suspends I/O; True or None allows fresh device verification."""
@@ -261,6 +292,13 @@ class LGDisplay:
                                         time.monotonic(),
                                         response_str,
                                     )
+                            if (
+                                not is_query
+                                and " OK" in response_str.upper()
+                                and cmd1 + cmd2
+                                in {"ka", "xb", "dx", "jq", "sm", "kd", "kc", "mg"}
+                            ):
+                                self._picture_settings_changed()
                             return response_str
             except asyncio.CancelledError:
                 self._query_cache.clear()
@@ -527,15 +565,20 @@ class LGDisplay:
         )
         return (ok_payload(response) or "").lower() == f"a3{int(enabled):02x}"
 
-    async def async_get_picture_mode(self) -> Optional[int]:
+    async def async_get_picture_mode(self, *, use_cache=True) -> Optional[int]:
         """Get current picture mode."""
-        result = await self.async_send_command("d", "x", READ_STATUS)
+        result = await self.async_send_command(
+            "d", "x", READ_STATUS, use_cache=use_cache
+        )
         return result
 
     async def async_set_picture_mode(self, mode: int) -> bool:
         """Set a picture mode."""
         result = await self.async_send_command("d", "x", mode)
-        return result is not None
+        return (
+            result == mode
+            and await self.async_get_picture_mode(use_cache=False) == mode
+        )
 
     async def async_get_auto_sleep(self) -> Optional[bool]:
         """Get auto sleep state."""
@@ -562,14 +605,17 @@ class LGDisplay:
         result = await self.async_send_command("f", "j", value)
         return result == value
 
-    async def async_get_energy_saving(self) -> Optional[int]:
+    async def async_get_energy_saving(self, *, use_cache=True) -> Optional[int]:
         """Get current energy saving level."""
-        return await self.async_send_command("j", "q", READ_STATUS)
+        return await self.async_send_command("j", "q", READ_STATUS, use_cache=use_cache)
 
     async def async_set_energy_saving(self, mode: int) -> bool:
         """Set energy saving level."""
         result = await self.async_send_command("j", "q", mode)
-        return result is not None
+        return (
+            result == mode
+            and await self.async_get_energy_saving(use_cache=False) == mode
+        )
 
     async def async_get_osd_language(self) -> Optional[int]:
         """Get current OSD language."""
@@ -589,14 +635,76 @@ class LGDisplay:
         result = await self.async_send_command("d", "y", mode)
         return result is not None
 
-    async def async_get_backlight(self) -> Optional[int]:
-        """Get current backlight level."""
-        return await self.async_send_command("m", "g", READ_STATUS)
+    async def async_get_backlight_context(self, *, use_cache=True):
+        """Read actual picture locks; configured DPM alone never blocks brightness."""
+        power = await self.async_get_power_status(use_cache=use_cache)
+        result = {
+            "power": power,
+            "energy_saving": None,
+            "brightness_scheduling": None,
+            "panel_state": None,
+            "picture_mode": None,
+            "control_status": None,
+        }
+        if power is not True:
+            result["control_status"] = (
+                "Display is off" if power is False else "Power state unknown"
+            )
+            return result
+        result["energy_saving"] = await self.async_send_command(
+            "j", "q", READ_STATUS, use_cache=use_cache
+        )
+        result["brightness_scheduling"] = await self.async_send_command(
+            "s", "m", READ_STATUS, use_cache=use_cache
+        )
+        result["panel_state"] = await self.async_get_subcommand(
+            "sv", 3, use_cache=use_cache
+        )
+        result["picture_mode"] = await self.async_send_command(
+            "d", "x", READ_STATUS, use_cache=use_cache
+        )
+        context = tuple(result.values())
+        if context != self._backlight_context:
+            self._unsupported_until.pop(("m", "g", READ_STATUS, ""), None)
+            self._query_cache.pop(("m", "g", READ_STATUS, ""), None)
+            self._backlight_context = context
+        if result["panel_state"] in (1, 2, 3, 4):
+            result["control_status"] = "Panel is off (PM/DPM)"
+        elif result["energy_saving"] == 4:
+            result["control_status"] = "Automatic energy saving"
+        elif result["energy_saving"] == 3:
+            result["control_status"] = "Maximum energy saving"
+        elif result["brightness_scheduling"] == 1:
+            result["control_status"] = "Brightness scheduling is active"
+        return result
+
+    async def async_get_backlight_status(self):
+        result = await self.async_get_backlight_context()
+        result["value"] = None
+        if result["control_status"] is None:
+            result["value"] = await self.async_get_backlight()
+            if result["value"] is None:
+                result["control_status"] = (
+                    "Backlight unavailable in the current display mode"
+                )
+        return result
+
+    async def async_get_backlight(self, *, use_cache=True) -> Optional[int]:
+        result = await self.async_send_command(
+            "m", "g", READ_STATUS, use_cache=use_cache
+        )
+        return result if type(result) is int and 0 <= result <= 100 else None
 
     async def async_set_backlight(self, level: int) -> bool:
-        """Set backlight level."""
+        if type(level) is not int or not 0 <= level <= 100:
+            return False
+        context = await self.async_get_backlight_context(use_cache=False)
+        if context["control_status"]:
+            return False
         result = await self.async_send_command("m", "g", level)
-        return result is not None
+        return (
+            result == level and await self.async_get_backlight(use_cache=False) == level
+        )
 
     async def async_get_contrast(self) -> Optional[int]:
         """Get current contrast level."""
@@ -753,14 +861,25 @@ class LGDisplay:
         result = await self.async_send_command("j", "p", value)
         return result is not None
 
-    async def async_get_aspect_ratio(self) -> Optional[int]:
-        """Get aspect ratio raw value."""
-        return await self.async_send_command("k", "c", READ_STATUS)
+    async def async_get_aspect_ratio(self, *, use_cache=True) -> Optional[int]:
+        value = await self.async_send_command(
+            "k", "c", READ_STATUS, use_cache=use_cache
+        )
+        value = value if value in ASPECT_RATIOS.values() else None
+        if value is not None and value != self.aspect_ratio:
+            self.aspect_ratio = value
+            for listener in tuple(self._aspect_listeners):
+                listener()
+        return value
 
     async def async_set_aspect_ratio(self, value: int) -> bool:
-        """Set aspect ratio raw value."""
+        if type(value) is not int or value not in ASPECT_RATIOS.values():
+            return False
         result = await self.async_send_command("k", "c", value)
-        return result is not None
+        return (
+            result == value
+            and await self.async_get_aspect_ratio(use_cache=False) == value
+        )
 
     @property
     def is_connected(self) -> bool:

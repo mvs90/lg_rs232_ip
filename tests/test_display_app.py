@@ -1347,3 +1347,18 @@ async def test_pip_label_collision_does_not_hide_physical_hdmi(app):
         assert not app.pip_selected
     finally:
         await layouts.async_close()
+
+
+async def test_aspect_ratio_payload_tracks_native_setting_and_subscription_is_closed(
+    app,
+):
+    display = app.controller._lg_display
+    display.subscribe_aspect_ratio.assert_called_once()
+    display.aspect_ratio = 2
+    assert app.state()["hdmi_fit"] == "fill"
+    display.aspect_ratio = 6
+    assert app.state()["hdmi_fit"] == "contain"
+    display.aspect_ratio = None
+    assert app.state()["hdmi_fit"] == "contain"
+    await app.async_close()
+    display.subscribe_aspect_ratio.return_value.assert_called_once()

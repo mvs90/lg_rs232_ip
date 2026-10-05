@@ -74,3 +74,10 @@ Das Studio startet mit einer Galerie. Über **Neue Ansicht** ein benanntes Desig
 ### Farbthemes und PiP-Quelle (2.10.0)
 
 Im Editor links nur Farben und Hintergrund ändern; Inhalte, Entitäten und Positionen bleiben beim Theme-Wechsel erhalten. Oben direkt zwischen HDMI-Vollbild, Dashboard, PiP und Mitteilungsansichten wechseln. HDMI-Quellen erscheinen immer im Vollbild in der App; **Dashboard** und **PiP** laden ihre eigenen zugeordneten Ansichten. PiP behält den zuletzt gewählten HDMI-Eingang. Für diese Quellen im kombinierten Player AV Companion 1.2.0 verwenden.
+
+
+### Seitenverhältnis und Backlight (2.10.1)
+
+**Aspect Ratio** bietet **Full Screen** (Fläche ausfüllen) und **Original** (Proportionen beibehalten). Das gilt auch für die HDMI-Fläche in der optionalen App; PiP-Position und Größe bleiben im Studio einstellbar. Der alte Zahlenregler heißt **Aspect Ratio Code** und akzeptiert nur noch 2 oder 6.
+
+**Backlight** ist bei Energiesparen **AUTO/MAXIMUM**, aktiver LG-Helligkeitsplanung oder ausgeschaltetem Panel gesperrt. Der Sensor **Backlight Control** zeigt den Grund. Für manuelle Regelung **Energy Saving → OFF, MINIMUM oder MEDIUM** wählen. Ein konfigurierter DPM-Timer allein verhindert die Regelung nicht; DPM und Energiesparen werden niemals automatisch umgestellt. Bildmoduswechsel können einen anderen gespeicherten Backlight-Wert laden. [Abhängigkeiten, Bedienung und Gerätetest](PICTURE-CONTROLS.md).

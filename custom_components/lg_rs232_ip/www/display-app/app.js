@@ -1,8 +1,9 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.7.1", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.7.2", video = null, sourceNode = null, videoSource = null;
   var dashboardSelected = false, pipSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
+  var hdmiFit = "contain";
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
   var captureBusy = false, lastCapture = null, cancelCapture = null;
   var active = null, dismissed = null, expires = 0, lastSuccess = Date.now();
@@ -42,6 +43,7 @@
       video.pause(); sourceNode.src = source; video.load();
       var playing = video.play(); if (playing && playing.catch) { playing.catch(function () {}); }
     }
+    video.style.objectFit = hdmiFit;
     videoSource = source;
   }
   function releaseHdmi() {
@@ -178,6 +180,7 @@
         text("connection", "Mit Home Assistant verbunden");
         var first = revision === null;
         revision = data.revision; idleHdmi = data.idle_hdmi || null; inputRequest = data.input_request;
+        hdmiFit = data.hdmi_fit === "fill" ? "fill" : "contain";
         design = data.layout || null; dashboardSelected = data.dashboard === true; pipSelected = data.pip === true;
         if (design && design.now) { serverOffset = new Date(design.now).getTime() - Date.now(); }
         try {

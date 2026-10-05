@@ -23,7 +23,7 @@ from .const import DOMAIN
 from .resident_app import ResidentApp, SI_APP_ID
 from .web_manager import LGWebError
 
-APP_VERSION = "1.7.1"
+APP_VERSION = "1.7.2"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -88,6 +88,7 @@ class DisplayAppManager(ResidentApp):
         self._revision = 0
         self._changed = asyncio.Event()
         self._sensor_unsub = None
+        self._aspect_unsub = None
         self._init_resident()
         self.layouts = hass.data.get(DOMAIN, {}).get(entry.entry_id, {}).get("layouts")
         if self.layouts:
@@ -101,6 +102,9 @@ class DisplayAppManager(ResidentApp):
             self.saved["token"] = self.token
             await self.store.async_save(self.saved)
         if self.enabled:
+            self._aspect_unsub = self.controller._lg_display.subscribe_aspect_ratio(
+                self.changed
+            )
             self.assets = await self.hass.async_add_executor_job(
                 lambda: {
                     name: (ASSETS / name).read_bytes()
@@ -129,6 +133,9 @@ class DisplayAppManager(ResidentApp):
 
     async def async_close(self):
         self.closed = True
+        if self._aspect_unsub:
+            self._aspect_unsub()
+            self._aspect_unsub = None
         if self._sensor_unsub:
             self._sensor_unsub()
             self._sensor_unsub = None
@@ -442,6 +449,9 @@ class DisplayAppManager(ResidentApp):
             "version": APP_VERSION,
             "revision": self._revision,
             "idle_hdmi": self.idle_hdmi(),
+            "hdmi_fit": "fill"
+            if self.controller._lg_display.aspect_ratio == 2
+            else "contain",
             "dashboard": self.dashboard_selected,
             "pip": self.pip_selected,
             "capture": self._capture,

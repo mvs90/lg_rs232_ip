@@ -64,3 +64,5 @@ python3.13 -m venv .venv
 ```
 
 See [test coverage and acceptance checks](docs/TESTING.md), [split acceptance report](docs/RELEASE-TESTS.md) and [contributing](CONTRIBUTING.md).
+
+Picture controls: [aspect-ratio options, backlight locks and DPM/PM dependencies](docs/PICTURE-CONTROLS.md).

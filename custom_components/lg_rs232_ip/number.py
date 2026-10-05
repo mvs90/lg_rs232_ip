@@ -10,9 +10,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, READ_STATUS
+from .const import DOMAIN, READ_STATUS, ENERGY_SAVING_MODES
 from .lg_display import LGDisplay
-from .device_profile import is_uh5f
+from .device_profile import ASPECT_RATIOS, PM_STATES, is_uh5f
 from homeassistant.exceptions import HomeAssistantError
 
 _LOGGER = logging.getLogger(__name__)
@@ -193,6 +193,8 @@ class LGDisplayBacklightNumber(LGDisplayBaseNumber):
         self._name = name
         self._unique_id = unique_id
         self._attr_native_value: Optional[int] = None
+        self._backlight_state = {}
+        self._control_status = "Not yet read"
         self._attr_native_min_value = 0
         self._attr_native_max_value = 100
         self._attr_native_step = 1
@@ -208,7 +210,7 @@ class LGDisplayBacklightNumber(LGDisplayBaseNumber):
 
     @property
     def available(self) -> bool:
-        return self._lg_display.is_available
+        return self._lg_display.is_available and self._control_status is None
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -218,24 +220,53 @@ class LGDisplayBacklightNumber(LGDisplayBaseNumber):
             "manufacturer": "LG",
         }
 
-    async def async_set_native_value(self, value: float) -> None:
-        power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
-            return
+    @property
+    def extra_state_attributes(self):
+        return {
+            "control_status": self._control_status or "Manual control available",
+            "energy_saving": next(
+                (
+                    k
+                    for k, v in ENERGY_SAVING_MODES.items()
+                    if v == self._backlight_state.get("energy_saving")
+                ),
+                None,
+            ),
+            "brightness_scheduling": {0: False, 1: True}.get(
+                self._backlight_state.get("brightness_scheduling")
+            ),
+            "panel_state": PM_STATES.get(self._backlight_state.get("panel_state")),
+            "picture_mode_code": self._backlight_state.get("picture_mode"),
+        }
 
-        backlight_value = int(value)
-        if await self._lg_display.async_set_backlight(backlight_value):
-            self._attr_native_value = backlight_value
+    async def async_added_to_hass(self):
+        self.async_on_remove(
+            self._lg_display.subscribe_picture_settings(
+                lambda: self.async_schedule_update_ha_state(force_refresh=True)
+            )
+        )
+        await self.async_update()
+
+    async def async_set_native_value(self, value: float) -> None:
+        if not 0 <= value <= 100 or value != int(value):
+            raise HomeAssistantError(
+                "Backlight must be a whole percentage from 0 to 100"
+            )
+        if not await self._lg_display.async_set_backlight(int(value)):
+            await self.async_update()
             self.async_write_ha_state()
+            raise HomeAssistantError(
+                "Backlight change not confirmed: "
+                + (self._control_status or "display rejected the value")
+                + ". Use energy saving Off, Minimum or Medium and disable brightness scheduling for manual control."
+            )
+        await self.async_update()
+        self.async_write_ha_state()
 
     async def async_update(self) -> None:
-        power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
-            return
-
-        result = await self._lg_display.async_get_backlight()
-        if result is not None:
-            self._attr_native_value = int(result)
+        self._backlight_state = await self._lg_display.async_get_backlight_status()
+        self._control_status = self._backlight_state["control_status"]
+        self._attr_native_value = self._backlight_state["value"]
 
 
 class LGDisplayContrastNumber(LGDisplayBaseNumber):
@@ -562,16 +593,16 @@ class LGDisplayIsmMethodNumber(LGDisplayBaseNumber):
 
 
 class LGDisplayAspectRatioNumber(LGDisplayBaseNumber):
-    """Aspect ratio raw value control for LG Display."""
+    """Compatibility control; new installations should use the named select."""
 
     def __init__(self, lg_display: LGDisplay, name: str, unique_id: str) -> None:
         self._lg_display = lg_display
         self._name = name
         self._unique_id = unique_id
         self._attr_native_value: Optional[int] = None
-        self._attr_native_min_value = 0
-        self._attr_native_max_value = 255
-        self._attr_native_step = 1
+        self._attr_native_min_value = 2
+        self._attr_native_max_value = 6
+        self._attr_native_step = 4
 
     @property
     def unique_id(self) -> str:
@@ -579,11 +610,11 @@ class LGDisplayAspectRatioNumber(LGDisplayBaseNumber):
 
     @property
     def name(self) -> str:
-        return "Aspect Ratio"
+        return "Aspect Ratio Code"
 
     @property
     def available(self) -> bool:
-        return self._lg_display.is_available
+        return self._lg_display.is_available and self._attr_native_value is not None
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -593,21 +624,31 @@ class LGDisplayAspectRatioNumber(LGDisplayBaseNumber):
             "manufacturer": "LG",
         }
 
-    async def async_set_native_value(self, value: float) -> None:
-        power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
-            return
+    async def async_added_to_hass(self):
+        self.async_on_remove(
+            self._lg_display.subscribe_picture_settings(
+                lambda: self.async_schedule_update_ha_state(force_refresh=True)
+            )
+        )
+        await self.async_update()
 
-        ratio_value = int(value)
-        if await self._lg_display.async_set_aspect_ratio(ratio_value):
-            self._attr_native_value = ratio_value
+    async def async_set_native_value(self, value: float) -> None:
+        if value not in ASPECT_RATIOS.values():
+            raise HomeAssistantError(
+                "Aspect ratio supports only 2 (Full Screen) or 6 (Original); use the Aspect Ratio select"
+            )
+        if await self._lg_display.async_get_power_status() is not True:
+            raise HomeAssistantError("Display must be on to change aspect ratio")
+        if not await self._lg_display.async_set_aspect_ratio(int(value)):
+            await self.async_update()
             self.async_write_ha_state()
+            raise HomeAssistantError(
+                "Display did not confirm aspect ratio in the current input/mode"
+            )
+        self._attr_native_value = int(value)
+        self.async_write_ha_state()
 
     async def async_update(self) -> None:
-        power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
-            return
-
-        result = await self._lg_display.async_get_aspect_ratio()
-        if result is not None:
-            self._attr_native_value = int(result)
+        self._attr_native_value = None
+        if await self._lg_display.async_get_power_status() is True:
+            self._attr_native_value = await self._lg_display.async_get_aspect_ratio()

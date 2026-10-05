@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, READ_STATUS, OSD_LANGUAGES
+from .const import DOMAIN, READ_STATUS, OSD_LANGUAGES, ENERGY_SAVING_MODES
 from .device_profile import ok_payload, PM_STATES, PM_MODES
 from .lg_display import LGDisplay
 
@@ -106,6 +106,7 @@ async def async_setup_entry(
         LGDisplayTemperatureSensor(lg_display, data["name"], config_entry.entry_id),
         LGDisplayElapsedTimeSensor(lg_display, data["name"], config_entry.entry_id),
         LGDisplayEnergySavingSensor(lg_display, data["name"], config_entry.entry_id),
+        LGDisplayBacklightControlSensor(lg_display, config_entry.entry_id),
         LGDisplayOSDLanguageSensor(lg_display, data["name"], config_entry.entry_id),
         LGDisplayRemoteLockSensor(lg_display, data["name"], config_entry.entry_id),
         LGDisplayStatusSensor(
@@ -353,12 +354,16 @@ class LGDisplayEnergySavingSensor(LGDisplayBaseSensor):
 
         result = await self._lg_display.async_send_command("j", "q", READ_STATUS)
         if result is not None:
-            self._state = {
-                0x00: "OFF",
-                0x01: "MINIMUM",
-                0x02: "MEDIUM",
-                0x03: "MAXIMUM",
-            }.get(result, f"UNKNOWN ({result})")
+            self._state = next(
+                (
+                    name
+                    for name, value in ENERGY_SAVING_MODES.items()
+                    if value == result
+                ),
+                None,
+            )
+        else:
+            self._state = None
 
 
 class LGDisplaySoftwareVersionSensor(LGDisplayBaseSensor):
@@ -672,4 +677,51 @@ class LGDisplayAppSensor(LGDisplayBaseSensor):
         return self.manager.attributes
 
     async def async_added_to_hass(self):
-        self.async_on_remove(self.manager.controller.subscribe(self.async_write_ha_state))
+        self.async_on_remove(
+            self.manager.controller.subscribe(self.async_write_ha_state)
+        )
+
+
+class LGDisplayBacklightControlSensor(LGDisplayBaseSensor):
+    """Explain a disabled backlight slider without hiding its locking mode."""
+
+    _attr_entity_registry_enabled_default = True
+    _attr_name = "Backlight Control"
+    _attr_icon = "mdi:brightness-6"
+
+    def __init__(self, display, unique_id):
+        self._lg_display = display
+        self._attr_unique_id = f"{unique_id}_backlight_control"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, unique_id)})
+        self._attr_native_value = None
+
+    @property
+    def available(self):
+        return self._lg_display.is_available
+
+    async def async_added_to_hass(self):
+        self.async_on_remove(
+            self._lg_display.subscribe_picture_settings(
+                lambda: self.async_schedule_update_ha_state(force_refresh=True)
+            )
+        )
+        await self.async_update()
+
+    async def async_update(self):
+        status = await self._lg_display.async_get_backlight_status()
+        self._attr_native_value = status["control_status"] or "Manual control available"
+        self._attr_extra_state_attributes = {
+            "energy_saving": next(
+                (
+                    name
+                    for name, value in ENERGY_SAVING_MODES.items()
+                    if value == status["energy_saving"]
+                ),
+                None,
+            ),
+            "brightness_scheduling": {0: False, 1: True}.get(
+                status["brightness_scheduling"]
+            ),
+            "panel_state": PM_STATES.get(status["panel_state"]),
+            "picture_mode_code": status["picture_mode"],
+        }

@@ -2,6 +2,8 @@
 
 import re
 
+ASPECT_RATIOS = {"Full Screen": 0x02, "Original": 0x06}
+
 DPM_DELAYS = {
     "Off": 0x00,
     "10 seconds": 0x02,

@@ -1,5 +1,11 @@
 # Release acceptance
 
+## LG 2.10.1: picture-control dependencies — 2026-10-05
+
+**320 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 102 browser cases pass across Chromium and WebKit.** Coverage includes the energy/schedule/panel dependency matrix, stale-value removal, exact acknowledgements/readback, mode-triggered rejection-cache invalidation, HA state-context serialization, visible diagnostics for disabled controls and aspect changes on the same video element.
+
+The existing HA 2026.9.4 container and LG 75UH5F-HJ verified manual backlight writes in Off/Minimum/Medium, lockout in Maximum/Auto, immediate recovery, APS preset readback and both aspect modes. Native captures confirmed video-plane geometry in PiP; the HDMI image was black, so no active-programme/HDCP claim is made. Picture settings, DPM/PM policies, original Dashboard source and saved library were restored. See [detailed evidence and limits](PICTURE-CONTROLS.md).
+
 ## LG 2.10.0: colour-only themes and explicit PiP source — 2026-10-04
 
 **302 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 100 browser cases pass across Chromium and WebKit.** Ruff and whitespace checks pass. New coverage includes theme changes preserving every non-colour widget field, editable palettes, context navigation without changing the source, read-only HDMI preview, explicit PiP selection, source-label collisions, persistence, acknowledgement rollback, standby/supply protection, removal of the PiP HDMI widget, and omission of old automatic scenes from panel data/forecast/image access.

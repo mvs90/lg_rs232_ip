@@ -21,7 +21,7 @@ from .const import (
     SOUND_MODES,
 )
 from .lg_display import LGDisplay
-from .device_profile import DPM_DELAYS, SIGNAGE_PICTURE_MODES, is_uh5f
+from .device_profile import ASPECT_RATIOS, DPM_DELAYS, SIGNAGE_PICTURE_MODES, is_uh5f
 from homeassistant.exceptions import HomeAssistantError
 
 _LOGGER = logging.getLogger(__name__)
@@ -74,6 +74,9 @@ async def async_setup_entry(
         ),
     ]
 
+    entities.append(
+        LGDisplayAspectRatioSelect(lg_display, data["name"], config_entry.entry_id)
+    )
     entities.append(
         LGDisplayDpmDelaySelect(lg_display, data["name"], config_entry.entry_id)
     )
@@ -299,19 +302,17 @@ class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
 
     async def async_select_option(self, option: str) -> None:
         if option not in self._modes:
-            _LOGGER.warning("Attempted to select unsupported picture mode: %s", option)
-            return
-
-        power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
-            _LOGGER.info("Display is off; ignoring picture mode change %s", option)
-            return
-
-        if await self._lg_display.async_set_picture_mode(self._modes[option]):
-            self._current_mode = option
+            raise HomeAssistantError("Unsupported picture mode")
+        if await self._lg_display.async_get_power_status() is not True:
+            raise HomeAssistantError("Display must be on to change picture mode")
+        if not await self._lg_display.async_set_picture_mode(self._modes[option]):
+            await self.async_update()
             self.async_write_ha_state()
-        else:
-            _LOGGER.error("Failed to set picture mode to %s", option)
+            raise HomeAssistantError(
+                "Display did not confirm picture mode in the current input/mode"
+            )
+        self._current_mode = option
+        self.async_write_ha_state()
 
 
 class LGDisplayEnergySavingSelect(LGDisplayBaseSelect):
@@ -376,21 +377,19 @@ class LGDisplayEnergySavingSelect(LGDisplayBaseSelect):
 
     async def async_select_option(self, option: str) -> None:
         if option not in ENERGY_SAVING_MODES:
-            _LOGGER.warning(
-                "Attempted to select unsupported energy saving mode: %s", option
-            )
-            return
-
-        power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
-            _LOGGER.info("Display is off; ignoring energy saving change %s", option)
-            return
-
-        if await self._lg_display.async_set_energy_saving(ENERGY_SAVING_MODES[option]):
-            self._current_mode = option
+            raise HomeAssistantError("Unsupported energy saving")
+        if await self._lg_display.async_get_power_status() is not True:
+            raise HomeAssistantError("Display must be on to change energy saving")
+        if not await self._lg_display.async_set_energy_saving(
+            ENERGY_SAVING_MODES[option]
+        ):
+            await self.async_update()
             self.async_write_ha_state()
-        else:
-            _LOGGER.error("Failed to set energy saving mode to %s", option)
+            raise HomeAssistantError(
+                "Display did not confirm energy saving in the current input/mode"
+            )
+        self._current_mode = option
+        self.async_write_ha_state()
 
 
 class LGDisplaySoundModeSelect(LGDisplayBaseSelect):
@@ -575,5 +574,54 @@ class LGDisplayDpmDelaySelect(LGDisplayBaseSelect):
         result = await self._lg_display.async_send_command("f", "j", value)
         if result != value:
             raise HomeAssistantError("Display did not confirm the DPM timeout")
+        self._attr_current_option = option
+        self.async_write_ha_state()
+
+
+class LGDisplayAspectRatioSelect(LGDisplayBaseSelect):
+    """Documented aspect ratios, mirrored to the resident HDMI video plane."""
+
+    _attr_entity_registry_enabled_default = True
+    _attr_icon = "mdi:aspect-ratio"
+
+    def __init__(self, display, name, unique_id):
+        self._lg_display = display
+        self._attr_name = "Aspect Ratio"
+        self._attr_unique_id = f"{unique_id}_aspect_ratio"
+        self._attr_options = list(ASPECT_RATIOS)
+        self._attr_current_option = None
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, unique_id)})
+
+    @property
+    def available(self):
+        return self._lg_display.is_available and self._attr_current_option is not None
+
+    async def async_added_to_hass(self):
+        self.async_on_remove(
+            self._lg_display.subscribe_picture_settings(
+                lambda: self.async_schedule_update_ha_state(force_refresh=True)
+            )
+        )
+        await self.async_update()
+
+    async def async_update(self):
+        value = None
+        if await self._lg_display.async_get_power_status() is True:
+            value = await self._lg_display.async_get_aspect_ratio()
+        self._attr_current_option = next(
+            (k for k, v in ASPECT_RATIOS.items() if v == value), None
+        )
+
+    async def async_select_option(self, option):
+        if option not in ASPECT_RATIOS:
+            raise HomeAssistantError("Unsupported aspect ratio")
+        if await self._lg_display.async_get_power_status() is not True:
+            raise HomeAssistantError("Display must be on to change aspect ratio")
+        if not await self._lg_display.async_set_aspect_ratio(ASPECT_RATIOS[option]):
+            await self.async_update()
+            self.async_write_ha_state()
+            raise HomeAssistantError(
+                "Display did not confirm aspect ratio in the current input/mode"
+            )
         self._attr_current_option = option
         self.async_write_ha_state()

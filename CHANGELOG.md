@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.10.1
+
+- Replace arbitrary aspect-ratio values with a named Full Screen/Original select; retain the legacy number with validated codes. Verify native acknowledgement/readback and mirror fitting to the resident HDMI plane without a decoder/input switch (app 1.7.2).
+- Honour backlight locks from Auto/Maximum energy saving, brightness scheduling and actual panel-off state; configured DPM alone does not lock manual control. Add a Backlight Control diagnostic sensor and clear stale numeric values.
+- Require matching readback for backlight and picture/energy mode changes, refresh dependent controls and invalidate mode-dependent rejection caches. Correct the energy-saving sensor's AUTO decoding.
+- Document and physically test the mode dependencies, preserving the installation's original settings.
+
 ## 2.10.0
 
 - Separate editor colour themes from content templates. Left-hand themes/palette/background controls preserve widgets, entities, text, geometry and typography; top context buttons navigate saved views and a read-only HDMI-fullscreen preview.

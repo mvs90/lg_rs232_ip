@@ -9,7 +9,7 @@ async function mount(page, state) {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.7.1', revision: 1, dashboard: state.dashboard || false, pip: state.pip || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.7.2', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -390,4 +390,20 @@ test('PiP with its video widget removed stays free of HDMI through notifications
   state.pip=false;
   await expect(page.locator('body')).toHaveClass('hdmi');
   await expect(page.locator('#hdmi-slot')).toBeVisible();
+});
+
+test('aspect ratio updates the existing HDMI plane in full-screen and PiP without reloading video', async ({page}) => {
+  const state = {content:null,idle_hdmi:'ext://hdmi:1',hdmi_fit:'contain'};
+  await mount(page,state);
+  const video = page.locator('#hdmi-slot video');
+  await expect(video).toHaveCSS('object-fit','contain');
+  await video.evaluate(el => { window.originalHdmiPlane = el; window.videoReloads = 0; el.load = () => window.videoReloads++; });
+  state.hdmi_fit = 'fill';
+  await expect(video).toHaveCSS('object-fit','fill');
+  state.content = {...content(),layout:'pip'};
+  await expect(page.locator('body')).toHaveClass('pip');
+  await expect(video).toHaveCSS('object-fit','fill');
+  state.hdmi_fit = 'contain';
+  await expect(video).toHaveCSS('object-fit','contain');
+  expect(await video.evaluate(el => el === window.originalHdmiPlane && window.videoReloads === 0)).toBe(true);
 });

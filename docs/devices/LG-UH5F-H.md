@@ -260,3 +260,10 @@ The local HA test container was stopped during the short probe to release the sh
 With app 1.2.0 / integration 2.5.0, changing the existing `service/webos-external` source and calling `video.load()`/`video.play()` changed HDMI 1 → HDMI 2 → HDMI 1 without leaving `commercial.signage.signageapplauncher`. The video DOM element is retained. HDMI 2 had no signal; zero video dimensions must be treated as signal absence, not loss of the app. Message/layout acknowledgements must not wait for those dimensions.
 
 Removing repeated Control Manager foreground/settings reads from each notification and allowing content replacement reduced six measured request-to-render-acknowledgement times to 38–87 ms on this installation. Periodic ownership checks remain enabled. A lost heartbeat no longer triggers a native HDMI/SI relaunch cycle: the already loaded video plane remains and its long poll reconnects. See the 2.5 [acceptance record](../RELEASE-TESTS.md) for hardware, methods and limits. HDMI source changes retain the OSD guard, including its settling delay; layout changes require no OSD command.
+
+
+## Picture-control verification — 2026-10-05
+
+The live configuration used AUTO energy saving, General picture mode, DPM 1 minute, PM Network Ready and Original aspect ratio. Manual backlight 75 → 70 → 75 succeeded with energy saving Off, Minimum and Medium; Auto/Maximum prevented manual control. The panel's Control Manager also locks its slider during brightness scheduling or screen-off. DPM remained enabled during successful manual writes. APS with energy saving Off exposed its own backlight value (100), so do not infer an unconditional lock from the preset name.
+
+`kc 02` and `kc 06` were acknowledged and read back in the SI app. App 1.7.2 mirrors the choice to the same HDMI element's fill/contain geometry; screenshots verified a deliberately non-16:9 rectangle. Original source, library and picture/power policies were restored. No DPM power-off test or active-programme scaling claim is made. [Full implementation and reusable dependency reference](../PICTURE-CONTROLS.md).
