@@ -1,6 +1,6 @@
 # LG Professional Display
 
-Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.7.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
+Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.12.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
 
 [Deutsche Anleitung](docs/README.de.md) · [Display Studio](docs/DISPLAY-STUDIO.md) · [Dashboard remote](docs/DASHBOARD-CARD.md) · [Features and actions](docs/FEATURES.md) · [Device reference](docs/devices/LG-UH5F-H.md) · [MIT license](LICENSE)
 
@@ -66,3 +66,7 @@ python3.13 -m venv .venv
 See [test coverage and acceptance checks](docs/TESTING.md), [split acceptance report](docs/RELEASE-TESTS.md) and [contributing](CONTRIBUTING.md).
 
 Picture controls: [aspect-ratio options, backlight locks and DPM/PM dependencies](docs/PICTURE-CONTROLS.md).
+
+### Full-screen music view and 4K assets
+
+Select **Mediaplayer** in Display Studio to configure a full-screen cover, title, artist, playback state and progress view. Bind any existing HA media player, customize widgets and backgrounds, then select the new source on the LG or AV Companion 1.3.0. Artwork tiers honor display pixel density; uploaded backgrounds retain up to 3840×2160 pixels. See [configuration, resource limits and measured LG rendering](docs/DISPLAY-STUDIO.md#mediaplayer-im-vollbild).

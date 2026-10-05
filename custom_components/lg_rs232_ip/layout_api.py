@@ -202,10 +202,16 @@ class LayoutMediaView(LayoutEntryView):
     async def get(self, request, entry_id, entity_id):
         manager = self.manager(request, entry_id)
         # Only administrators may preview a not-yet-saved media binding.
+        from .layout_media import artwork_size
+
+        try:
+            size = artwork_size(request.query.get("size", "640"))
+        except ValueError as err:
+            raise web.HTTPBadRequest(text=str(err)) from None
         key = manager.media.key(entity_id)
         requested = request.query.get("v", "preview")
         data = await manager.media.async_image(
-            entity_id, key if requested == "preview" else requested
+            entity_id, key if requested == "preview" else requested, size
         )
         return web.Response(
             body=data,

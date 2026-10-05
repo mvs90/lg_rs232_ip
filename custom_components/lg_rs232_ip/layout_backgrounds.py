@@ -26,12 +26,12 @@ def prepare_background(source):
             ):
                 raise ValueError
             image = ImageOps.exif_transpose(image)
-            image.thumbnail((1920, 1080), Image.Resampling.LANCZOS)
+            image.thumbnail((3840, 2160), Image.Resampling.LANCZOS)
             rgb = Image.new("RGB", image.size, "#101827")
             rgba = image.convert("RGBA")
             rgb.paste(rgba, mask=rgba.getchannel("A"))
             out = BytesIO()
-            rgb.save(out, format="JPEG", quality=85, optimize=True)
+            rgb.save(out, format="JPEG", quality=95, subsampling=0, optimize=True)
             return out.getvalue()
     except Exception:
         raise ValueError(

@@ -132,6 +132,8 @@ class DisplayController(NativeControls):
                     if app and app.dashboard_selected and app.resident_connected
                     else "PiP"
                     if app and app.pip_selected and app.resident_connected
+                    else "Mediaplayer"
+                    if app and app.media_view_selected and app.resident_connected
                     else self._resolve_source_name(self._current_input_id)
                 )
                 self.volume = await self._lg_display.async_get_volume()
@@ -180,8 +182,11 @@ class DisplayController(NativeControls):
     async def async_select_pip(self):
         await self.async_select_app_view("pip")
 
+    async def async_select_media_view(self):
+        await self.async_select_app_view("media_view")
+
     async def async_select_app_view(self, view):
-        if view not in ("dashboard", "pip"):
+        if view not in ("dashboard", "pip", "media_view"):
             raise HomeAssistantError("Unknown app view")
         app = (
             self.hass.data.get(DOMAIN, {})
@@ -211,7 +216,11 @@ class DisplayController(NativeControls):
             if self.external_owner or self.presentation_active:
                 raise HomeAssistantError("Display is busy with another presentation")
             await app.async_select_view(view)
-            self._source = "Dashboard" if view == "dashboard" else "PiP"
+            self._source = {
+                "dashboard": "Dashboard",
+                "pip": "PiP",
+                "media_view": "Mediaplayer",
+            }[view]
             self.async_write_ha_state()
 
     async def async_select_input(self, input_id):
@@ -230,6 +239,7 @@ class DisplayController(NativeControls):
                     return
                 app.saved.pop("dashboard", None)
                 app.saved.pop("pip", None)
+                app.saved.pop("media_view", None)
                 await app.async_pause_resident(leave=False)
             if not await self._lg_display.async_set_input(input_id):
                 raise HomeAssistantError("LG rejected input")

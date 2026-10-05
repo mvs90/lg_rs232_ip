@@ -334,3 +334,45 @@ async def test_background_only_binding_subscribes_and_inactive_views_do_not_expo
         assert manager.values() == {} and manager.media_entities() == set()
     finally:
         await manager.async_close()
+
+
+async def test_cover_resolution_tiers_share_fetch_and_never_upscale(media):
+    from custom_components.lg_rs232_ip.layout_media import artwork_size
+
+    cache, player = media
+    key = cache.key("media_player.sonos")
+    images = await asyncio.gather(
+        *(
+            cache.async_image("media_player.sonos", key, size)
+            for size in (640, 1280, 2160)
+        )
+    )
+    assert [Image.open(BytesIO(data)).size for data in images] == [
+        (640, 640),
+        (1280, 1280),
+        (1600, 1600),
+    ]
+    player.async_get_media_image.assert_awaited_once()
+    for invalid in (0, 1, True, "640.0", 3840, "../640", None):
+        with pytest.raises(ValueError):
+            artwork_size(invalid)
+
+
+async def test_cover_cache_evicts_lru_with_total_byte_limit(media):
+    cache, _ = media
+    key = cache.key("media_player.sonos")
+    cache._cache["media_player.old"] = ("old", {640: b"x" * 1000000}, 0)
+    with patch("custom_components.lg_rs232_ip.layout_media.MAX_CACHE_BYTES", 1000000):
+        assert await cache.async_image("media_player.sonos", key)
+    assert "media_player.old" not in cache._cache
+    assert "media_player.sonos" in cache._cache
+
+
+async def test_artwork_larger_than_cache_is_returned_without_refetch_loop(media):
+    cache, player = media
+    with patch("custom_components.lg_rs232_ip.layout_media.MAX_CACHE_BYTES", 1):
+        assert await asyncio.wait_for(
+            cache.async_image("media_player.sonos", cache.key("media_player.sonos")), 2
+        )
+    player.async_get_media_image.assert_awaited_once()
+    assert not cache._cache

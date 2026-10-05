@@ -1,4 +1,4 @@
-"""Named, reusable views and their assignment to the six display contexts."""
+"""Named, reusable views and their assignment to display contexts."""
 
 from copy import deepcopy
 import re
@@ -14,6 +14,7 @@ SCENE_NAMES = {
     "pip": "Meldung · PiP",
     "fullscreen": "Meldung · Vollbild",
     "pip_view": "PiP",
+    "media_view": "Mediaplayer",
 }
 
 
@@ -60,6 +61,11 @@ def validate_library(value, settings):
         normalized = validate_layout(candidate)["scenes"]["dashboard"]
         views.append({"id": identifier, "name": name.strip(), "scene": normalized})
     assignments = value.get("assignments")
+    if isinstance(assignments, dict) and set(assignments) in (
+        set(SCENES) - {"media_view"},
+        set(SCENES) - {"media_view", "pip_view"},
+    ):
+        assignments = {**assignments, "media_view": ""}
     if isinstance(assignments, dict) and set(assignments) == set(SCENES) - {"pip_view"}:
         # Keep the existing HDMI composition available as the explicit PiP view.
         assignments = {**assignments, "pip_view": assignments["signal"]}

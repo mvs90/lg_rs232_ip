@@ -9,7 +9,7 @@ async function mount(page, state) {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.8.0', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.9.0', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -17,7 +17,7 @@ async function mount(page, state) {
       if (event.type === 'rendered' && state.content) state.content.rendered = true;
       return route.fulfill({contentType: 'application/json', body: '{"ok":true}'});
     }
-    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html', body: fs.readFileSync(path.join(assets, name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src ext:; frame-ancestors 'none'"}});
+    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: fs.readFileSync(path.join(assets, name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src ext:; frame-ancestors 'none'"}});
   });
   await page.goto('http://display-app.test/index.html');
   return events;
@@ -439,7 +439,7 @@ test('playing cover background follows tracks, modes and playback without replac
     media.state=playback;await expect(layer).toHaveCount(0);
     media.state='playing';await expect(layer).toHaveClass(/loaded/);
   }
-  media.artwork='two';await expect(art).toHaveAttribute('src',/v=two$/);
+  media.artwork='two';await expect(art).toHaveAttribute('src',/v=two(?:&|$)/);
   scene.media_background_enabled=false;await expect(layer).toHaveCount(0);
   expect(await page.evaluate(()=>window.hdmiNode===document.querySelector('video'))).toBe(true);
   scene.media_background_enabled=true;media.artwork='missing';
@@ -465,8 +465,51 @@ test('cover edge colours come from the actual borders and slow old artwork never
   let finish;const pending=new Promise(resolve=>finish=resolve);
   await page.route('**/cover.jpg?**',async r=>{await pending;await r.fulfill({contentType:'image/png',body:Buffer.from(png,'base64')}).catch(()=>{});});
   state.layout.values['media_player.music'].artwork='slow';
-  await expect(layer.locator('img')).toHaveAttribute('src',/v=slow$/);
+  await expect(layer.locator('img')).toHaveAttribute('src',/v=slow(?:&|$)/);
   await expect(layer).not.toHaveClass(/loaded/);
   state.layout.values['media_player.music'].state='paused';await expect(layer).toHaveCount(0);
   finish();await page.waitForTimeout(500);await expect(layer).toHaveCount(0);
+});
+
+test('4K media view keeps HDMI decoder, uses crisp artwork tiers and returns after notifications',async({page})=>{
+  await page.setViewportSize({width:3840,height:2160});
+  const state={content:null,idle_hdmi:'ext://hdmi:1',media_view:true,layout:designed()};
+  const scene=state.layout.config.scenes.media_view;
+  const item=scene.elements.find(i=>i.kind==='media');item.entity_id='media_player.music';
+  Object.assign(scene,{media_background_enabled:true,media_background_entity:'media_player.music',media_background_dim:.65});
+  state.layout.values['media_player.music']={state:'playing',name:'Wohnzimmer',media_title:'A beautiful evening',media_artist:'The Artist',media_album_name:'Live Sessions',media_duration:240,media_position:42,artwork:'one'};
+  const events=await mount(page,state);
+  const media=page.locator('.lg-media'),art=media.locator('img');
+  await expect(media).toHaveAttribute('data-media-style','stage');
+  await expect(media).toContainText('A beautiful evening');
+  await expect(art).toHaveAttribute('src',/size=2160/);
+  await expect(page.locator('.lg-cover-background img')).toHaveAttribute('src',/size=2160/);
+  await expect(page.locator('#hdmi-slot')).toHaveCSS('visibility','hidden');
+  const geometry=await media.evaluate(n=>{const a=n.querySelector('.lg-media-art').getBoundingClientRect(),title=n.querySelector('.lg-value').getBoundingClientRect(),detail=n.querySelector('.lg-detail').getBoundingClientRect();return{art:a.width,overlap:a.right>title.left,titleBottom:title.bottom,detailTop:detail.top,scroll:document.documentElement.scrollWidth};});
+  expect(geometry.art).toBeGreaterThan(1280);expect(geometry.overlap).toBe(false);expect(geometry.titleBottom).toBeLessThan(geometry.detailTop);expect(geometry.scroll).toBe(3840);
+  await expect.poll(()=>events.some(e=>e.rendering?.width===3840&&e.rendering?.height===2160&&e.layout_scene==='media_view')).toBe(true);
+  await page.evaluate(()=>{window.savedPlane=document.querySelector('video');});
+  await page.screenshot({path:'test-results/media-4k-'+test.info().project.name+'.png'});
+  state.content={...content(),layout:'overlay'};await expect(page.locator('.lg-message')).toBeVisible();
+  await expect(page.locator('#hdmi-slot')).toHaveCSS('visibility','hidden');
+  state.content=null;await expect(media).toBeVisible();
+  state.layout.values['media_player.music'].media_title='Next track';state.layout.values['media_player.music'].artwork='two';
+  await expect(media).toContainText('Next track');await expect(art).toHaveAttribute('src',/v=two&size=2160/);
+  state.media_view=false;await expect(page.locator('body')).toHaveClass('hdmi');
+  expect(await page.evaluate(()=>document.querySelector('video')===window.savedPlane)).toBe(true);
+});
+
+test('LG logical 1080p viewport at density two requests UHD artwork without scaling layout',async({browser})=>{
+  const context=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:2});
+  const page=await context.newPage();
+  try{
+    const state={content:null,idle_hdmi:'ext://hdmi:1',media_view:true,layout:designed()};
+    state.layout.config.scenes.media_view.elements[0].entity_id='media_player.music';
+    state.layout.values['media_player.music']={state:'playing',artwork:'density',media_title:'A title long enough to wrap across multiple lines on the display without overlapping artist and album',media_artist:'Artist'};
+    const events=await mount(page,state);
+    await expect(page.locator('.lg-media-art img')).toHaveAttribute('src',/size=2160/);
+    await expect.poll(()=>events.some(e=>e.rendering?.width===1920&&e.rendering?.pixel_ratio===2)).toBe(true);
+    const boxes=await page.locator('.lg-media').evaluate(n=>({title:n.querySelector('.lg-value').getBoundingClientRect().bottom,artist:n.querySelector('.lg-detail').getBoundingClientRect().top,width:n.clientWidth}));
+    expect(boxes.title).toBeLessThan(boxes.artist);expect(boxes.width).toBe(1728);
+  }finally{await context.close();}
 });

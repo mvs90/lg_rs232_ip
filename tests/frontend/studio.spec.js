@@ -6,8 +6,8 @@ async function mount(page,width=1500) {
   const root=path.resolve('custom_components/lg_rs232_ip/www');
   await page.route('http://studio.test/**',route=>{
     const file=new URL(route.request().url()).pathname.split('/').pop();
-    const mapping={'studio.js':'studio.js','studio.css':'studio.css','weather.js':'display-app/weather.js','cards.js':'display-app/cards.js','layout-runtime.js':'display-app/layout.js','layout.css':'display-app/layout.css'};
-    return route.fulfill({contentType:file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':'text/html',body:mapping[file]?fs.readFileSync(path.join(root,mapping[file])):'<body style="margin:0"></body>'});
+    const mapping={'studio.js':'studio.js','studio.css':'studio.css','weather.js':'display-app/weather.js','cards.js':'display-app/cards.js','layout-runtime.js':'display-app/layout.js','layout.css':'display-app/layout.css','grain.png':'display-app/grain.png'};
+    return route.fulfill({contentType:file.endsWith('.js')?'application/javascript':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'text/html',body:mapping[file]?fs.readFileSync(path.join(root,mapping[file])):'<body style="margin:0"></body>'});
   });
   await page.goto('http://studio.test/');
   await page.addScriptTag({url:'http://studio.test/lg_rs232_ip/studio.js',type:'module'});
@@ -204,7 +204,7 @@ test('room suggestions add styled media/status cards once, support editing and r
 test('overview manages independent named views, assignments, deletion undo and persistence',async({page})=>{
   await mount(page);
   await expect(page.locator('.overview')).toBeVisible();await expect(page.locator('.workspace')).toBeHidden();
-  await expect(page.locator('.view-card')).toHaveCount(7);
+  await expect(page.locator('.view-card')).toHaveCount(8);
   await page.getByRole('button',{name:'＋ Neue Ansicht',exact:true}).click();
   await page.getByLabel('Name',{exact:true}).fill('Mein Sonnenplatz');
   await page.getByLabel('Vorlage',{exact:true}).selectOption('morning');
@@ -214,9 +214,9 @@ test('overview manages independent named views, assignments, deletion undo and p
   await page.getByLabel('Name der Ansicht').fill('Mein Tageslicht');await page.getByLabel('Name der Ansicht').press('Tab');
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
-  await expect(page.locator('.view-card')).toHaveCount(8);
-  await page.getByRole('button',{name:'Mein Tageslicht duplizieren',exact:true}).click();
   await expect(page.locator('.view-card')).toHaveCount(9);
+  await page.getByRole('button',{name:'Mein Tageslicht duplizieren',exact:true}).click();
+  await expect(page.locator('.view-card')).toHaveCount(10);
   await openView(page,'Mein Tageslicht · Kopie');
   await page.getByLabel('Hintergrund',{exact:true}).selectOption('ocean');
   await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
@@ -232,7 +232,7 @@ test('overview manages independent named views, assignments, deletion undo and p
   await page.screenshot({path:'test-results/studio-views-'+test.info().project.name+'.png',fullPage:true});
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   await page.evaluate(()=>{studio.remove();document.body.append(studio);});
-  await expect(page.locator('.view-card')).toHaveCount(9);
+  await expect(page.locator('.view-card')).toHaveCount(10);
   await expect(page.locator('.overview')).toBeVisible();
 });
 
@@ -251,7 +251,7 @@ test('solar view follows live HA updates without reload and preserves edited fie
 
 test('empty overview remains usable, supports new views and fits a phone',async({page})=>{
   await mount(page,390);
-  for(const name of ['Mit HDMI','Ohne HDMI','Dashboard','Meldung · Overlay','Meldung · PiP','Meldung · Vollbild','PiP'])await page.getByRole('button',{name:name+' löschen',exact:true}).click();
+  for(const name of ['Mit HDMI','Ohne HDMI','Dashboard','Meldung · Overlay','Meldung · PiP','Meldung · Vollbild','PiP','Mediaplayer'])await page.getByRole('button',{name:name+' löschen',exact:true}).click();
   await expect(page.locator('.view-card')).toHaveCount(0);
   await expect(page.getByRole('button',{name:'Neue Ansicht anlegen',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
@@ -332,4 +332,27 @@ test('a background player is independent of cards, previews live, survives save,
   await expect(page.getByLabel('Hintergrund-Medienplayer')).toHaveValue('media_player.sonos');
   await expect(page.getByLabel('Cover darstellen')).toHaveValue('stretch');
   expect(await page.evaluate(()=>window.coverRequests)).toBeLessThanOrEqual(4);
+});
+
+test('Mediaplayer context configures full-screen view, saves and selects its own source',async({page})=>{
+  await mount(page);await openView(page,'Dashboard');
+  await page.getByRole('button',{name:'Mediaplayer',exact:true}).click();
+  await expect(page.getByLabel('Name der Ansicht')).toHaveValue('Mediaplayer');
+  await page.locator('.layer .name').filter({hasText:'JETZT LÄUFT'}).click();
+  await page.getByLabel('Home-Assistant-Entität').fill('media_player.sonos');await page.getByLabel('Home-Assistant-Entität').press('Tab');
+  await expect(page.locator('.scene .lg-media')).toHaveAttribute('data-media-style','stage');
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  expect(await page.evaluate(()=>saved.scenes.media_view.elements.find(i=>i.kind==='media').entity_id)).toBe('media_player.sonos');
+  await page.getByRole('button',{name:'Mediaplayer anzeigen',exact:true}).click();
+  expect(await page.evaluate(()=>calls.some(c=>c[0]==='media_player'&&c[1]==='select_source'&&c[2].source==='Mediaplayer'))).toBe(true);
+  await page.getByRole('button',{name:'Element entfernen',exact:true}).click();
+  await expect(page.locator('.scene .lg-media')).toHaveCount(0);
+});
+
+
+test('gallery displays assigned music view without replacing Dashboard',async({page})=>{
+  await mount(page);
+  await page.locator('.view-card').filter({has:page.getByRole('heading',{name:'Mediaplayer',exact:true})}).getByRole('button',{name:'Anzeigen',exact:true}).click();
+  expect(await page.evaluate(()=>calls.some(c=>c[0]==='media_player'&&c[1]==='select_source'&&c[2].source==='Mediaplayer'))).toBe(true);
+  expect(await page.evaluate(()=>studio.config.assignments.dashboard)).toBe('dashboard');
 });

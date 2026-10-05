@@ -62,15 +62,28 @@ class ResidentApp:
     async def async_select_pip(self):
         await self.async_select_view("pip")
 
+    @property
+    def media_view_selected(self):
+        return bool(
+            self.dashboard_available
+            and self.saved.get("media_view")
+            and not self.saved.get("paused")
+        )
+
+    async def async_select_media_view(self):
+        await self.async_select_view("media_view")
+
     async def async_select_view(self, view):
-        if view not in ("dashboard", "pip"):
+        if view not in ("dashboard", "pip", "media_view"):
             raise HomeAssistantError("Unknown app view")
         if not self.dashboard_available or not self.resident_connected:
             raise HomeAssistantError(
                 "Enable custom layouts and connect the resident display app first"
             )
-        if (view == "dashboard" and self.dashboard_selected) or (
-            view == "pip" and self.pip_selected
+        if (
+            (view == "dashboard" and self.dashboard_selected)
+            or (view == "pip" and self.pip_selected)
+            or (view == "media_view" and self.media_view_selected)
         ):
             return
         from .native_presentations import settle_mutation
@@ -81,6 +94,7 @@ class ResidentApp:
                 self.selected_app,
                 dashboard=view == "dashboard",
                 pip=view == "pip",
+                media_view=view == "media_view",
             )
         )
         if cancelled:
@@ -125,6 +139,7 @@ class ResidentApp:
             and self.selected_app == target_app
             and not self.saved.get("dashboard")
             and not self.saved.get("pip")
+            and not self.saved.get("media_view")
         ):
             return True
         from .native_presentations import settle_mutation
@@ -139,10 +154,11 @@ class ResidentApp:
         return True
 
     async def _async_apply_hdmi(
-        self, input_id, target_app, *, dashboard=False, pip=False
+        self, input_id, target_app, *, dashboard=False, pip=False, media_view=False
     ):
         previous_dashboard = self.saved.get("dashboard", False)
         previous_pip = self.saved.get("pip", False)
+        previous_media = self.saved.get("media_view", False)
         previous = self.selected_input
         previous_app = self.selected_app
         self._input_request = secrets.token_hex(16)
@@ -151,6 +167,7 @@ class ResidentApp:
             async with self.controller._lg_display.async_suppress_osd_for_switch():
                 self.saved["dashboard"] = dashboard
                 self.saved["pip"] = pip
+                self.saved["media_view"] = media_view
                 self.saved["selected_input"] = input_id
                 self.saved["selected_app"] = target_app
                 if self.content:
@@ -162,6 +179,7 @@ class ResidentApp:
                     # Publish rollback before the guard restores OSD.
                     self.saved["dashboard"] = previous_dashboard
                     self.saved["pip"] = previous_pip
+                    self.saved["media_view"] = previous_media
                     self.saved["selected_input"] = previous
                     self.saved["selected_app"] = previous_app
                     self._input_request = None

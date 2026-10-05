@@ -38,7 +38,7 @@ async def layouts(tmp_path):
 @pytest.mark.parametrize("preset", presets(), ids=lambda p: p["id"])
 def test_presets_have_valid_independent_signal_and_notification_scenes(preset):
     config = validate_layout(preset["layout"])
-    assert len(config["scenes"]) == 7
+    assert len(config["scenes"]) == 8
     assert config["scenes"]["signal"]["elements"][0]["kind"] in ("hdmi", "clock")
     assert not any(
         item["kind"] == "hdmi" for item in config["scenes"]["no_signal"]["elements"]

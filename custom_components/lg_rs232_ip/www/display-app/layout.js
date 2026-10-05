@@ -46,6 +46,7 @@
   function Renderer(root, hdmi, preview) {
     this.root = root; this.hdmi = hdmi; this.preview = !!preview; this.nodes = {}; this.scene = null; this.data = null; this.options = null;
   }
+  function artworkSize(pixels) {return pixels>1280 ? 2160 : pixels>640 ? 1280 : 640;}
   function edgeBackground(image) {
     // One 32 x 32 sample per new cover, never per frame or progress update.
     // The scoped HA artwork endpoint and editor blob URLs are same-origin.
@@ -69,7 +70,8 @@
   Renderer.prototype.renderCover = function () {
     var scene=this.scene,data=this.data[scene.media_background_entity],self=this;
     if(!scene.media_background_enabled || !data || data.state!=="playing" || !data.artwork || !this.options.mediaUrl){this.clearCover();return;}
-    var key=scene.media_background_entity+"/"+data.artwork,cover=this.cover;
+    var size=scene.media_background_fit === "center" ? 640 : artworkSize(this.root.clientHeight*(window.devicePixelRatio || 1));
+    var key=scene.media_background_entity+"/"+data.artwork+"/"+size,cover=this.cover;
     if(cover && cover.key!==key){this.clearCover();cover=null;}
     if(!cover){
       var node=child(this.root,"cover-background"),image=document.createElement("img");
@@ -81,12 +83,16 @@
     style(cover.shade,"background","rgba(0,0,0,"+(scene.media_background_dim === undefined ? .35 : scene.media_background_dim)+")");
     if(cover.ready){this.coverGeometry();return;}
     if(cover.url || Date.now()<cover.retryAt){return;}
-    var url=this.options.mediaUrl(scene.media_background_entity,data.artwork);
+    var url=this.options.mediaUrl(scene.media_background_entity,data.artwork,size);
     if(!url){return;}cover.url=url;
     cover.image.onload=function () {
       if(self.cover!==cover){return;}
       if(!cover.image.naturalWidth){cover.image.onerror();return;}
-      try {style(cover.node,"background",edgeBackground(cover.image));}
+      try {
+        var artworkKey=scene.media_background_entity+"/"+data.artwork;
+        if(self.edgeKey!==artworkKey){self.edgeColor=edgeBackground(cover.image);self.edgeKey=artworkKey;}
+        style(cover.node,"background",self.edgeColor);
+      }
       catch(_){style(cover.node,"background",self.scene.color);}
       cover.ready=true;cover.node.classList.add("loaded");self.coverGeometry();
     };
@@ -193,6 +199,7 @@
     this.root.classList.remove("lg-scene"); this.root.style.background=""; this.root._lgStyle={};
     if (this.hdmi) {this.hdmi.removeAttribute("style"); this.hdmi._lgStyle={};}
   };
+  window.LGArtworkSize=artworkSize;
   window.LGLayoutRenderer=Renderer;
   window.LGLayoutBackground=background;
 }());

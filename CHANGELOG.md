@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.12.0
+
+- Add the persistent Mediaplayer source and configurable full-screen media view in Display Studio, with artwork, metadata, playback state and progress. Keep independent named views, colour themes and optional cover backgrounds.
+- Keep HDMI full-screen selection, notification return, OSD restoration, restart persistence and AV standby protection consistent across Dashboard, PiP and Mediaplayer. Extend public API v1 additively for AV Companion 1.3.0.
+- Select bounded 640/1280/2160 artwork tiers using viewport area and pixel density. Share one upstream fetch, preserve originals without upscaling, cap the JPEG cache at 32 MiB and retain 4K background uploads. Add static gradient dithering and bounded renderer diagnostics.
+- Release display app 1.9.0. Verify on the existing HA container and physical LG using the actual Wohnzimmer Sonos, including source transitions and notification return without interrupting AirPlay.
+
 ## 2.11.0
 
 - Add an optional per-view media-player cover background to Display Studio, independent of media cards. Show it only while the selected player is playing; restore the regular theme on pause, stop, unavailable/missing artwork or load errors.

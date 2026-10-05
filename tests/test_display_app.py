@@ -1075,7 +1075,7 @@ async def test_dashboard_source_is_persistent_excludes_av_standby_and_hdmi_selec
             app.controller, SimpleNamespace(entry_id="test", options={})
         )
         api = get_display_api(app.hass, "test")
-        assert entity.source_list[-2:] == ["Dashboard", "PiP"]
+        assert entity.source_list[-3:] == ["Dashboard", "PiP", "Mediaplayer"]
         assert api.dashboard_available
         app.web.reset_mock()
         app.controller._lg_display.async_set_input.reset_mock()
@@ -1184,6 +1184,7 @@ async def test_dashboard_source_does_not_hide_a_custom_hdmi_label(app):
             "HDMI 3",
             "Dashboard (App)",
             "PiP",
+            "Mediaplayer",
         ]
         await acknowledge_selection(app, entity.async_select_source("Dashboard (App)"))
         assert entity.source == "Dashboard (App)"
@@ -1210,7 +1211,7 @@ async def test_paired_media_artwork_only_exposes_selected_saved_players(app):
     )
     layouts.media._cache["media_player.sonos"] = (
         layouts.media.key("media_player.sonos"),
-        cover(),
+        {640: cover()},
         0,
     )
 
@@ -1253,6 +1254,7 @@ async def test_paired_media_artwork_only_exposes_selected_saved_players(app):
             cfg["scenes"]["dashboard"]["elements"] = [item]
             await layouts.async_save(cfg, layouts.revision)
             assert (await client.get(url)).status == 200
+            assert (await client.get(url + "&size=99999")).status == 400
             assert (await client.get(url.replace(app.token, "wrong"))).status == 404
             cfg["scenes"]["dashboard"]["elements"] = []
             await layouts.async_save(cfg, layouts.revision)
@@ -1373,3 +1375,138 @@ async def test_aspect_ratio_payload_tracks_native_setting_and_subscription_is_cl
     assert app.state()["hdmi_fit"] == "contain"
     await app.async_close()
     display.subscribe_aspect_ratio.return_value.assert_called_once()
+
+
+async def test_media_view_source_is_independent_persisted_and_same_hdmi_exits_it(app):
+    from custom_components.lg_rs232_ip.api import get_display_api
+    from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
+
+    layouts = await configure_dashboard(app)
+    try:
+        entity = LGDisplayMediaPlayer(
+            app.controller, SimpleNamespace(entry_id="test", options={})
+        )
+        api = get_display_api(app.hass, "test")
+        assert api.media_view_available and "Mediaplayer" in entity.source_list
+        await acknowledge_selection(app, entity.async_select_source("Mediaplayer"))
+        assert (
+            app.media_view_selected
+            and not app.dashboard_selected
+            and entity.source == "Mediaplayer"
+        )
+        assert app.state()["media_view"] and not app.state()["dashboard"]
+        assert (await app.store.async_load())["media_view"] is True
+        assert api.presentation_active and api.media_view_active
+        assert await api.async_get_input() is None
+        assert await api.async_get_signal_status() is None
+        # A separate instance reads the selected source from the recovery journal.
+        second = DisplayAppManager(app.hass, app.entry, app.controller, app.web)
+        second.layouts = layouts
+        second.resident = True
+        await second.async_start()
+        assert second.media_view_selected and not second.dashboard_selected
+        await second.async_close()
+        # Selecting Dashboard leaves Mediaplayer, selecting the same HDMI leaves both.
+        await acknowledge_selection(app, entity.async_select_source("Dashboard"))
+        assert app.dashboard_selected and not app.media_view_selected
+        await acknowledge_selection(app, api.async_select_media_view())
+        await acknowledge_selection(app, api.async_set_input(0x90))
+        assert not app.media_view_selected and entity.source == "HDMI 1"
+        assert not api.presentation_active
+    finally:
+        await layouts.async_close()
+
+
+async def test_failed_view_change_restores_media_view_and_explicit_power_off_releases_guard(
+    app,
+):
+    from custom_components.lg_rs232_ip.api import get_display_api
+
+    layouts = await configure_dashboard(app)
+
+    async def timeout(awaitable, _timeout):
+        awaitable.close()
+        raise TimeoutError
+
+    try:
+        await acknowledge_selection(app, app.async_select_media_view())
+        with patch(
+            "custom_components.lg_rs232_ip.resident_app.asyncio.wait_for", timeout
+        ):
+            with pytest.raises(HomeAssistantError, match="confirm"):
+                await app.async_select_dashboard()
+        assert app.media_view_selected and not app.dashboard_selected
+        assert (await app.store.async_load())["media_view"] is True
+        api = get_display_api(app.hass, "test")
+        app.controller.power = False
+        app.controller._lg_display.async_get_power_status.return_value = False
+        assert not api.media_view_active
+        async with api.supply_guard() as allowed:
+            assert allowed
+        assert app.saved["media_view"]  # Wake keeps the selected view.
+    finally:
+        await layouts.async_close()
+
+
+async def test_media_view_label_collision_does_not_hide_physical_hdmi(app):
+    from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
+
+    layouts = await configure_dashboard(app)
+    try:
+        entity = LGDisplayMediaPlayer(
+            app.controller,
+            SimpleNamespace(
+                entry_id="test", options={"input_name_hdmi1": "Mediaplayer"}
+            ),
+        )
+        assert entity.media_view_source == "Mediaplayer (App)"
+        assert (
+            "Mediaplayer" in entity.source_list
+            and "Mediaplayer (App)" in entity.source_list
+        )
+        await acknowledge_selection(
+            app, entity.async_select_source("Mediaplayer (App)")
+        )
+        assert entity.source == "Mediaplayer (App)"
+        await acknowledge_selection(app, entity.async_select_source("Mediaplayer"))
+        assert not app.media_view_selected
+    finally:
+        await layouts.async_close()
+
+
+async def test_rendering_diagnostics_only_accept_bounded_dimensions(app):
+    app.event(
+        {
+            "type": "hello",
+            "version": "1.9.0",
+            "visible": True,
+            "rendering": {
+                "width": 3840,
+                "height": 2160,
+                "screen_width": 3840,
+                "screen_height": 2160,
+                "pixel_ratio": 1,
+                "private": "ignored",
+            },
+        }
+    )
+    assert app.attributes["rendering"] == {
+        "width": 3840,
+        "height": 2160,
+        "screen_width": 3840,
+        "screen_height": 2160,
+        "pixel_ratio": 1,
+    }
+    app.event(
+        {
+            "type": "heartbeat",
+            "rendering": {
+                "width": True,
+                "height": 0,
+                "screen_width": 10000,
+                "screen_height": "2160",
+                "pixel_ratio": 99,
+            },
+        }
+    )
+    assert app.attributes["rendering"] == {}

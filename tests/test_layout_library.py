@@ -82,7 +82,7 @@ async def test_saved_views_only_publish_assigned_data_and_survive_restart(layout
     layouts.hass.states.async_set("sensor.private", "secret")
     await layouts.async_save(config, 0, library)
     assert "private" not in str(layouts.payload())
-    assert len(layouts.editor_document()["config"]["views"]) == 8
+    assert len(layouts.editor_document()["config"]["views"]) == 9
     second = DisplayLayouts(layouts.hass, layouts.entry)
     await second.async_start()
     try:
@@ -146,7 +146,7 @@ async def test_library_api_authorization_and_inactive_background_protection(layo
             path, headers=headers, json={"config": editor, "revision": 0}
         )
         assert response.status == 200
-        assert len((await response.json())["config"]["views"]) == 8
+        assert len((await response.json())["config"]["views"]) == 9
         assert (
             await client.post(
                 path, headers=headers, json={"config": editor, "revision": 0}
@@ -224,3 +224,16 @@ async def test_legacy_hdmi_scenes_stay_saved_but_do_not_publish_or_request_data(
     assert "no_signal" not in layouts.payload()["config"]["scenes"]
     assert layouts.values() == {} and layouts.media_entities() == set()
     assert layouts.forecast_requests() == {}
+
+
+def test_existing_views_gain_media_context_without_changing_saved_scenes():
+    original = from_config(make_layout("aurora"))
+    original["views"] = [v for v in original["views"] if v["id"] != "media_view"]
+    original["assignments"].pop("media_view")
+    runtime, normalized = validate_library(original, make_layout())
+    assert normalized["views"] == original["views"]
+    assert normalized["assignments"]["media_view"] == ""
+    assert runtime["scenes"]["media_view"]["elements"][0]["media_style"] == "stage"
+    assert all(
+        item["kind"] != "hdmi" for item in runtime["scenes"]["media_view"]["elements"]
+    )

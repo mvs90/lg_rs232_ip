@@ -1,5 +1,19 @@
 # Release acceptance
 
+## LG 2.12.0 / AV 1.3.0: full-screen media and UHD assets — 2026-10-05
+
+**331 LG and 95 AV Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14.** **116 browser cases pass across Chromium and WebKit**, including 3840×2160 at density 1 and the physical LG's 1920×1080 CSS viewport at density 2. New checks exercise persistent media-source selection, same-HDMI exit, OSD rollback, restart state, standby/supply guards, name collisions, old saved views, artwork tiers/shared fetches/cache-byte limits, oversize-cache completion, strict resolution queries, 4K background retention, long-title geometry and gallery source assignment.
+
+Using the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container and physical **75UH5F-HJ / webOS 4.0.1-136**, integration 2.12.0 and app 1.9.0 displayed the **actual Wohnzimmer Sonos** currently playing through AirPlay. No synthetic media integration was installed and no play/pause/skip command was sent to Sonos. The additional named music view was saved while preserving all six existing views and their assignments. Original Dashboard source was restored after testing.
+
+- Native LG capture verified large cover, title, artist, album, playback state and progress. Studio showed the same live Sonos metadata and editable full-screen card controls. Naturally changing tracks updated the preview.
+- Repeated Mediaplayer → PiP → Mediaplayer → HDMI → Mediaplayer selections retained the SI launcher as foreground. An overlay returned to the music view. The video element identity and hidden HDMI during music notifications are also asserted in both browsers.
+- A temporary AV Companion entry exposed and selected Mediaplayer, returned to HDMI full-screen, and followed direct LG selection. It was removed after the test; source/library were preserved. Actual HomeKit discovery on an iPhone was not tested.
+- Runtime diagnostics measured **1920×1080 CSS pixels, device pixel ratio 2, screen 1920×1080**. Resource selection therefore targets 3840×2160; internal GPU buffer format/resolution and panel bit depth are not independently verified. Native capture remains limited to Full HD.
+- The real AirPlay artwork was **512×512** for all requested tiers (640/1280/2160), proving that small originals are not artificially upscaled. Separate image tests verify high-resolution variants and 3840×2160 backgrounds.
+
+Private screenshots, player details and credentials remain excluded from Git. The new media view is configured for the user's room; it does not change playback or bind a sound system to the standalone LG integration.
+
 ## LG 2.11.0: media cover backgrounds — 2026-10-05
 
 **322 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 108 browser cases pass across Chromium and WebKit.** New coverage includes background-only entity subscriptions/scoped image access, strict options and the combined entity limit, playback/track transitions, all three fit modes, dimming, actual red/blue border sampling, one analysis per unchanged cover, slow obsolete responses, image-failure backoff, theme/save/undo/duplicate preservation and HDMI element identity.

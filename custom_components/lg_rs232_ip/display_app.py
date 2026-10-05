@@ -23,7 +23,7 @@ from .const import DOMAIN
 from .resident_app import ResidentApp, SI_APP_ID
 from .web_manager import LGWebError
 
-APP_VERSION = "1.8.0"
+APP_VERSION = "1.9.0"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -76,6 +76,7 @@ class DisplayAppManager(ResidentApp):
         self.client_layout_scene = None
         self.client_layout_revision = None
         self.client_has_bridge = False
+        self.client_rendering = {}
         self.last_error = None
         self._rendered = asyncio.Event()
         self.closed = False
@@ -116,6 +117,7 @@ class DisplayAppManager(ResidentApp):
                         "weather.js",
                         "cards.js",
                         "layout.css",
+                        "grain.png",
                     )
                 }
             )
@@ -225,6 +227,7 @@ class DisplayAppManager(ResidentApp):
             "resident_enabled": self.resident,
             "dashboard_selected": self.dashboard_selected,
             "pip_selected": self.pip_selected,
+            "media_view_selected": self.media_view_selected,
             "resident_connected": self.resident_connected,
             "resident_paused": bool(self.saved.get("paused")),
             "capture_capable": self.connected and self.capture_capable,
@@ -234,6 +237,7 @@ class DisplayAppManager(ResidentApp):
             "layout_scene": self.client_layout_scene if self.connected else None,
             "layout_revision": self.client_layout_revision if self.connected else None,
             "platform_bridge_present": self.client_has_bridge,
+            "rendering": self.client_rendering if self.connected else {},
             "si_configured": bool(self.saved.get("installed")),
             "si_restore_pending": "previous" in self.saved and not self.resident,
             "last_error": self.last_error,
@@ -454,6 +458,7 @@ class DisplayAppManager(ResidentApp):
             else "contain",
             "dashboard": self.dashboard_selected,
             "pip": self.pip_selected,
+            "media_view": self.media_view_selected,
             "capture": self._capture,
             "input_request": self._input_request,
             "layout": self.layouts.payload() if self.layouts else None,
@@ -499,6 +504,7 @@ class DisplayAppManager(ResidentApp):
         before = (
             self.connected,
             self.client_version,
+            dict(self.client_rendering),
             self.client_layout_scene,
             self.client_layout_revision,
             self.client_hdmi,
@@ -522,6 +528,7 @@ class DisplayAppManager(ResidentApp):
                     "no_signal",
                     "dashboard",
                     "pip_view",
+                    "media_view",
                     "overlay",
                     "pip",
                     "fullscreen",
@@ -531,6 +538,16 @@ class DisplayAppManager(ResidentApp):
             self.client_layout_revision = (
                 revision if type(revision) is int and revision >= 0 else None
             )
+            rendering = value.get("rendering")
+            if isinstance(rendering, dict):
+                self.client_rendering = {
+                    key: rendering[key]
+                    for key in ("width", "height", "screen_width", "screen_height")
+                    if type(rendering.get(key)) is int and 1 <= rendering[key] <= 8192
+                }
+                ratio = rendering.get("pixel_ratio")
+                if type(ratio) in (int, float) and 0.5 <= ratio <= 4:
+                    self.client_rendering["pixel_ratio"] = ratio
             self.client_visible = value.get("visible") is True
             self.client_hdmi = value.get("hdmi_ready") is True
             self.capture_capable = value.get("capture") is True
@@ -562,6 +579,7 @@ class DisplayAppManager(ResidentApp):
         after = (
             self.connected,
             self.client_version,
+            dict(self.client_rendering),
             self.client_layout_scene,
             self.client_layout_revision,
             self.client_hdmi,
@@ -611,8 +629,14 @@ class DisplayAppView(HomeAssistantView):
                 or entity not in manager.layouts.media_entities()
             ):
                 raise web.HTTPNotFound()
+            from .layout_media import artwork_size
+
+            try:
+                size = artwork_size(request.query.get("size", "640"))
+            except ValueError as err:
+                raise web.HTTPBadRequest(text=str(err)) from None
             data = await manager.layouts.media.async_image(
-                entity, request.query.get("v")
+                entity, request.query.get("v"), size
             )
             return web.Response(
                 body=data,
@@ -646,6 +670,7 @@ class DisplayAppView(HomeAssistantView):
             "weather.js": "application/javascript",
             "cards.js": "application/javascript",
             "layout.css": "text/css",
+            "grain.png": "image/png",
         }
         if resource not in mime:
             raise web.HTTPNotFound()

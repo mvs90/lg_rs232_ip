@@ -12,6 +12,7 @@ SCENES = (
     "pip",
     "fullscreen",
     "pip_view",
+    "media_view",
 )
 KINDS = (
     "hdmi",
@@ -188,6 +189,21 @@ def make_layout(style="cinema"):
         if style != "cinema"
         else make_layout("aurora")["scenes"]["signal"]["elements"]
     )
+    media_view = [
+        block(
+            "media",
+            5,
+            12,
+            90,
+            76,
+            label="JETZT LÄUFT",
+            font_size=8,
+            opacity=0,
+            media_style="stage",
+            show_volume=False,
+        ),
+        block("clock", 74, 3, 21, 9, font_size=3, opacity=0, show_label=False),
+    ]
     return {
         "schema": 1,
         "enabled": False,
@@ -203,7 +219,16 @@ def make_layout(style="cinema"):
             )
             for key, items in zip(
                 SCENES,
-                (signal, overview, dashboard, overlay, pip, fullscreen, pip_view),
+                (
+                    signal,
+                    overview,
+                    dashboard,
+                    overlay,
+                    pip,
+                    fullscreen,
+                    pip_view,
+                    media_view,
+                ),
             )
         },
     }
@@ -294,6 +319,8 @@ def validate_layout(value):
     entities = set()
     for key in SCENES:
         raw = value.get("scenes", {}).get(key)
+        if key == "media_view" and raw is None:
+            raw = make_layout()["scenes"]["media_view"]
         if key == "pip_view" and raw is None:
             raw = deepcopy(value["scenes"].get("signal"))
         if key == "dashboard" and raw is None:
@@ -399,7 +426,7 @@ def validate_layout(value):
                     raise ValueError("Invalid card option")
                 obj[flag] = item.get(flag, True)
             obj["media_style"] = _choice(
-                item.get("media_style", "compact"), ("compact", "poster")
+                item.get("media_style", "compact"), ("compact", "poster", "stage")
             )
             obj["accent_color"] = _color(item.get("accent_color", "#79e5c0"))
             if type(item.get("show_label")) is not bool:

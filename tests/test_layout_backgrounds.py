@@ -28,7 +28,7 @@ def png():
 def test_background_decode_is_bounded_and_reencoded_without_metadata():
     data = prepare_background(png())
     with Image.open(BytesIO(data)) as image:
-        assert image.format == "JPEG" and image.width <= 1920 and image.height <= 1080
+        assert image.format == "JPEG" and image.width <= 3840 and image.height <= 2160
         assert not image.getexif() and image.mode == "RGB"
     for data in (b"<svg><script>alert(1)</script></svg>", b"", b"x" * (MAX_BYTES + 1)):
         with pytest.raises(ValueError):
@@ -101,3 +101,11 @@ async def test_upload_is_private_deduplicated_and_referenced_images_cannot_be_de
     finally:
         await manager.async_close()
         await hass.async_stop(force=True)
+
+
+def test_4k_background_keeps_native_dimensions():
+    raw = BytesIO()
+    Image.new("RGB", (3840, 2160), "navy").save(raw, format="PNG")
+    image = Image.open(BytesIO(prepare_background(raw.getvalue())))
+    assert image.size == (3840, 2160)
+    assert not image.getexif()

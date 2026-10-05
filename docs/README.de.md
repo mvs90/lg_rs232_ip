@@ -81,3 +81,7 @@ Im Editor links nur Farben und Hintergrund ändern; Inhalte, Entitäten und Posi
 **Aspect Ratio** bietet **Full Screen** (Fläche ausfüllen) und **Original** (Proportionen beibehalten). Das gilt auch für die HDMI-Fläche in der optionalen App; PiP-Position und Größe bleiben im Studio einstellbar. Der alte Zahlenregler heißt **Aspect Ratio Code** und akzeptiert nur noch 2 oder 6.
 
 **Backlight** ist bei Energiesparen **AUTO/MAXIMUM**, aktiver LG-Helligkeitsplanung oder ausgeschaltetem Panel gesperrt. Der Sensor **Backlight Control** zeigt den Grund. Für manuelle Regelung **Energy Saving → OFF, MINIMUM oder MEDIUM** wählen. Ein konfigurierter DPM-Timer allein verhindert die Regelung nicht; DPM und Energiesparen werden niemals automatisch umgestellt. Bildmoduswechsel können einen anderen gespeicherten Backlight-Wert laden. [Abhängigkeiten, Bedienung und Gerätetest](PICTURE-CONTROLS.md).
+
+## Mediaplayer-Vollbild und 4K
+
+Ab LG 2.12.0 bietet Display Studio den Aufbau und die Quelle **Mediaplayer** neben Dashboard und PiP. Medienkarte mit einer vorhandenen Sonos-/Player-Entität verbinden, Gestaltung speichern und **Mediaplayer anzeigen** wählen. Cover, Titel, Interpret, Status, Fortschritt und Widgets sind anpassbar. Hintergründe behalten bis zu 4K; Cover berücksichtigen die Pixeldichte des Displays. Details und Geräte-Grenzen: [Display Studio](DISPLAY-STUDIO.md#mediaplayer-im-vollbild).

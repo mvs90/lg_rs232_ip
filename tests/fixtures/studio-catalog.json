@@ -12,7 +12,7 @@
     {
       "id": "cinema",
       "name": "Cinema",
-      "description": "HDMI im Vollbild · dezente Meldungen · Übersicht ohne Signal",
+      "description": "HDMI im Vollbild \u00b7 dezente Meldungen \u00b7 \u00dcbersicht ohne Signal",
       "layout": {
         "schema": 1,
         "enabled": false,
@@ -58,7 +58,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "no_signal": {
             "background": "midnight",
@@ -101,7 +105,7 @@
                 "y": 7,
                 "width": 31,
                 "height": 28,
-                "label": "Draußen",
+                "label": "Drau\u00dfen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 5,
@@ -214,7 +218,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "dashboard": {
             "background": "midnight",
@@ -345,7 +353,7 @@
                 "width": 24,
                 "height": 27,
                 "label": "",
-                "text": "Zeit für einen guten Start.",
+                "text": "Zeit f\u00fcr einen guten Start.",
                 "entity_id": "",
                 "font_size": 2.8,
                 "color": "#f2f6fa",
@@ -370,7 +378,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "overlay": {
             "background": "midnight",
@@ -439,7 +451,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "pip": {
             "background": "midnight",
@@ -537,7 +553,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "fullscreen": {
             "background": "midnight",
@@ -606,7 +626,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "pip_view": {
             "background": "midnight",
@@ -649,7 +673,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Draußen",
+                "label": "Drau\u00dfen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -678,7 +702,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als Nächstes",
+                "label": "Als N\u00e4chstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -766,7 +790,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Schön, dass du da bist.",
+                "text": "Sch\u00f6n, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#f2f6fa",
@@ -791,7 +815,84 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
+          },
+          "media_view": {
+            "background": "midnight",
+            "color": "#101827",
+            "accent": "#8fb6ff",
+            "elements": [
+              {
+                "id": "media",
+                "kind": "media",
+                "x": 5,
+                "y": 12,
+                "width": 90,
+                "height": 76,
+                "label": "JETZT L\u00c4UFT",
+                "text": "",
+                "entity_id": "",
+                "font_size": 8,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "stage",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": false,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
+              },
+              {
+                "id": "clock",
+                "kind": "clock",
+                "x": 74,
+                "y": 3,
+                "width": 21,
+                "height": 9,
+                "label": "",
+                "text": "",
+                "entity_id": "",
+                "font_size": 3,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
+              }
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           }
         }
       }
@@ -799,7 +900,7 @@
     {
       "id": "aurora",
       "name": "Aurora",
-      "description": "Grüne Lichtflächen · HDMI neben Uhr, Wetter und Terminen",
+      "description": "Gr\u00fcne Lichtfl\u00e4chen \u00b7 HDMI neben Uhr, Wetter und Terminen",
       "layout": {
         "schema": 1,
         "enabled": false,
@@ -848,7 +949,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Draußen",
+                "label": "Drau\u00dfen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -877,7 +978,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als Nächstes",
+                "label": "Als N\u00e4chstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -965,7 +1066,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Schön, dass du da bist.",
+                "text": "Sch\u00f6n, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#f2f6fa",
@@ -990,7 +1091,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "no_signal": {
             "background": "aurora",
@@ -1033,7 +1138,7 @@
                 "y": 7,
                 "width": 31,
                 "height": 28,
-                "label": "Draußen",
+                "label": "Drau\u00dfen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 5,
@@ -1146,7 +1251,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "dashboard": {
             "background": "aurora",
@@ -1277,7 +1386,7 @@
                 "width": 24,
                 "height": 27,
                 "label": "",
-                "text": "Zeit für einen guten Start.",
+                "text": "Zeit f\u00fcr einen guten Start.",
                 "entity_id": "",
                 "font_size": 2.8,
                 "color": "#f2f6fa",
@@ -1302,7 +1411,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "overlay": {
             "background": "aurora",
@@ -1371,7 +1484,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "pip": {
             "background": "aurora",
@@ -1469,7 +1586,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "fullscreen": {
             "background": "aurora",
@@ -1538,7 +1659,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "pip_view": {
             "background": "aurora",
@@ -1581,7 +1706,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Draußen",
+                "label": "Drau\u00dfen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -1610,7 +1735,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als Nächstes",
+                "label": "Als N\u00e4chstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -1698,7 +1823,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Schön, dass du da bist.",
+                "text": "Sch\u00f6n, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#f2f6fa",
@@ -1723,7 +1848,84 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
+          },
+          "media_view": {
+            "background": "aurora",
+            "color": "#0b2228",
+            "accent": "#79e5c0",
+            "elements": [
+              {
+                "id": "media",
+                "kind": "media",
+                "x": 5,
+                "y": 12,
+                "width": 90,
+                "height": 76,
+                "label": "JETZT L\u00c4UFT",
+                "text": "",
+                "entity_id": "",
+                "font_size": 8,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "stage",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": false,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
+              },
+              {
+                "id": "clock",
+                "kind": "clock",
+                "x": 74,
+                "y": 3,
+                "width": 21,
+                "height": 9,
+                "label": "",
+                "text": "",
+                "entity_id": "",
+                "font_size": 3,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
+              }
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           }
         }
       }
@@ -1731,7 +1933,7 @@
     {
       "id": "morning",
       "name": "Sonnenstand",
-      "description": "Lebendiger Himmel · Farben und Licht folgen der Sonne",
+      "description": "Lebendiger Himmel \u00b7 Farben und Licht folgen der Sonne",
       "layout": {
         "schema": 1,
         "enabled": false,
@@ -1780,7 +1982,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Draußen",
+                "label": "Drau\u00dfen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -1809,7 +2011,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als Nächstes",
+                "label": "Als N\u00e4chstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -1897,7 +2099,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Schön, dass du da bist.",
+                "text": "Sch\u00f6n, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#f2f6fa",
@@ -1922,7 +2124,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "no_signal": {
             "background": "solar",
@@ -1965,7 +2171,7 @@
                 "y": 7,
                 "width": 31,
                 "height": 28,
-                "label": "Draußen",
+                "label": "Drau\u00dfen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 5,
@@ -2078,7 +2284,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "dashboard": {
             "background": "solar",
@@ -2209,7 +2419,7 @@
                 "width": 24,
                 "height": 27,
                 "label": "",
-                "text": "Zeit für einen guten Start.",
+                "text": "Zeit f\u00fcr einen guten Start.",
                 "entity_id": "",
                 "font_size": 2.8,
                 "color": "#f2f6fa",
@@ -2234,7 +2444,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "overlay": {
             "background": "solar",
@@ -2303,7 +2517,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "pip": {
             "background": "solar",
@@ -2401,7 +2619,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "fullscreen": {
             "background": "solar",
@@ -2470,7 +2692,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "pip_view": {
             "background": "solar",
@@ -2513,7 +2739,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Draußen",
+                "label": "Drau\u00dfen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -2542,7 +2768,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als Nächstes",
+                "label": "Als N\u00e4chstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -2630,7 +2856,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Schön, dass du da bist.",
+                "text": "Sch\u00f6n, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#f2f6fa",
@@ -2655,7 +2881,84 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
+          },
+          "media_view": {
+            "background": "solar",
+            "color": "#382033",
+            "accent": "#ffcfaa",
+            "elements": [
+              {
+                "id": "media",
+                "kind": "media",
+                "x": 5,
+                "y": 12,
+                "width": 90,
+                "height": 76,
+                "label": "JETZT L\u00c4UFT",
+                "text": "",
+                "entity_id": "",
+                "font_size": 8,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "stage",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": false,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
+              },
+              {
+                "id": "clock",
+                "kind": "clock",
+                "x": 74,
+                "y": 3,
+                "width": 21,
+                "height": 9,
+                "label": "",
+                "text": "",
+                "entity_id": "",
+                "font_size": 3,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
+              }
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           }
         }
       }
@@ -2663,7 +2966,7 @@
     {
       "id": "sand",
       "name": "Paper & Sand",
-      "description": "Helle Flächen · klare Typografie · natürliche Farben",
+      "description": "Helle Fl\u00e4chen \u00b7 klare Typografie \u00b7 nat\u00fcrliche Farben",
       "layout": {
         "schema": 1,
         "enabled": false,
@@ -2712,7 +3015,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Draußen",
+                "label": "Drau\u00dfen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -2741,7 +3044,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als Nächstes",
+                "label": "Als N\u00e4chstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -2829,7 +3132,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Schön, dass du da bist.",
+                "text": "Sch\u00f6n, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#302c26",
@@ -2854,7 +3157,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "no_signal": {
             "background": "sand",
@@ -2897,7 +3204,7 @@
                 "y": 7,
                 "width": 31,
                 "height": 28,
-                "label": "Draußen",
+                "label": "Drau\u00dfen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 5,
@@ -3010,7 +3317,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "dashboard": {
             "background": "sand",
@@ -3141,7 +3452,7 @@
                 "width": 24,
                 "height": 27,
                 "label": "",
-                "text": "Zeit für einen guten Start.",
+                "text": "Zeit f\u00fcr einen guten Start.",
                 "entity_id": "",
                 "font_size": 2.8,
                 "color": "#302c26",
@@ -3166,7 +3477,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "overlay": {
             "background": "sand",
@@ -3235,7 +3550,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "pip": {
             "background": "sand",
@@ -3333,7 +3652,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "fullscreen": {
             "background": "sand",
@@ -3402,7 +3725,11 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           },
           "pip_view": {
             "background": "sand",
@@ -3445,7 +3772,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Draußen",
+                "label": "Drau\u00dfen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -3474,7 +3801,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als Nächstes",
+                "label": "Als N\u00e4chstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -3562,7 +3889,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Schön, dass du da bist.",
+                "text": "Sch\u00f6n, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#302c26",
@@ -3587,7 +3914,84 @@
             "image_id": "",
             "image_fit": "cover",
             "image_dim": 0.25,
-            "gradient_angle": 135
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
+          },
+          "media_view": {
+            "background": "sand",
+            "color": "#e9e0cf",
+            "accent": "#76654c",
+            "elements": [
+              {
+                "id": "media",
+                "kind": "media",
+                "x": 5,
+                "y": 12,
+                "width": 90,
+                "height": 76,
+                "label": "JETZT L\u00c4UFT",
+                "text": "",
+                "entity_id": "",
+                "font_size": 8,
+                "color": "#302c26",
+                "background": "#fffaf0",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": true,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "stage",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": false,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
+              },
+              {
+                "id": "clock",
+                "kind": "clock",
+                "x": 74,
+                "y": 3,
+                "width": 21,
+                "height": 9,
+                "label": "",
+                "text": "",
+                "entity_id": "",
+                "font_size": 3,
+                "color": "#302c26",
+                "background": "#fffaf0",
+                "opacity": 0,
+                "radius": 24,
+                "align": "left",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0"
+              }
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
           }
         }
       }

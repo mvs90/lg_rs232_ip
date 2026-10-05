@@ -43,7 +43,8 @@
     var visibility=item.show_cover===false?"none":"block";if(area.style.display!==visibility){area.style.display=visibility;}
     if(key!==node._artKey){node._artKey=key;node._artRetry=0;node._artUrl=null;area.classList.remove("loaded");img.removeAttribute("src");}
     if(!key||!options.mediaUrl||node._artRetry>Date.now()){return;}
-    var url=options.mediaUrl(item.entity_id,key);if(!url){return;}
+    var pixels=Math.max(area.clientWidth,area.clientHeight)*(window.devicePixelRatio || 1);
+    var url=options.mediaUrl(item.entity_id,key,window.LGArtworkSize ? window.LGArtworkSize(pixels) : 640);if(!url){return;}
     if(url!==node._artUrl||node._artRetry){node._artUrl=url;var retry=node._artRetry;node._artRetry=0;img.src=url+(retry&&url.indexOf("blob:")!==0?"&retry="+Math.floor(Date.now()/30000):"");}
   }
   function renderMedia(node,item,data,options){
@@ -61,10 +62,10 @@
     text(node._value,valid?(data.media_title||data.source||data.name||"Keine Titelinformationen"):data?(data.name||item.label||"Mediaplayer"):"Deine Musik");
     text(node._detail,valid?(data.media_artist||data.app_name||""):"");text(node._mediaAlbum,valid?(data.media_album_name||""):"");
     text(node._mediaVolume,item.show_volume!==false&&valid?(data.is_volume_muted?"Stumm":typeof data.volume_level==="number"?"Lautstärke "+Math.round(data.volume_level*100)+" %":""):"");
-    tickMedia(node,item,data,options);
+    geometry(node,item);tickMedia(node,item,data,options);
   }
   function geometry(node,item){
-    if(!node._mediaArt){return;}var size=item.media_style==='poster'?'100%':Math.round(Math.min(node.clientWidth*.32,node.clientHeight*.76))+"px";
+    if(!node._mediaArt){return;}var size=item.media_style==='poster'?'100%':Math.round(Math.min(node.clientWidth*(item.media_style==='stage' ? .44 : .32),node.clientHeight*(item.media_style==='stage' ? .94 : .76)))+"px";
     if(node._mediaArt.style.width!==size){node._mediaArt.style.width=size;node._mediaArt.style.height=size;node._mediaArt.style.paddingBottom="0";}
   }
   function tickMedia(node,item,data,options){
