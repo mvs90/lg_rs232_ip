@@ -397,3 +397,27 @@ test('an unassigned gallery view explicitly offers assignment instead of ambiguo
   await card.getByRole('button',{name:'Als Dashboard verwenden',exact:true}).click();
   expect(await page.evaluate(()=>saved.views.find(v=>v.id===saved.assignments.dashboard).name)).toBe('Mediaplayer · Kopie');
 });
+
+test('music view saves colour-only background and optional timeline state without changing assignments',async({page})=>{
+  await mount(page);
+  await page.evaluate(png=>{
+    hass.states['media_player.sonos']={entity_id:'media_player.sonos',state:'playing',attributes:{friendly_name:'Sonos Wohnzimmer',entity_picture:'/private-art',media_title:'First'}};
+    hass.fetchWithAuth=async()=>new Response(Uint8Array.from(atob(png),c=>c.charCodeAt(0)),{headers:{'Content-Type':'image/png'}});
+  },fs.readFileSync('tests/fixtures/media-cover.png').toString('base64'));
+  await openView(page,'Mediaplayer');
+  await expect(page.getByLabel('Cover darstellen')).toHaveValue('colors');
+  await page.getByLabel('Hintergrund-Medienplayer').selectOption('media_player.sonos');
+  await page.getByLabel('Bei Wiedergabe anzeigen').check();
+  await expect(page.locator('.scene .lg-cover-background')).toHaveClass(/loaded/);
+  await expect(page.locator('.scene .lg-cover-background img')).toBeHidden();
+  await page.locator('.layer .name').filter({hasText:'JETZT LÄUFT'}).click();
+  await expect(page.getByLabel('Play-/Pause-Symbol anzeigen')).toBeChecked();
+  await page.getByLabel('Play-/Pause-Symbol anzeigen').uncheck();
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  expect(await page.evaluate(()=>saved.scenes.media_view.elements[0].show_playback_icon)).toBe(false);
+  expect(await page.evaluate(()=>saved.scenes.media_view.media_background_fit)).toBe('colors');
+  expect(await page.evaluate(()=>saved.assignments.dashboard)).toBe('dashboard');
+  await page.getByLabel('Play-/Pause-Symbol anzeigen').check();
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  expect(await page.evaluate(()=>saved.scenes.media_view.elements[0].show_playback_icon)).toBe(true);
+});

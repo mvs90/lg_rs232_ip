@@ -70,7 +70,7 @@
   Renderer.prototype.renderCover = function () {
     var scene=this.scene,data=this.data[scene.media_background_entity],self=this;
     if(!scene.media_background_enabled || !data || data.state!=="playing" || !data.artwork || !this.options.mediaUrl){this.clearCover();return;}
-    var size=scene.media_background_fit === "center" ? 640 : artworkSize(this.root.clientHeight*(window.devicePixelRatio || 1));
+    var size=(scene.media_background_fit === "center" || scene.media_background_fit === "colors") ? 640 : artworkSize(this.root.clientHeight*(window.devicePixelRatio || 1));
     var key=scene.media_background_entity+"/"+data.artwork+"/"+size,cover=this.cover;
     if(cover && cover.key!==key){this.clearCover();cover=null;}
     if(!cover){
@@ -106,6 +106,7 @@
   Renderer.prototype.coverGeometry = function () {
     var cover=this.cover;if(!cover || !cover.ready){return;}
     var image=cover.image,fit=this.scene.media_background_fit || "contain";
+    if(fit === "colors"){return;}
     if(fit === "center"){
       // Design coordinates keep the Studio preview and a 1080p/4K panel alike.
       // Preserve decoded cover size within the 1920 x 1080 design, never upscale.

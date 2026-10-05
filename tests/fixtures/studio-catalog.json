@@ -50,6 +50,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -94,6 +95,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -123,6 +125,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -152,6 +155,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -181,6 +185,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -210,6 +215,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -254,6 +260,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -283,6 +290,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -312,6 +320,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -341,6 +350,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -370,6 +380,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -414,6 +425,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -443,6 +455,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -487,6 +500,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -516,6 +530,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -545,6 +560,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -589,6 +605,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -618,6 +635,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -662,6 +680,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -691,6 +710,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -720,6 +740,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -749,6 +770,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -778,6 +800,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -807,6 +830,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -851,6 +875,7 @@
                 "media_style": "stage",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": true,
                 "show_volume": false,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -880,6 +905,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -891,7 +917,7 @@
             "gradient_angle": 135,
             "media_background_enabled": false,
             "media_background_entity": "",
-            "media_background_fit": "contain",
+            "media_background_fit": "colors",
             "media_background_dim": 0.35
           }
         }
@@ -938,6 +964,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -967,6 +994,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -996,6 +1024,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1025,6 +1054,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1054,6 +1084,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1083,6 +1114,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1127,6 +1159,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1156,6 +1189,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1185,6 +1219,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1214,6 +1249,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1243,6 +1279,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1287,6 +1324,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1316,6 +1354,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1345,6 +1384,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1374,6 +1414,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1403,6 +1444,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1447,6 +1489,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1476,6 +1519,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1520,6 +1564,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1549,6 +1594,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1578,6 +1624,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1622,6 +1669,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1651,6 +1699,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1695,6 +1744,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1724,6 +1774,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1753,6 +1804,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1782,6 +1834,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1811,6 +1864,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1840,6 +1894,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1884,6 +1939,7 @@
                 "media_style": "stage",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": true,
                 "show_volume": false,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1913,6 +1969,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -1924,7 +1981,7 @@
             "gradient_angle": 135,
             "media_background_enabled": false,
             "media_background_entity": "",
-            "media_background_fit": "contain",
+            "media_background_fit": "colors",
             "media_background_dim": 0.35
           }
         }
@@ -1971,6 +2028,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2000,6 +2058,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2029,6 +2088,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2058,6 +2118,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2087,6 +2148,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2116,6 +2178,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2160,6 +2223,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2189,6 +2253,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2218,6 +2283,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2247,6 +2313,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2276,6 +2343,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2320,6 +2388,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2349,6 +2418,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2378,6 +2448,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2407,6 +2478,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2436,6 +2508,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2480,6 +2553,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2509,6 +2583,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2553,6 +2628,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2582,6 +2658,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2611,6 +2688,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2655,6 +2733,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2684,6 +2763,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2728,6 +2808,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2757,6 +2838,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2786,6 +2868,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2815,6 +2898,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2844,6 +2928,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2873,6 +2958,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2917,6 +3003,7 @@
                 "media_style": "stage",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": true,
                 "show_volume": false,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2946,6 +3033,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -2957,7 +3045,7 @@
             "gradient_angle": 135,
             "media_background_enabled": false,
             "media_background_entity": "",
-            "media_background_fit": "contain",
+            "media_background_fit": "colors",
             "media_background_dim": 0.35
           }
         }
@@ -3004,6 +3092,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3033,6 +3122,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3062,6 +3152,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3091,6 +3182,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3120,6 +3212,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3149,6 +3242,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3193,6 +3287,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3222,6 +3317,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3251,6 +3347,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3280,6 +3377,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3309,6 +3407,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3353,6 +3452,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3382,6 +3482,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3411,6 +3512,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3440,6 +3542,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3469,6 +3572,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3513,6 +3617,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3542,6 +3647,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3586,6 +3692,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3615,6 +3722,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3644,6 +3752,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3688,6 +3797,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3717,6 +3827,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3761,6 +3872,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3790,6 +3902,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3819,6 +3932,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3848,6 +3962,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3877,6 +3992,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3906,6 +4022,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3950,6 +4067,7 @@
                 "media_style": "stage",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": true,
                 "show_volume": false,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3979,6 +4097,7 @@
                 "media_style": "compact",
                 "show_cover": true,
                 "show_progress": true,
+                "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
                 "accent_color": "#79e5c0"
@@ -3990,7 +4109,7 @@
             "gradient_angle": 135,
             "media_background_enabled": false,
             "media_background_entity": "",
-            "media_background_fit": "contain",
+            "media_background_fit": "colors",
             "media_background_dim": 0.35
           }
         }

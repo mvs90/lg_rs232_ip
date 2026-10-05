@@ -59,6 +59,7 @@ def test_media_binding_validation_and_cover_decoding():
         ("entity_id", "camera.private"),
         ("media_style", "url(evil)"),
         ("show_cover", 1),
+        ("show_playback_icon", "false"),
         ("accent_color", "red"),
     ):
         saved = item.get(key)
@@ -71,6 +72,27 @@ def test_media_binding_validation_and_cover_decoding():
     for raw in (b"<svg/>", b"x" * (5 * 1024 * 1024 + 1)):
         with pytest.raises((ValueError, OSError)):
             prepare_cover(raw)
+
+
+def test_media_colour_background_and_optional_icon_survive_validation():
+    cfg = make_layout()
+    scene = cfg["scenes"]["media_view"]
+    assert scene["media_background_fit"] == "colors"
+    card = scene["elements"][0]
+    assert card["show_playback_icon"] is True
+    assert validate_layout(cfg)["scenes"]["media_view"]["elements"][0][
+        "show_playback_icon"
+    ]
+    # Older cards retain the uncluttered timeline until explicitly enabled.
+    del card["show_playback_icon"]
+    assert not validate_layout(cfg)["scenes"]["media_view"]["elements"][0][
+        "show_playback_icon"
+    ]
+    for fit in ("colors", "contain", "center", "stretch"):
+        scene["media_background_fit"] = fit
+        assert (
+            validate_layout(cfg)["scenes"]["media_view"]["media_background_fit"] == fit
+        )
 
 
 async def test_selected_media_metadata_does_not_leak_urls_tokens_or_unselected_entities(

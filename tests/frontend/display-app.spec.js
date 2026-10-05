@@ -9,7 +9,7 @@ async function mount(page, state) {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.9.0', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.10.0', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -355,7 +355,7 @@ test('media cards render artwork and status, advance only playing progress and c
   await page.screenshot({path:'test-results/media-dashboard-'+test.info().project.name+'.png'});
   await page.evaluate(()=>window.artNode=document.querySelector('.lg-media-art img'));
   media.state='paused';media.media_position=81;
-  await expect(page.locator('[data-layout-id=music] .lg-media-state')).toHaveText('Pausiert');
+  await expect(page.locator('.lg-media-state')).toHaveCount(0);
   await expect(page.locator('[data-layout-id=music] .lg-media-elapsed')).toHaveText('1:21');
   await page.waitForTimeout(1300);await expect(page.locator('[data-layout-id=music] .lg-media-elapsed')).toHaveText('1:21');
   expect(await page.evaluate(()=>window.artNode===document.querySelector('.lg-media-art img'))).toBe(true);
@@ -476,7 +476,7 @@ test('4K media view keeps HDMI decoder, uses crisp artwork tiers and returns aft
   const state={content:null,idle_hdmi:'ext://hdmi:1',media_view:true,layout:designed()};
   const scene=state.layout.config.scenes.media_view;
   const item=scene.elements.find(i=>i.kind==='media');item.entity_id='media_player.music';
-  Object.assign(scene,{media_background_enabled:true,media_background_entity:'media_player.music',media_background_dim:.65});
+  Object.assign(scene,{media_background_enabled:true,media_background_entity:'media_player.music',media_background_fit:'contain',media_background_dim:.65});
   state.layout.values['media_player.music']={state:'playing',name:'Wohnzimmer',media_title:'A beautiful evening',media_artist:'The Artist',media_album_name:'Live Sessions',media_duration:240,media_position:42,artwork:'one'};
   const events=await mount(page,state);
   const media=page.locator('.lg-media'),art=media.locator('img');
@@ -512,4 +512,75 @@ test('LG logical 1080p viewport at density two requests UHD artwork without scal
     const boxes=await page.locator('.lg-media').evaluate(n=>({title:n.querySelector('.lg-value').getBoundingClientRect().bottom,artist:n.querySelector('.lg-detail').getBoundingClientRect().top,width:n.clientWidth}));
     expect(boxes.title).toBeLessThan(boxes.artist);expect(boxes.width).toBe(1728);
   }finally{await context.close();}
+});
+
+test('colour-only music backdrop hides the duplicate cover and reuses edge analysis at 4K',async({page})=>{
+  await page.setViewportSize({width:3840,height:2160});
+  await page.addInitScript(()=>{
+    window.edgeSamples=0;
+    const original=CanvasRenderingContext2D.prototype.getImageData;
+    CanvasRenderingContext2D.prototype.getImageData=function(...args){window.edgeSamples++;return original.apply(this,args);};
+  });
+  const state={content:null,idle_hdmi:'ext://hdmi:1',media_view:true,layout:designed()};
+  const scene=state.layout.config.scenes.media_view,card=scene.elements[0];
+  card.entity_id='media_player.music';
+  Object.assign(scene,{media_background_enabled:true,media_background_entity:card.entity_id});
+  const media=state.layout.values[card.entity_id]={state:'playing',name:'Wohnzimmer',media_title:'Morning Light',media_artist:'North Collective',media_album_name:'Slow Sundays',media_duration:240,media_position:81,artwork:'one'};
+  await mount(page,state);
+  const layer=page.locator('.lg-cover-background'),backgroundArt=layer.locator('img');
+  await expect(layer).toHaveClass(/loaded/);
+  await expect(layer).toHaveAttribute('data-fit','colors');
+  await expect(backgroundArt).toBeHidden();
+  await expect(backgroundArt).toHaveAttribute('src',/size=640/);
+  expect(await layer.evaluate(n=>n.style.background)).toContain('radial-gradient');
+  await expect(page.locator('.lg-media-art.loaded img')).toBeVisible();
+  await expect(page.locator('.lg-media-art img')).toHaveAttribute('src',/size=2160/);
+  await expect(page.locator('.lg-media-playback')).toHaveAttribute('aria-label','Wiedergabe');
+  await expect(page.locator('.lg-media-state')).toHaveCount(0);
+  await page.screenshot({path:'test-results/media-colors-4k-'+test.info().project.name+'.png'});
+  scene.media_background_dim=.5;
+  await expect(layer.locator('.lg-cover-shade')).toHaveCSS('background-color','rgba(0, 0, 0, 0.5)');
+  await page.waitForTimeout(1100);expect(await page.evaluate(()=>window.edgeSamples)).toBe(1);
+  scene.media_background_fit='contain';await expect(backgroundArt).toBeVisible();
+  scene.media_background_fit='colors';await expect(backgroundArt).toBeHidden();
+  expect(await page.evaluate(()=>window.edgeSamples)).toBe(1);
+  media.artwork='two';await expect(backgroundArt).toHaveAttribute('src',/v=two&size=640/);
+  await expect.poll(()=>page.evaluate(()=>window.edgeSamples)).toBe(2);
+  media.state='paused';await expect(layer).toHaveCount(0);
+  media.state='playing';media.artwork='missing';await expect(layer).toHaveCount(1);
+  await expect(layer).not.toHaveClass(/loaded/);await expect(backgroundArt).toBeHidden();
+});
+
+test('all media styles show an optional state icon beside the timeline without status text',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',dashboard:true,layout:designed()};
+  const scene=state.layout.config.scenes.dashboard,base=state.layout.config.scenes.media_view.elements[0];
+  const cards=['compact','poster','stage'].map((style,i)=>({...base,id:style,media_style:style,x:3+i*32,y:5,width:30,height:85,font_size:3,entity_id:'media_player.music',show_playback_icon:true}));
+  scene.elements=cards;
+  const media=state.layout.values['media_player.music']={state:'playing',name:'Wohnzimmer',media_title:'Morning Light',media_artist:'North Collective',media_album_name:'Slow Sundays',media_duration:240,media_position:60,artwork:'one'};
+  await mount(page,state);
+  for(const card of cards){
+    const node=page.locator('[data-layout-id='+card.id+']');
+    await expect(node.locator('.lg-media-playback')).toBeVisible();
+    await expect(node.locator('.lg-media-playback')).toHaveAttribute('aria-label','Wiedergabe');
+    const boxes=await node.evaluate(n=>{const icon=n.querySelector('.lg-media-playback').getBoundingClientRect(),bar=n.querySelector('.lg-media-bar').getBoundingClientRect(),album=n.querySelector('.lg-media-album');return {iconRight:icon.right,barLeft:bar.left,iconCenter:(icon.top+icon.bottom)/2,barCenter:(bar.top+bar.bottom)/2,albumFont:getComputedStyle(album).fontSize};});
+    expect(boxes.iconRight).toBeLessThan(boxes.barLeft);expect(Math.abs(boxes.iconCenter-boxes.barCenter)).toBeLessThan(1);
+    expect(parseFloat(boxes.albumFont)).toBeLessThan(20);
+    await expect(node).not.toContainText(/Wiedergabe|Bereit|Pausiert/);
+  }
+  media.state='paused';
+  await expect(page.locator('.lg-media-playback[aria-label=Pausiert]')).toHaveCount(3);
+  await expect(page.locator('.lg-media-elapsed').first()).toHaveText('1:00');
+  await page.waitForTimeout(1100);await expect(page.locator('.lg-media-elapsed').first()).toHaveText('1:00');
+  // An unchanged paused state must not repeatedly mutate the SVG/state indicator.
+  await page.evaluate(()=>{window.iconMutations=0;new MutationObserver(m=>window.iconMutations+=m.length).observe(document.querySelector('.lg-media-playback'),{subtree:true,attributes:true,childList:true});});
+  await page.waitForTimeout(1100);expect(await page.evaluate(()=>window.iconMutations)).toBe(0);
+  cards[0].show_playback_icon=false;await expect(page.locator('[data-layout-id=compact] .lg-media-playback')).toBeHidden();
+  await expect(page.locator('[data-layout-id=compact] .lg-media-bar')).toHaveCSS('left','0px');
+  cards[1].show_progress=false;await expect(page.locator('[data-layout-id=poster] .lg-media-progress')).toBeHidden();
+  for(const playback of ['buffering','idle','off','unavailable']){
+    media.state=playback;await expect(page.locator('[data-layout-id=stage] .lg-media-playback')).toBeHidden();
+    await expect(page.locator('.lg-media-state')).toHaveCount(0);
+  }
+  media.state='playing';delete media.media_duration;
+  await expect(page.locator('[data-layout-id=stage] .lg-media-progress')).toBeHidden();
 });

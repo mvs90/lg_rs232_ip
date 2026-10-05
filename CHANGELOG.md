@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.13.0
+
+- Add a colour-only cover background: sample the cover edges for a full-screen gradient without displaying the cover twice. Make this the default background mode for new Mediaplayer views; retain the existing image modes for other designs. Decode only the small artwork tier for colour sampling, including at 4K.
+- Remove textual playback-state badges from every media-card style. Add an optional SVG play/pause state indicator beside the progress timeline, configurable per card in Studio and enabled in new full-screen media templates. Hide it when no usable timeline exists.
+- Release display app 1.10.0 with cached artwork analysis and no repeated state-icon DOM updates. Preserve source assignments, the HDMI decoder and the existing OSD restoration.
+
 ## 2.12.1
 
 - Fix Studio source buttons silently assigning the currently edited view to Dashboard, PiP or Mediaplayer. Source selection now shows the saved source without changing views, assignments or unsaved drafts.

@@ -23,7 +23,7 @@ from .const import DOMAIN
 from .resident_app import ResidentApp, SI_APP_ID
 from .web_manager import LGWebError
 
-APP_VERSION = "1.9.0"
+APP_VERSION = "1.10.0"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 

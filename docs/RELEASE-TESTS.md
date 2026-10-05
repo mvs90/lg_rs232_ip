@@ -1,5 +1,13 @@
 # Release acceptance
 
+## LG 2.13.0: cover colours and optional playback icon — 2026-10-05
+
+**332 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 128 browser cases pass across Chromium and WebKit.** Coverage adds colour-only 4K backgrounds without a second visible cover, small sampling-image requests, one edge analysis per cover across fit/dimming changes, missing artwork and pause fallback, optional playing/paused SVGs across all three media styles, timeline alignment, paused progress, no repeated icon DOM mutations, removal of status text, strict config validation and saving the new Studio controls without changing source assignments.
+
+The existing **unifi-air-quality-ha-dev / HA 2026.9.4** container runs LG 2.13.0 and the physical **75UH5F-HJ** reports connected app **1.10.0**. The saved Wohnzimmer media view uses colour-only background (35% dimming) and enables the state icon. All other views and source assignments were preserved. Native capture verified the media view without a textual playback badge; Mediaplayer → Dashboard → original HDMI 1 retained the SI app in the foreground. Installed files match the repository and the LG app reports no error.
+
+The actual **Wohnzimmer Sonos** was playing its **TV** input with no artwork, duration or position. This verifies the fallback on the real panel: no invented cover, progress or icon. Cover gradients, artwork changes, playing/paused icons and 4K rendering were verified with browser fixtures, not claimed as observed on this live TV source. No playback/skip/pause command was sent to Sonos. Private configuration backups and captures remain outside Git.
+
 ## LG 2.12.1: source selection preserves view assignments — 2026-10-05
 
 **38 Studio browser cases pass across Chromium and WebKit.** Regression checks select all three sources from an open music view with an unsaved draft, assert no library POST or assignment changes, preserve the draft through subsequent save, cover unavailable sources/unassigned defaults and require an explicit gallery action for assigning an unassigned view.

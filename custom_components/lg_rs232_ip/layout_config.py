@@ -66,13 +66,21 @@ def element(kind, x, y, width, height):
         media_style="compact",
         show_cover=True,
         show_progress=True,
+        show_playback_icon=False,
         show_volume=True,
         status_coloring=True,
         accent_color="#79e5c0",
     )
 
 
-def scene(background="aurora", elements=None, color="#101e30", accent="#6ee7d5"):
+def scene(
+    background="aurora",
+    elements=None,
+    color="#101e30",
+    accent="#6ee7d5",
+    *,
+    media_background_fit="contain",
+):
     return dict(
         background=background,
         color=color,
@@ -84,7 +92,7 @@ def scene(background="aurora", elements=None, color="#101e30", accent="#6ee7d5")
         gradient_angle=135,
         media_background_enabled=False,
         media_background_entity="",
-        media_background_fit="contain",
+        media_background_fit=media_background_fit,
         media_background_dim=0.35,
     )
 
@@ -200,6 +208,7 @@ def make_layout(style="cinema"):
             font_size=8,
             opacity=0,
             media_style="stage",
+            show_playback_icon=True,
             show_volume=False,
         ),
         block("clock", 74, 3, 21, 9, font_size=3, opacity=0, show_label=False),
@@ -216,6 +225,7 @@ def make_layout(style="cinema"):
                 items,
                 color,
                 accent,
+                media_background_fit="colors" if key == "media_view" else "contain",
             )
             for key, items in zip(
                 SCENES,
@@ -363,7 +373,7 @@ def validate_layout(value):
             media_background_entity=player,
             media_background_fit=_choice(
                 raw.get("media_background_fit", "contain"),
-                ("stretch", "contain", "center"),
+                ("stretch", "contain", "center", "colors"),
             ),
             media_background_dim=_number(raw.get("media_background_dim", 0.35), 0, 0.9),
         )
@@ -425,6 +435,9 @@ def validate_layout(value):
                 if type(item.get(flag, True)) is not bool:
                     raise ValueError("Invalid card option")
                 obj[flag] = item.get(flag, True)
+            if type(item.get("show_playback_icon", False)) is not bool:
+                raise ValueError("Invalid playback icon option")
+            obj["show_playback_icon"] = item.get("show_playback_icon", False)
             obj["media_style"] = _choice(
                 item.get("media_style", "compact"), ("compact", "poster", "stage")
             )
