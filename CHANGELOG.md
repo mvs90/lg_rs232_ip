@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.15.0
+
+- Move the three notification views into a separate section below fixed and custom views.
+- Add Nur HDMI as the first protected, editable and individually resettable view. All HDMI inputs use its saved composition; the default is full-screen video. Keep one video element through edits, source selection and notification return.
+- Add only the HDMI default when upgrading existing libraries, preserving every saved design and custom source. Keep 24 custom views and the shared entity/resource bounds. Release app 1.12.0.
+
 ## 2.14.0
 
 - Replace view assignments with six protected, editable views: Dashboard, Dashboard PiP, Mediaplayer, Mitteilung, Mitteilung PiP and Mitteilung Vollbild. Add per-view default restoration with undo and explicit save; remove the assignment section.

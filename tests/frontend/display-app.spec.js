@@ -9,7 +9,7 @@ async function mount(page, state) {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.11.0', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.12.0', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -244,11 +244,11 @@ test('HDMI stays fullscreen despite signal loss or saved layouts; only explicit 
   });
   const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed('auto')};
   await mount(page,state);
-  await expect(page.locator('body')).toHaveClass('hdmi');
+  await expect(page.locator('body')).toHaveClass('designed');
   await page.evaluate(()=>{window.ready=false;window.originalHDMI=document.querySelector('video');});
   state.layout.config.mode='no_signal';
   await page.waitForTimeout(1500);
-  await expect(page.locator('body')).toHaveClass('hdmi');
+  await expect(page.locator('body')).toHaveClass('designed');
   await expect(page.locator('#hdmi-slot')).toBeVisible();
   await expect(page.locator('.lg-widget')).toHaveCount(0);
   state.pip=true;
@@ -259,8 +259,8 @@ test('HDMI stays fullscreen despite signal loss or saved layouts; only explicit 
   await expect(page.locator('.lg-message')).toHaveCount(0,{timeout:3000});
   expect(await page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('61%');
   state.pip=false;
-  await expect(page.locator('body')).toHaveClass('hdmi');
-  expect(await page.locator('#hdmi-slot').getAttribute('style')).toBeNull();
+  await expect(page.locator('body')).toHaveClass('designed');
+  expect(await page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('100%');
   expect(await page.evaluate(()=>document.querySelector('video')===window.originalHDMI)).toBe(true);
   expect(await page.evaluate(()=>window.loads)).toBe(0);
 });
@@ -388,7 +388,7 @@ test('PiP with its video widget removed stays free of HDMI through notifications
   await expect(page.locator('#hdmi-slot')).toBeHidden();
   await expect(page.locator('.lg-message')).toHaveCount(0,{timeout:3000});
   state.pip=false;
-  await expect(page.locator('body')).toHaveClass('hdmi');
+  await expect(page.locator('body')).toHaveClass('designed');
   await expect(page.locator('#hdmi-slot')).toBeVisible();
 });
 
@@ -495,7 +495,7 @@ test('4K media view keeps HDMI decoder, uses crisp artwork tiers and returns aft
   state.content=null;await expect(media).toBeVisible();
   state.layout.values['media_player.music'].media_title='Next track';state.layout.values['media_player.music'].artwork='two';
   await expect(media).toContainText('Next track');await expect(art).toHaveAttribute('src',/v=two&size=2160/);
-  state.media_view=false;await expect(page.locator('body')).toHaveClass('hdmi');
+  state.media_view=false;await expect(page.locator('body')).toHaveClass('designed');
   expect(await page.evaluate(()=>document.querySelector('video')===window.savedPlane)).toBe(true);
 });
 
@@ -602,6 +602,31 @@ test('custom source survives notifications, live edits and deletion fallback wit
   delete state.layout.config.scenes.view_extra;state.selected_view='dashboard';state.dashboard=true;
   await expect(page.locator('.lg-text')).not.toContainText('Live geändert');
   state.selected_view=null;state.dashboard=false;
-  await expect(page.locator('body')).toHaveClass('hdmi');
+  await expect(page.locator('body')).toHaveClass('designed');
   expect(await page.evaluate(()=>window.originalPlane===document.querySelector('video'))).toBe(true);
+});
+
+
+test('edited HDMI view updates all inputs, returns after messages and resets without rebuilding video',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  const scene=state.layout.config.scenes.hdmi_full;
+  scene.elements[0].width=75;
+  scene.elements.push({...state.layout.config.scenes.dashboard.elements[0],label:'HDMI ANSICHT'});
+  await mount(page,state);
+  await expect(page.locator('#hdmi-slot')).toBeVisible();
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('75%');
+  await expect(page.locator('.lg-widget')).toContainText('HDMI ANSICHT');
+  await page.evaluate(()=>window.originalHDMI=document.querySelector('video'));
+  state.idle_hdmi='ext://hdmi:2';state.input_request='hdmi2';
+  await expect(page.locator('#hdmi-slot source')).toHaveAttribute('src','ext://hdmi:2');
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('75%');
+  state.content={...content(),layout:'pip',duration:1};
+  await expect(page.locator('.lg-message')).toBeVisible();
+  await expect(page.locator('.lg-message')).toHaveCount(0,{timeout:3000});
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('75%');
+  scene.elements[0].width=100;scene.elements.splice(1);
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('100%');
+  expect(await page.evaluate(()=>document.querySelector('video')===window.originalHDMI)).toBe(true);
+  state.layout.config.enabled=false;
+  await expect(page.locator('body')).toHaveClass('hdmi');
 });

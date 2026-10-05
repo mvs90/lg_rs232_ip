@@ -1,5 +1,13 @@
 # Release acceptance
 
+## LG 2.15.0: editable HDMI and grouped notifications — 2026-10-05
+
+**337 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 134 browser cases pass across Chromium and WebKit.** Coverage adds the version-2 to version-3 library conversion, protected HDMI identity, scoped HDMI-widget data and persistence, notification-section placement, custom copies remaining in the primary section, HDMI editing/reset/undo, and one video element through HDMI input changes and notification return.
+
+Installed **LG 2.15.0 / app 1.12.0** in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container. On the physical **75UH5F-HJ**, HDMI 1 used the full-screen default; an edited HDMI composition with smaller positioned video and a test label was acknowledged and confirmed in a native capture. HDMI 1 and HDMI 2 shared the composition while retaining their source identities. An overlay returned to the HDMI scene, and restoring the default restored full-screen video. The SI launcher remained foreground.
+
+The existing saved views were compared with the upgraded library and preserved. Test modifications were removed and the original Dashboard PiP source restored. Browser inspection verified Nur HDMI as the first editable/resettable view and the three messages in a separate section below all persistent views. No additional container or AV update is needed; AV Companion 1.4 remains compatible. Private captures/backups stay excluded from Git.
+
 ## LG 2.14.0 / AV 1.4.0: fixed views and dynamic sources — 2026-10-05
 
 **335 LG tests and 97 AV tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14. All 130 browser cases pass across Chromium and WebKit.** New coverage protects fixed names/IDs from deletion, tests per-view reset and undo, custom creation/duplication/rename/deletion, API revisions and conversion of existing designs, scoped data/image access and combined entity limits. Source tests cover collisions, stable IDs, acknowledgement timeout rollback, notification return, HDMI element identity, deletion fallback and AV standby/linked-source behavior. The final Studio fix canonicalizes scene order so undo correctly restores the saved indicator.

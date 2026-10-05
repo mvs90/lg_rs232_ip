@@ -12,6 +12,7 @@ from homeassistant.exceptions import HomeAssistantError
 import pytest
 
 from custom_components.lg_rs232_ip.display_app import (
+    APP_VERSION,
     DisplayAppManager,
     DisplayAppView,
     SI_APP_ID,
@@ -1487,7 +1488,7 @@ async def test_rendering_diagnostics_only_accept_bounded_dimensions(app):
     app.event(
         {
             "type": "hello",
-            "version": "1.11.0",
+            "version": APP_VERSION,
             "visible": True,
             "rendering": {
                 "width": 3840,

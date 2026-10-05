@@ -1,6 +1,6 @@
 # LG Display Studio
 
-Ab **LG Professional Display 2.14.0 / App 1.11.0** beginnt das Studio mit sechs festen Ansichten und eigenen, zusätzlich angelegten Ansichten. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
+Ab **LG Professional Display 2.15.0 / App 1.12.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
 
 Die App bleibt optional. Für dauerhafte Quellen müssen **Display-App**, **SI-App**, **SI-Dauerbetrieb mit automatischem Start** und **Eigenes Layout verwenden** aktiv sein. Das Öffnen und Bearbeiten installiert keine SI-App und weckt das Display nicht. **Anzeigen** ist eine ausdrückliche Quellenwahl und kann das mit Strom versorgte Display wecken.
 
@@ -8,6 +8,7 @@ Die App bleibt optional. Für dauerhafte Quellen müssen **Display-App**, **SI-A
 
 | Feste Ansicht | Verwendung |
 |---|---|
+| Nur HDMI | Gemeinsame, bearbeitbare Gestaltung für HDMI 1, 2 und 3; Standard ist Vollbild |
 | Dashboard | Dauerhafte Quelle, beispielsweise für Wetter und Tagesübersicht |
 | Dashboard PiP | Dauerhafte Quelle mit dem zuletzt gewählten HDMI-Eingang |
 | Mediaplayer | Dauerhafte Quelle mit Cover und Medieninformationen |
@@ -15,19 +16,19 @@ Die App bleibt optional. Für dauerhafte Quellen müssen **Display-App**, **SI-A
 | Mitteilung PiP | Zeitlich begrenzte Mitteilung mit HDMI-Fenster |
 | Mitteilung Vollbild | Zeitlich begrenzte Vollbildmitteilung |
 
-Diese sechs Ansichten lassen sich gestalten und duplizieren. Namen und Vorhandensein sind fest: Umbenennen und Löschen sind gesperrt, auch in der API. **Standard wiederherstellen** setzt ausschließlich die gewählte Ansicht auf ihre Cinema-Grundgestaltung zurück, einschließlich Widgets, Hintergründen und Entitätsbindungen. Die Schaltfläche steht in der Übersicht und im Editor. Erst **Speichern** übernimmt die Änderung; **Rückgängig** holt den vorherigen Entwurf zurück.
+Diese sieben Ansichten lassen sich gestalten und duplizieren. Namen und Vorhandensein sind fest: Umbenennen und Löschen sind gesperrt, auch in der API. **Standard wiederherstellen** setzt ausschließlich die gewählte Ansicht auf ihre Cinema-Grundgestaltung zurück, einschließlich Widgets, Hintergründen und Entitätsbindungen. Die Schaltfläche steht in der Übersicht und im Editor. Erst **Speichern** übernimmt die Änderung; **Rückgängig** holt den vorherigen Entwurf zurück.
 
 **Neue Ansicht** oder eine Vorlage (**Cinema**, **Aurora**, **Sonnenstand**, **Paper & Sand**) legt eine unabhängige Ansicht an. Name und Aufbau wählen, Inhalte gestalten und speichern: Sie erscheint automatisch als eigene Quelle am LG-Mediaplayer und in der Fernbedienung. Eine weitere Zuordnung entfällt vollständig. Auch Kopien fester Ansichten sind eigene Quellen. Eigene Ansichten lassen sich umbenennen, duplizieren und löschen; ihre interne Kennung bleibt beim Umbenennen erhalten. Beim Löschen einer gerade angezeigten Ansicht wechselt das Display zum Dashboard. Die festen Mitteilungsansichten bleiben zeitlich begrenzte Aktionen; sie sind keine dauerhaften Quellen.
 
 **Bearbeiten** öffnet genau eine Ansicht. Links stehen Farbthemes und Hintergründe, rechts Widgets und Inhalte. Ein Theme verändert ausschließlich Farben und Hintergrund; Entitäten, Texte, Positionen, Größen und Reihenfolge bleiben erhalten. **Alle Ansichten** erhält offene Entwürfe. **Speichern** übernimmt die gesamte Bibliothek gemeinsam. Die App aktualisiert gespeicherte Änderungen ohne Quellenwechsel. **Anzeigen** verwendet stets die gespeicherte Quelle; offene Entwürfe werden dabei nicht automatisch gespeichert. In der Galerie müssen offene Änderungen zuerst gespeichert werden.
 
-Es gibt **sechs feste und bis zu 24 eigene Ansichten**, jeweils mit höchstens 16 Widgets. Über alle verwendbaren Ansichten gilt weiterhin die gemeinsame Grenze von 32 Entitäten. **Rückgängig/Wiederholen** umfasst Gestaltung, Anlegen, Duplizieren, Löschen und Zurücksetzen innerhalb der Editorsitzung. Versionsprüfungen verhindern, dass ein alter Editor neuere Änderungen überschreibt.
+Es gibt **sieben feste und bis zu 24 eigene Ansichten**, jeweils mit höchstens 16 Widgets. Über alle verwendbaren Ansichten gilt weiterhin die gemeinsame Grenze von 32 Entitäten. **Rückgängig/Wiederholen** umfasst Gestaltung, Anlegen, Duplizieren, Löschen und Zurücksetzen innerhalb der Editorsitzung. Versionsprüfungen verhindern, dass ein alter Editor neuere Änderungen überschreibt.
 
-Beim Update werden bestehende Zuordnungen einmalig in die entsprechenden festen Ansichten übernommen. Mehrfach verwendete Designs werden unabhängig kopiert. Übrige eigene und frühere Ohne-HDMI-Ansichten bleiben als eigene Quellen erhalten und können gelöscht werden. Inhalte, Entitäten und Hintergründe werden dabei bewahrt. Das Format wird erst beim nächsten Speichern dauerhaft umgestellt. Die bisherige Quelle **PiP** heißt jetzt **Dashboard PiP**; vorhandene Automationen mit einem fest eingetragenen Quellennamen entsprechend anpassen.
+Beim Update von 2.14 wird ausschließlich die neue Standardansicht **Nur HDMI** ergänzt; sämtliche vorhandenen Ansichten bleiben erhalten. Bei älteren Versionen werden bestehende Zuordnungen einmalig in die entsprechenden festen Ansichten übernommen. Mehrfach verwendete Designs werden unabhängig kopiert. Übrige eigene und frühere Ohne-HDMI-Ansichten bleiben als eigene Quellen erhalten und können gelöscht werden. Inhalte, Entitäten und Hintergründe werden dabei bewahrt. Das Format wird erst beim nächsten Speichern dauerhaft umgestellt. Die bisherige Quelle **PiP** heißt jetzt **Dashboard PiP**; vorhandene Automationen mit einem fest eingetragenen Quellennamen entsprechend anpassen.
 
 ## Eine Ansicht gestalten
 
-Die Buttons oben öffnen direkt **HDMI · Vollbild**, **Dashboard**, **Dashboard PiP**, **Mediaplayer**, **Mitteilung**, **Mitteilung PiP** und **Mitteilung Vollbild**. Dabei bleiben Entwürfe erhalten und die tatsächliche Displayquelle unverändert. **HDMI · Vollbild** ist eine feste, schreibgeschützte Vorschau; gestaltbare HDMI-Kompositionen gehören zur Quelle Dashboard PiP. Links Farben/Hintergrund anpassen, rechts Widgets und Inhalte bearbeiten. Raumvorschläge und Ausgabebuttons stehen im mittleren Bereich.
+Die Buttons oben öffnen direkt **Nur HDMI**, **Dashboard**, **Dashboard PiP**, **Mediaplayer**, **Mitteilung**, **Mitteilung PiP** und **Mitteilung Vollbild**. Dabei bleiben Entwürfe erhalten und die tatsächliche Displayquelle unverändert. **Nur HDMI** lässt sich wie die anderen Ansichten gestalten: Video positionieren und skalieren, Hintergrund ändern oder Widgets ergänzen und entfernen. **Standard wiederherstellen** setzt sie auf ein bildfüllendes HDMI-Element zurück. Sie ist die gemeinsame Vorlage für die bestehenden HDMI-Quellen und fügt keine zusätzliche Quelle hinzu. Links Farben/Hintergrund anpassen, rechts Widgets und Inhalte bearbeiten. Raumvorschläge und Ausgabebuttons stehen im mittleren Bereich.
 
 Elemente anklicken, ziehen und über die Ecke vergrößern. Position und Größe lassen sich auch in Prozent eingeben. Pfeiltasten verschieben um 1 %, Umschalt + Pfeiltaste um 0,1 %. Die Elementliste regelt die Ebenenreihenfolge. **Widget-Typ** tauscht ein Element aus und erhält seine Geometrie/Gestaltung; unpassende Entitätszuordnungen werden geleert. **×**, **Element entfernen** oder Entf/Backspace entfernen jedes Widget, auch HDMI und Meldungsfenster.
 
@@ -37,7 +38,7 @@ Für Wetter, Kalender und weitere Informationen passende HA-Entitäten wählen o
 
 ## Ansichten als Quellen
 
-**HDMI 1/2/3** zeigt das gewählte Videosignal immer im Vollbild innerhalb der App, auch ohne Signal. **Dashboard**, **Dashboard PiP**, **Mediaplayer** und alle eigenen Ansichten laden ihre jeweilige gespeicherte Gestaltung. HDMI-Elemente verwenden den zuletzt gewählten Eingang. Fehlt ein HDMI-Element, bleibt die Videoebene auch während einer Mitteilung verborgen. Nach einer Mitteilung kehrt die App zur gewählten Quelle zurück. Quellen bleiben über HA-Neustart und normalen Standby erhalten. Auch die Auswahl desselben HDMI-Eingangs stellt wieder Vollbild her. Alle Wechsel verwenden die vorhandene OSD-Unterdrückung mit Wiederherstellung des vorherigen Zustands.
+**HDMI 1/2/3** zeigt das gewählte Videosignal in der gespeicherten Ansicht **Nur HDMI**, auch ohne Signal. Standardmäßig füllt das Video die Fläche aus. **Dashboard**, **Dashboard PiP**, **Mediaplayer** und alle eigenen Ansichten laden ihre jeweilige gespeicherte Gestaltung. HDMI-Elemente verwenden den zuletzt gewählten Eingang. Fehlt ein HDMI-Element, bleibt die Videoebene auch während einer Mitteilung verborgen. Nach einer Mitteilung kehrt die App zur gewählten Quelle zurück. Quellen bleiben über HA-Neustart und normalen Standby erhalten. Auch die Auswahl desselben HDMI-Eingangs kehrt zu **Nur HDMI** zurück. Alle Wechsel verwenden die vorhandene OSD-Unterdrückung mit Wiederherstellung des vorherigen Zustands.
 
 Beispielaktion für eine Morgen-Automation:
 
@@ -63,7 +64,7 @@ Ab **LG 2.13.0 / App 1.10.0** verwendet die neue Vollbildvorlage **Nur Coverfarb
 
 Alle Medienkarten verzichten auf Statuswörter wie „Wiedergabe“, „Pausiert“ oder „Bereit“. Rechts in der ausgewählten Medienkarte lässt sich **Play-/Pause-Symbol anzeigen** einschalten: **▶** kennzeichnet laufende Wiedergabe, **⏸** eine Pause. Das Symbol steht links neben der Zeitleiste und ist eine Zustandsanzeige, keine Steuertaste. Es benötigt aktivierten Fortschritt sowie Dauer und Position vom Player; bei TV-/Radioquellen ohne Zeitdaten, Leerlauf oder Puffern erscheint es nicht. Neue Vollbildvorlagen aktivieren die Option; neue normale Karten und bestehende Karten ohne diese Einstellung lassen sie ausgeschaltet.
 
-Die ausgewählte Quelle bleibt über Standby/Neustart erhalten. Benachrichtigungen kehren anschließend zur Musikansicht zurück. Die Standardansicht enthält kein HDMI-Element; HDMI bleibt auch während einer Meldung verborgen. Die HDMI-Quelle stellt wieder das volle Videosignal her. Quellenwechsel verwenden die bestehende OSD-Unterdrückung und stellen einen zuvor manuell deaktivierten OSD nicht an. Die Musikansicht zeigt den Zustand des Players an; ihre Auswahl startet oder pausiert dessen Wiedergabe nicht.
+Die ausgewählte Quelle bleibt über Standby/Neustart erhalten. Benachrichtigungen kehren anschließend zur Musikansicht zurück. Die Standardansicht enthält kein HDMI-Element; HDMI bleibt auch während einer Meldung verborgen. Die HDMI-Quelle kehrt zur gespeicherten **Nur HDMI**-Ansicht zurück. Quellenwechsel verwenden die bestehende OSD-Unterdrückung und stellen einen zuvor manuell deaktivierten OSD nicht an. Die Musikansicht zeigt den Zustand des Players an; ihre Auswahl startet oder pausiert dessen Wiedergabe nicht.
 
 **AV Companion 1.3.0** bietet Mediaplayer ebenfalls am kombinierten Player und in dessen HomeKit-Quellenliste an, wenn LG 2.12 verfügbar ist. Die aktive Musikansicht ist vor dem automatischen Standby wegen eines inaktiven HDMI-Zuspielers geschützt. Ältere LG-Versionen bleiben mit AV Companion kompatibel; die zusätzliche Quelle fehlt dort.
 
@@ -142,7 +143,7 @@ Layoutwechsel in der laufenden App brauchen keinen physischen Eingangsbefehl. Be
 ## Daten, Signal und Ressourcen
 
 - **HDMI:** Ein externes Videoelement pro Szene, frei positionierbar von 2–100 %. Es bleibt bei Layoutwechseln erhalten. PiP bedeutet ein HDMI-Bild neben/unter App-Inhalten, nicht zwei HDMI-Eingänge gleichzeitig.
-- **Signalstatus:** Die Bildbereitschaft bleibt für die Diagnose verfügbar. HDMI bleibt unabhängig davon Vollbild; Dashboard, Dashboard PiP, Mediaplayer und eigene Quellen werden ausdrücklich gewählt. Alle gelten als aktive Anzeige für den AV-Standbyschutz. Die bisherigen Signalmodus-/Verzögerungsfelder werden nur für alte Exporte erhalten und steuern keine automatischen Layoutwechsel mehr.
+- **Signalstatus:** Die Bildbereitschaft bleibt für die Diagnose verfügbar. HDMI verwendet unabhängig davon die **Nur HDMI**-Ansicht; Dashboard, Dashboard PiP, Mediaplayer und eigene Quellen werden ausdrücklich gewählt. Alle gelten als aktive Anzeige für den AV-Standbyschutz. Die bisherigen Signalmodus-/Verzögerungsfelder werden nur für alte Exporte erhalten und steuern keine automatischen Layoutwechsel mehr.
 - **Uhr:** HA-Zeitzone, minutenweise zwischengespeicherte Formatierung, keine HA-Abfrage pro Sekunde.
 - **Kalender:** Bis zu sechs Termine der nächsten sieben Tage über `calendar.get_events`; sonst aktueller/nächster Termin aus Attributen. Ganztagstermine behalten ihr Datum. Listen bleiben auf die Widgetgröße begrenzt.
 - **HA-Entität:** Name, Zustand und Einheit einer explizit gewählten Entität, etwa Temperatur, Luftqualität, Energie, Anwesenheit oder Türstatus. Zustandsanzeige ohne interaktive Steuerung auf dem LG, keine vollständigen Attribute oder Historien.

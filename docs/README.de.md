@@ -69,11 +69,11 @@ Im **LG Display Studio** unter **Karten aus deinem Raum** einen HA-Raum wählen 
 
 ### Gespeicherte Ansichten
 
-Das Studio startet mit einer Galerie aus sechs festen Ansichten. Über **Neue Ansicht** ein benanntes Design aus einer Vorlage anlegen; zusätzliche Ansichten lassen sich bearbeiten, unabhängig duplizieren und löschen. Nach **Speichern** erscheinen sie automatisch als eigene Quellen. Feste Ansichten können bearbeitet und einzeln zurückgesetzt werden. Die Vorlage **Sonnenstand** ersetzt „Morgenlicht“ und aktualisiert Farben und Lichtposition auch während der laufenden Anzeige. [Ansichten verwalten](DISPLAY-STUDIO.md#ansichten-verwalten).
+Das Studio startet mit einer Galerie aus sieben festen Ansichten. Über **Neue Ansicht** ein benanntes Design aus einer Vorlage anlegen; zusätzliche Ansichten lassen sich bearbeiten, unabhängig duplizieren und löschen. Nach **Speichern** erscheinen sie automatisch als eigene Quellen. Feste Ansichten können bearbeitet und einzeln zurückgesetzt werden. Die Vorlage **Sonnenstand** ersetzt „Morgenlicht“ und aktualisiert Farben und Lichtposition auch während der laufenden Anzeige. [Ansichten verwalten](DISPLAY-STUDIO.md#ansichten-verwalten).
 
 ### Farbthemes und PiP-Quelle (2.10.0)
 
-Im Editor links nur Farben und Hintergrund ändern; Inhalte, Entitäten und Positionen bleiben beim Theme-Wechsel erhalten. Oben direkt zwischen HDMI-Vollbild, Dashboard, PiP und Mitteilungsansichten wechseln. HDMI-Quellen erscheinen immer im Vollbild in der App; **Dashboard**, **Dashboard PiP**, **Mediaplayer** und eigene Ansichten laden ihre gespeicherten Designs. PiP behält den zuletzt gewählten HDMI-Eingang. Für diese Quellen im kombinierten Player AV Companion 1.4.0 verwenden.
+Im Editor links nur Farben und Hintergrund ändern; Inhalte, Entitäten und Positionen bleiben beim Theme-Wechsel erhalten. Oben direkt zwischen HDMI-Vollbild, Dashboard, PiP und Mitteilungsansichten wechseln. HDMI-Quellen verwenden die bearbeitbare Ansicht **Nur HDMI** (Standard: Vollbild); **Dashboard**, **Dashboard PiP**, **Mediaplayer** und eigene Ansichten laden ihre gespeicherten Designs. PiP behält den zuletzt gewählten HDMI-Eingang. Für diese Quellen im kombinierten Player AV Companion 1.4.0 verwenden.
 
 
 ### Seitenverhältnis und Backlight (2.10.1)
@@ -89,3 +89,5 @@ Ab LG 2.12.0 bietet Display Studio den Aufbau und die Quelle **Mediaplayer** neb
 ### Feste Ansichten und eigene Quellen (2.14)
 
 Dashboard, Dashboard PiP, Mediaplayer, Mitteilung, Mitteilung PiP und Mitteilung Vollbild sind fest vorhanden, bearbeitbar und einzeln über **Standard wiederherstellen** zurücksetzbar. Sie können nicht gelöscht werden. Zusätzlich angelegte oder duplizierte Ansichten werden nach dem Speichern automatisch zu Quellen und können wieder gelöscht werden. Die frühere Zuordnung entfällt. Bestehende Gestaltungen werden übernommen. [Bedienung und Grenzen](DISPLAY-STUDIO.md#ansichten-verwalten).
+
+Ab **2.15** steht **Nur HDMI** als erste bearbeitbare und rücksetzbare feste Ansicht in der Übersicht. Diese Gestaltung gilt gemeinsam für HDMI 1/2/3. Die drei Mitteilungen stehen in einer eigenen Sektion unter den festen und selbst angelegten Ansichten.

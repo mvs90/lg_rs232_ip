@@ -20,6 +20,7 @@ from custom_components.lg_rs232_ip.layout_library import (
     upgrade_library,
     FIXED_VIEWS,
     source_names,
+    source_views,
 )
 from custom_components.lg_rs232_ip.layouts import DisplayLayouts, LayoutConflict
 from tests.test_layouts import layouts
@@ -63,7 +64,7 @@ def test_runtime_save_preserves_custom_views_and_fixed_identity():
     runtime["scenes"]["dashboard"]["color"] = "#123456"
     result = sync_legacy(library, runtime)
     assert next(v for v in result["views"] if v["id"] == reserved["id"]) == reserved
-    assert result["views"][0]["id"] == "dashboard"
+    assert result["views"][0]["id"] == "hdmi_full"
     compiled, _ = validate_library(result, runtime)
     assert compiled == runtime
     assert sync_legacy(result, runtime) == result
@@ -84,7 +85,7 @@ async def test_custom_views_publish_as_sources_survive_restart_and_delete(layout
     assert layouts.source_views["view_morning"] == "Mein Morgen"
     assert layouts.payload()["values"]["sensor.room"]["state"] == "22"
     assert "view_morning" in layouts.payload()["config"]["scenes"]
-    assert len(layouts.editor_document()["config"]["views"]) == 7
+    assert len(layouts.editor_document()["config"]["views"]) == 8
     second = DisplayLayouts(layouts.hass, layouts.entry)
     await second.async_start()
     try:
@@ -112,7 +113,7 @@ async def test_existing_runtime_is_adopted_without_losing_user_bindings(layouts)
     await second.async_start()
     try:
         assert second.config == config and second.revision == 7
-        assert second.library["views"][0]["scene"] == config["scenes"]["dashboard"]
+        assert second.library["views"][1]["scene"] == config["scenes"]["dashboard"]
         # The original storage remains intact until the user saves.
         assert "library" not in await second.store.async_load()
     finally:
@@ -147,7 +148,7 @@ async def test_library_api_authorization_and_inactive_background_protection(layo
             path, headers=headers, json={"config": editor, "revision": 0}
         )
         assert response.status == 200
-        assert len((await response.json())["config"]["views"]) == 7
+        assert len((await response.json())["config"]["views"]) == 8
         assert (
             await client.post(
                 path, headers=headers, json={"config": editor, "revision": 0}
@@ -214,7 +215,7 @@ def test_existing_assignments_become_fixed_views_without_losing_designs():
     before = deepcopy(old)
     upgraded = upgrade_library(old, config)
     runtime, library = validate_library(upgraded, config)
-    assert [v["name"] for v in library["views"][:6]] == list(FIXED_VIEWS.values())
+    assert [v["name"] for v in library["views"][:7]] == list(FIXED_VIEWS.values())
     assert (
         runtime["scenes"]["dashboard"]
         == runtime["scenes"]["media_view"]
@@ -276,3 +277,44 @@ async def test_custom_sources_share_the_32_entity_bound(layouts):
         )
     with pytest.raises(ValueError, match="32 distinct"):
         validate_library(library, config)
+
+
+def test_version_two_adds_hdmi_default_and_preserves_every_existing_view():
+    config = make_layout("morning")
+    legacy = from_config(config)
+    legacy["views"].pop(0)
+    legacy["library_version"] = 2
+    config["scenes"].pop("hdmi_full")
+    from custom_components.lg_rs232_ip.layout_config import validate_layout
+
+    upgraded_config = validate_layout(config)
+    upgraded = upgrade_library(legacy, upgraded_config)
+    assert upgraded["library_version"] == 3
+    assert upgraded["views"][1:] == legacy["views"]
+    assert upgraded["views"][0]["scene"] == make_layout()["scenes"]["hdmi_full"]
+    runtime, library = validate_library(upgraded, upgraded_config)
+    assert "hdmi_full" not in source_views(library)
+    assert runtime["scenes"]["pip_view"] == config["scenes"]["pip_view"]
+
+
+async def test_hdmi_scene_edits_publish_and_survive_reload_with_scoped_data(layouts):
+    config = make_layout()
+    config["enabled"] = True
+    card = element("entity", 2, 2, 20, 10)
+    card["entity_id"] = "sensor.hdmi_info"
+    config["scenes"]["hdmi_full"]["elements"].append(card)
+    layouts.hass.states.async_set("sensor.hdmi_info", "42")
+    await layouts.async_save(config, 0)
+    assert layouts.library["views"][0]["name"] == "Nur HDMI"
+    assert layouts.payload()["values"]["sensor.hdmi_info"]["state"] == "42"
+    assert (
+        layouts.payload()["config"]["scenes"]["hdmi_full"]
+        == config["scenes"]["hdmi_full"]
+    )
+    second = DisplayLayouts(layouts.hass, layouts.entry)
+    await second.async_start()
+    try:
+        assert second.config == config
+        assert second.library == layouts.library
+    finally:
+        await second.async_close()

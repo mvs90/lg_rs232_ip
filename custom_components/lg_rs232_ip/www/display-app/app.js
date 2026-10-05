@@ -1,7 +1,7 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.11.0", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.12.0", video = null, sourceNode = null, videoSource = null;
   var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
   var hdmiFit = "contain";
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
@@ -111,9 +111,8 @@
     while (parent.children.length > items.length) { parent.removeChild(parent.lastChild); }
   }
   function renderDesign(content) {
-    // Physical HDMI selection always uses the full native video plane. Custom
-    // compositions are entered only through explicit app sources or messages.
-    if ((!content && !selectedView && !dashboardSelected && !pipSelected && !mediaSelected) || !design || !design.config.enabled || !window.LGLayoutRenderer) {
+    // HDMI inputs share an editable scene; keep the existing native video plane.
+    if (!design || !design.config.enabled || !window.LGLayoutRenderer || (!content && !selectedView && !dashboardSelected && !pipSelected && !mediaSelected && (!idleHdmi || !design.config.scenes.hdmi_full))) {
       if (designer) { designer.clear(); designer = null; sceneKey = null; }
       sceneKey = !content && idleHdmi ? "signal" : null;
       return false;
@@ -124,8 +123,9 @@
     else if (selectedView && design.config.scenes[selectedView]) { key = selectedView; }
     else if (dashboardSelected) { key = "dashboard"; }
     else if (mediaSelected) { key = "media_view"; }
-    else { key = "pip_view"; }
-    var baseKey = selectedView || (dashboardSelected ? "dashboard" : mediaSelected ? "media_view" : pipSelected ? "pip_view" : null);
+    else if (pipSelected) { key = "pip_view"; }
+    else { key = "hdmi_full"; }
+    var baseKey = selectedView || (dashboardSelected ? "dashboard" : mediaSelected ? "media_view" : pipSelected ? "pip_view" : idleHdmi ? "hdmi_full" : null);
     var baseScene = baseKey && design.config.scenes[baseKey];
     sceneKey = key;
     layout("designed");

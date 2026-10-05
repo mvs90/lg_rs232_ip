@@ -26,7 +26,7 @@ async function mount(page,width=1500) {
         if(window.failSave)throw {status_code:409};
         if(url==='lg_rs232_ip/layout_validate')return {config:data.config};
         window.saved=JSON.parse(JSON.stringify(data.config));window.revision++;
-        if(saved.views)hass.states['media_player.display']={entity_id:'media_player.display',state:'on',attributes:{view_sources:Object.fromEntries(saved.views.filter(v=>!['overlay','pip','fullscreen'].includes(v.id)).map(v=>[v.id,v.name]))}};
+        if(saved.views)hass.states['media_player.display']={entity_id:'media_player.display',state:'on',attributes:{view_sources:Object.fromEntries(saved.views.filter(v=>!['hdmi_full','overlay','pip','fullscreen'].includes(v.id)).map(v=>[v.id,v.name]))}};
       }
       return {config:window.saved,revision:window.revision,values:{},timezone:'Europe/Berlin'};
     },callWS:async()=>[{config_entry_id:'one',entity_id:'media_player.display'}],callService:async(...args)=>window.calls.push(args)};
@@ -204,7 +204,7 @@ test('room suggestions add styled media/status cards once, support editing and r
 
 test('overview creates, renames, duplicates and deletes independent source views with undo',async({page})=>{
   await mount(page);
-  await expect(page.locator('.view-card')).toHaveCount(6);
+  await expect(page.locator('.view-card')).toHaveCount(7);
   await expect(page.getByText('Wann wird welche Ansicht angezeigt?',{exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'＋ Neue Ansicht',exact:true}).click();
   await page.getByLabel('Name',{exact:true}).fill('Mein Sonnenplatz');
@@ -217,7 +217,7 @@ test('overview creates, renames, duplicates and deletes independent source views
   expect(await page.evaluate(id=>saved.scenes[id].background,id)).toBe('solar');
   await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
   await page.getByRole('button',{name:'Mein Tageslicht duplizieren',exact:true}).click();
-  await expect(page.locator('.view-card')).toHaveCount(8);
+  await expect(page.locator('.view-card')).toHaveCount(9);
   await openView(page,'Mein Tageslicht · Kopie');
   await page.getByLabel('Hintergrund',{exact:true}).selectOption('ocean');
   await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
@@ -226,12 +226,12 @@ test('overview creates, renames, duplicates and deletes independent source views
   expect(await page.evaluate(id=>saved.scenes[id].background,id)).toBe('solar');
   expect(await page.evaluate(()=>saved.views.find(v=>v.name==='Mein Tageslicht · Kopie').scene.background)).toBe('ocean');
   await page.getByRole('button',{name:'Mein Tageslicht löschen',exact:true}).click();
-  await expect(page.locator('.view-card')).toHaveCount(7);
-  await page.getByTitle('Rückgängig',{exact:true}).click();
   await expect(page.locator('.view-card')).toHaveCount(8);
+  await page.getByTitle('Rückgängig',{exact:true}).click();
+  await expect(page.locator('.view-card')).toHaveCount(9);
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   await page.evaluate(()=>{studio.remove();document.body.append(studio);});
-  await expect(page.locator('.view-card')).toHaveCount(8);
+  await expect(page.locator('.view-card')).toHaveCount(9);
   await expect(page.locator('.overview')).toBeVisible();
 });
 
@@ -249,9 +249,9 @@ test('solar view follows live HA updates without reload and preserves edited fie
   expect(await page.evaluate(()=>calls.filter(c=>c[0]==='POST').length)).toBe(0);
 });
 
-test('six fixed views are protected, reset independently and support undo on a phone',async({page})=>{
+test('seven fixed views are protected, reset independently and support undo on a phone',async({page})=>{
   await mount(page,390);
-  const names=['Dashboard','Dashboard PiP','Mediaplayer','Mitteilung','Mitteilung PiP','Mitteilung Vollbild'];
+  const names=['Nur HDMI','Dashboard','Dashboard PiP','Mediaplayer','Mitteilung','Mitteilung PiP','Mitteilung Vollbild'];
   for(const name of names){
     await expect(page.getByRole('button',{name:name+' löschen',exact:true})).toHaveCount(0);
     await expect(page.getByRole('button',{name:name+' Standard wiederherstellen',exact:true})).toHaveCount(1);
@@ -261,15 +261,15 @@ test('six fixed views are protected, reset independently and support undo on a p
   await page.getByLabel('Hintergrund',{exact:true}).selectOption('ocean');
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
-  const others=await page.evaluate(()=>JSON.stringify(studio.config.views.slice(1)));
+  const others=await page.evaluate(()=>JSON.stringify(studio.config.views.filter(v=>v.id!=='dashboard')));
   await page.getByRole('button',{name:'Dashboard Standard wiederherstellen',exact:true}).click();
   expect(await page.evaluate(()=>studio.config.scenes.dashboard.background)).toBe('midnight');
-  expect(await page.evaluate(()=>JSON.stringify(studio.config.views.slice(1)))).toBe(others);
+  expect(await page.evaluate(()=>JSON.stringify(studio.config.views.filter(v=>v.id!=='dashboard')))).toBe(others);
   await page.getByTitle('Rückgängig',{exact:true}).click();
   expect(await page.evaluate(()=>studio.config.scenes.dashboard.background)).toBe('ocean');
   expect(await page.evaluate(()=>studio.dirty)).toBe(false);
   await page.evaluate(()=>studio.deleteView('dashboard'));
-  await expect(page.locator('.view-card')).toHaveCount(6);
+  await expect(page.locator('.view-card')).toHaveCount(7);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
@@ -290,11 +290,11 @@ test('themes change colours only, palette is editable and top buttons preserve d
   await expect(page.getByLabel('Name der Ansicht')).toHaveValue('Dashboard');
   await page.locator('.context-tabs').getByRole('button',{name:'Mitteilung',exact:true}).click();
   await expect(page.locator('.scene .lg-message')).toBeVisible();
-  await page.locator('.context-tabs').getByRole('button',{name:'HDMI · Vollbild',exact:true}).click();
+  await page.locator('.context-tabs').getByRole('button',{name:'Nur HDMI',exact:true}).click();
   await expect(page.getByLabel('Name der Ansicht')).toBeDisabled();
-  await expect(page.locator('.selection')).toHaveCount(0);
-  await expect(page.locator('.sidebar')).toBeHidden();
-  await expect(page.locator('[data-action=reset-view]')).toBeHidden();
+  await expect(page.locator('.selection')).toHaveCount(1);
+  await expect(page.locator('.sidebar')).toBeVisible();
+  await expect(page.locator('[data-action=reset-view]')).toBeVisible();
   expect(await page.locator('.lg-hdmi-placeholder').evaluate(n=>n.style.width)).toBe('100%');
   await page.locator('.context-tabs').getByRole('button',{name:'Dashboard PiP',exact:true}).click();
   expect(await page.evaluate(()=>studio.scene.elements.find(i=>i.kind==='weather').entity_id)).toBe('weather.home');
@@ -396,7 +396,7 @@ test('source selection failure and unassigned defaults do not alter the library'
   await page.evaluate(()=>{hass.callService=async()=>{throw Error('offline');};});
   await page.getByRole('button',{name:'Dashboard anzeigen',exact:true}).click();
   await expect(page.locator('.flash')).toContainText('Quelle nicht erreichbar');
-  expect(await page.evaluate(()=>studio.config.views[0].id)).toBe('dashboard');
+  expect(await page.evaluate(()=>studio.config.views[0].id)).toBe('hdmi_full');
   expect(await page.evaluate(()=>calls.filter(c=>c[0]==='POST').length)).toBe(0);
 });
 
@@ -409,7 +409,7 @@ test('custom gallery and editor select their own source without replacing fixed 
   await openView(page,'Mediaplayer · Kopie');
   await page.getByRole('button',{name:'Ansicht anzeigen',exact:true}).click();
   expect(await page.evaluate(()=>calls.filter(c=>c[0]==='media_player').at(-1)[2].source)).toBe('Mediaplayer · Kopie');
-  expect(await page.evaluate(()=>saved.views[0].id)).toBe('dashboard');
+  expect(await page.evaluate(()=>saved.views[0].id)).toBe('hdmi_full');
   expect(await page.evaluate(()=>saved.assignments)).toBeUndefined();
 });
 
@@ -435,4 +435,31 @@ test('music view saves colour-only background and optional timeline state withou
   await page.getByLabel('Play-/Pause-Symbol anzeigen').check();
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   expect(await page.evaluate(()=>saved.scenes.media_view.elements[0].show_playback_icon)).toBe(true);
+});
+
+
+test('HDMI is the first editable resettable view; notifications have a separate lower section',async({page})=>{
+  await mount(page);
+  await expect(page.locator('.primary-gallery .view-card h3')).toHaveText(['Nur HDMI','Dashboard','Dashboard PiP','Mediaplayer']);
+  await expect(page.locator('.notification-gallery .view-card h3')).toHaveText(['Mitteilung','Mitteilung PiP','Mitteilung Vollbild']);
+  await page.getByRole('button',{name:'Mitteilung duplizieren',exact:true}).click();
+  await expect(page.locator('.primary-gallery .view-card h3').last()).toHaveText('Mitteilung · Kopie');
+  const main=await page.locator('.primary-views').boundingBox(),notices=await page.locator('.notification-views').boundingBox();
+  expect(notices.y).toBeGreaterThanOrEqual(main.y+main.height);
+  await openView(page,'Nur HDMI');
+  await page.locator('.layer .name').filter({hasText:'HDMI / PiP'}).click();
+  await page.getByLabel('Breite (%)',{exact:true}).fill('75');await page.getByLabel('Breite (%)',{exact:true}).press('Tab');
+  await page.getByLabel('Hintergrund',{exact:true}).selectOption('ocean');
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  expect(await page.evaluate(()=>saved.scenes.hdmi_full.elements[0].width)).toBe(75);
+  const others=await page.evaluate(()=>JSON.stringify(saved.views.slice(1)));
+  await page.getByRole('button',{name:'Standard wiederherstellen',exact:true}).click();
+  expect(await page.evaluate(()=>studio.scene.elements[0].width)).toBe(100);
+  await page.getByTitle('Rückgängig',{exact:true}).click();
+  expect(await page.evaluate(()=>studio.scene.elements[0].width)).toBe(75);
+  await expect(page.locator('.status')).toHaveText('Gespeichert');
+  await page.getByRole('button',{name:'Standard wiederherstellen',exact:true}).click();
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  expect(await page.evaluate(()=>saved.scenes.hdmi_full.elements[0].width)).toBe(100);
+  expect(await page.evaluate(()=>JSON.stringify(saved.views.slice(1)))).toBe(others);
 });

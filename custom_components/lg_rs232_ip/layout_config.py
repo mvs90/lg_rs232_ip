@@ -13,6 +13,7 @@ SCENES = (
     "fullscreen",
     "pip_view",
     "media_view",
+    "hdmi_full",
 )
 KINDS = (
     "hdmi",
@@ -238,6 +239,7 @@ def make_layout(style="cinema"):
                     fullscreen,
                     pip_view,
                     media_view,
+                    [deepcopy(hdmi)],
                 ),
             )
         },
@@ -334,6 +336,8 @@ def validate_layout(value):
         raise ValueError("Invalid custom view IDs or too many custom views")
     for key in (*SCENES, *extra):
         raw = value.get("scenes", {}).get(key)
+        if key == "hdmi_full" and raw is None:
+            raw = make_layout()["scenes"]["hdmi_full"]
         if key == "media_view" and raw is None:
             raw = make_layout()["scenes"]["media_view"]
         if key == "pip_view" and raw is None:
