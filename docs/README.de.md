@@ -91,3 +91,6 @@ Ab LG 2.12.0 bietet Display Studio den Aufbau und die Quelle **Mediaplayer** neb
 Dashboard, Dashboard PiP, Mediaplayer, Mitteilung, Mitteilung PiP und Mitteilung Vollbild sind fest vorhanden, bearbeitbar und einzeln über **Standard wiederherstellen** zurücksetzbar. Sie können nicht gelöscht werden. Zusätzlich angelegte oder duplizierte Ansichten werden nach dem Speichern automatisch zu Quellen und können wieder gelöscht werden. Die frühere Zuordnung entfällt. Bestehende Gestaltungen werden übernommen. [Bedienung und Grenzen](DISPLAY-STUDIO.md#ansichten-verwalten).
 
 Ab **2.15** steht **Nur HDMI** als erste bearbeitbare und rücksetzbare feste Ansicht in der Übersicht. Diese Gestaltung gilt gemeinsam für HDMI 1/2/3. Die drei Mitteilungen stehen in einer eigenen Sektion unter den festen und selbst angelegten Ansichten.
+
+
+Ab 2.18 lassen sich **Offline-HDMI-Start**, eine **UDP-Multicastquelle** im Studio und **Plattformdiagnosen** einrichten. Die neue Aktion `lg_rs232_ip.configure_video_wall` konfiguriert die Kachel eines Displays mit Auslesen, Prüfung, OSD-Schutz und Rücksetzversuch. Details und die Unterschiede zwischen bestätigten Funktionen und Hardwaregrenzen stehen in [Display App](DISPLAY-APP.md), [Studio](DISPLAY-STUDIO.md) und im [Geräteprotokoll](devices/LG-UH5F-H.md).

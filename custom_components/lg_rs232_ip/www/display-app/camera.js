@@ -32,6 +32,7 @@
   Camera.prototype.start=function () {
     var self=this, generation=this.generation;
     this.status("Verbinden …");
+    if(this.item.camera_source === "multicast"){this.stream(this.item.multicast_url);return;}
     if(this.item.camera_source === "test"){this.stream(this.urls.test);return;}
     if(!this.item.entity_id){this.status("Kamera auswählen");return;}
     if(this.item.camera_mode === "snapshot"){this.snapshots();return;}
@@ -47,7 +48,7 @@
   Camera.prototype.fallback=function () {
     var self=this;this.stop();
     if(this.closed || document.hidden){return;}
-    if(this.item.camera_source!=="test" && this.item.camera_mode!=="stream"){this.snapshots();}
+    if(this.item.camera_source==="entity" && this.item.camera_mode!=="stream"){this.snapshots();}
     else{this.status("Stream nicht verfügbar");}
     // One retry per minute, no repeated decoder construction on HA state polls.
     this.later(function () {self.stop();self.start();},60000);

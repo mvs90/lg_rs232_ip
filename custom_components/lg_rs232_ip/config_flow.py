@@ -157,6 +157,7 @@ def _display_options_form(user_input, saved_options):
         "suppress_osd_during_switch": False,
         "display_app_enabled": False,
         "display_app_resident": False,
+        "display_app_offline": False,
     }
     if user_input is not None:
         for key, (low, high, default) in ranges.items():

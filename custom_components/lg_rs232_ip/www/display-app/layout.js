@@ -219,13 +219,13 @@
       if(item.kind === "camera"){
         text(node._label,item.show_label ? item.label || "Kamera" : "");text(node._value,"");
         style(node._label,"display",item.show_label ? "block" : "none");
-        if(self.preview){text(node._value,"◉");text(node._detail,item.camera_source === "entity" ? item.entity_id || "Kamera auswählen" : "Lokaler Teststream");}
+        if(self.preview){text(node._value,"◉");text(node._detail,item.camera_source === "entity" ? item.entity_id || "Kamera auswählen" : item.camera_source === "multicast" ? "UDP-Multicast" : "Lokaler Teststream");}
         else if(window.LGCamera && self.options.cameraUrls){
           var cameraItem=item;
           if(hdmiItem && !self.options.hideHdmi && item.camera_source === "entity" && item.camera_mode === "auto" && item.x<hdmiItem.x+hdmiItem.width && hdmiItem.x<item.x+item.width && item.y<hdmiItem.y+hdmiItem.height && hdmiItem.y<item.y+item.height){
             cameraItem={};Object.keys(item).forEach(function (key) {cameraItem[key]=item[key];});cameraItem.camera_mode="snapshot";
           }
-          var urls=self.options.cameraUrls(item), cameraKey=JSON.stringify([item.camera_source,item.entity_id,cameraItem.camera_mode,item.camera_interval,item.camera_fit,urls]);
+          var urls=self.options.cameraUrls(item), cameraKey=JSON.stringify([item.camera_source,item.multicast_url,item.entity_id,cameraItem.camera_mode,item.camera_interval,item.camera_fit,urls]);
           if(node._cameraKey!==cameraKey){if(node._camera){node._camera.close();}node._camera=new window.LGCamera(node,cameraItem,urls);node._cameraKey=cameraKey;}
         }
       } else {self.fill(node,item);}

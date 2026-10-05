@@ -529,3 +529,18 @@ test('camera widget can be configured, bounded to one and removed without fetchi
   await page.getByRole('button',{name:'Element entfernen',exact:true}).click();
   await expect(page.locator('.scene .lg-camera')).toHaveCount(0);
 });
+
+test('multicast widget exposes its address, preserves it on save and blocks HDMI overlap',async({page})=>{
+  await mount(page);await openView(page,'Nur HDMI');
+  await page.evaluate(()=>studio.insertCard('camera'));
+  await page.getByLabel('Kameraquelle').selectOption('multicast');
+  await page.getByLabel('Multicast-Adresse').fill('udp://239.255.20.35:15000');
+  await page.getByLabel('Multicast-Adresse').press('Tab');
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await expect(page.locator('.flash')).toContainText('überlappen');
+  await page.evaluate(()=>{studio.scene.elements=studio.scene.elements.filter(e=>e.kind!=='hdmi');studio.changed(true);});
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await expect(page.locator('.status')).toHaveText('Gespeichert');
+  expect(await page.evaluate(()=>saved.scenes.hdmi_full.elements.find(e=>e.kind==='camera').multicast_url)).toBe('udp://239.255.20.35:15000');
+  await expect(page.locator('.scene video')).toHaveCount(0);
+});

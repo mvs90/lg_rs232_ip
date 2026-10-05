@@ -40,7 +40,8 @@
           "display_app_base_url": "Home Assistant URL reachable by display (optional)",
           "display_app_mode": "Display app launch method",
           "display_app_entities": "Display overview sensors (up to 12)",
-          "display_app_resident": "Keep SI app running with automatic startup"
+          "display_app_resident": "Keep SI app running with automatic startup",
+          "display_app_offline": "Offline HDMI startup using device cache"
         },
         "data_description": {
           "native_web_fingerprint": "Read from the display on save and stored for subsequent connections. An existing fingerprint is not replaced automatically.",
@@ -50,7 +51,8 @@
           "display_app_base_url": "Empty: automatically use the HA network URL. It must be reachable by the display; localhost cannot work. Docker may require the host LAN address.",
           "display_app_mode": "SI tested on UH5F with webOS 4. Existing SI apps are never overwritten. Website is an alternative launcher.",
           "display_app_entities": "Only these sensor values are shared during an active overview. No Home Assistant login is needed on the display.",
-          "display_app_resident": "Optional: keep HDMI visible inside the app so messages and PiP need no relaunch. SI only; HA must be reachable at initial startup. Physical source changes pause this mode until the next wake or Resume."
+          "display_app_resident": "Optional: keep HDMI visible inside the app so messages and PiP need no relaunch. SI only; HA must be reachable at initial startup. Physical source changes pause this mode until the next wake or Resume.",
+          "display_app_offline": "Optional for resident SI mode: stores only the app and last HDMI input in the LG browser. Load online once and check cache status. After clearing the cache, HA is required for the first start. Support depends on the model."
         },
         "description": "Confirm the display settings before finishing setup. For the preview camera, enable native LG web access and screenshot preview and enter the Mobile URL password. Leave the fingerprint blank for automatic detection. All settings can be changed later through Configure."
       }
@@ -104,7 +106,8 @@
           "display_app_base_url": "Home Assistant URL reachable by display (optional)",
           "display_app_mode": "Display app launch method",
           "display_app_entities": "Display overview sensors (up to 12)",
-          "display_app_resident": "Keep SI app running with automatic startup"
+          "display_app_resident": "Keep SI app running with automatic startup",
+          "display_app_offline": "Offline HDMI startup using device cache"
         },
         "data_description": {
           "native_web_fingerprint": "Read from the display on save and stored for subsequent connections. An existing fingerprint is not replaced automatically.",
@@ -114,7 +117,8 @@
           "display_app_base_url": "Empty: automatically use the HA network URL. It must be reachable by the display; localhost cannot work. Docker may require the host LAN address.",
           "display_app_mode": "SI tested on UH5F with webOS 4. Existing SI apps are never overwritten. Website is an alternative launcher.",
           "display_app_entities": "Only these sensor values are shared during an active overview. No Home Assistant login is needed on the display.",
-          "display_app_resident": "Optional: keep HDMI visible inside the app so messages and PiP need no relaunch. SI only; HA must be reachable at initial startup. Physical source changes pause this mode until the next wake or Resume."
+          "display_app_resident": "Optional: keep HDMI visible inside the app so messages and PiP need no relaunch. SI only; HA must be reachable at initial startup. Physical source changes pause this mode until the next wake or Resume.",
+          "display_app_offline": "Optional for resident SI mode: stores only the app and last HDMI input in the LG browser. Load online once and check cache status. After clearing the cache, HA is required for the first start. Support depends on the model."
         }
       }
     },
@@ -153,6 +157,9 @@
       },
       "resume_display_app": {
         "name": "Resume display app"
+      },
+      "refresh_platform": {
+        "name": "Refresh platform diagnostics"
       }
     },
     "sensor": {

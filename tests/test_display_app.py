@@ -1818,3 +1818,28 @@ async def test_rapid_event_replacement_keeps_original_return_target_during_ack(a
     finally:
         controller._cancel_temporary_view()
         await layouts.async_close()
+
+
+async def test_offline_manifest_is_opt_in_scoped_and_contains_only_app_assets(app):
+    view = DisplayAppView(app.hass)
+    http = web.Application()
+    view.register(app.hass, http, http.router)
+    base = f'/api/lg_rs232_ip/display_app/test/{app.token}'
+    async with TestClient(TestServer(http)) as client:
+        assert (await client.get(base + '/offline.appcache')).status == 404
+        assert 'manifest=' not in await (await client.get(base + '/index.html')).text()
+        app.resident = True
+        app.saved.update(resident=True, selected_app='com.webos.app.hdmi2', selected_input=0x91)
+        app.entry.options['display_app_offline'] = True
+        html = await (await client.get(base + '/index.html')).text()
+        assert 'manifest="offline.appcache"' in html
+        assert 'data-offline-hdmi="ext://hdmi:2"' in html
+        manifest = await (await client.get(base + '/offline.appcache')).text()
+        assert manifest.startswith('CACHE MANIFEST') and 'NETWORK:\n*' in manifest
+        assert app.asset_digest and app.asset_digest in manifest
+        assert 'platform.js' in manifest and 'offline.js' in manifest
+        assert 'camera.jpg' not in manifest and 'test-stream.ts' not in manifest
+        assert app.token not in manifest
+        assert (await client.get(base.replace(app.token, 'wrong') + '/offline.appcache')).status == 404
+        app.entry.options['display_app_offline'] = False
+        assert (await client.get(base + '/offline.appcache')).status == 404

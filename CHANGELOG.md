@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.18.0
+
+- Add opt-in offline HDMI startup for resident SI mode on compatible LG browsers. Cache versioned app assets and only the paired last HDMI input/fit; restore HDMI before HA connects. Invalidate disabled caches and update cached assets without repeated reloads. Release app 1.15.0.
+- Add a UDP multicast source to the Studio camera widget, limited to administratively scoped IPv4 groups. Preserve one muted additional decoder, separate HDMI rectangles, stalled-stream cleanup and bounded retry.
+- Add the on-demand platform diagnostic button and bounded memory, CPU delta, temperature, backlight and tile attributes. Keep unsupported sensors explicitly unavailable and reject unrelated replies.
+- Add `configure_video_wall`: read original geometry, validate, apply, verify and attempt rollback on failure, using the existing OSD guard. Tile configuration does not synchronize multiple displays.
+- Verify HDMI plus multicast, 2×2 tile configuration/restoration and cached HDMI after a real display reboot with app endpoints unavailable on 75UH5F-HJ. Document native API details and remaining hardware limits.
+
 ## 2.17.0
 
 - Add one configurable camera widget per Studio view: local H.264/HLS test stream, HA HLS, automatic snapshot fallback, 1–30 s snapshot interval and contain/cover fit. Release app 1.14.2.

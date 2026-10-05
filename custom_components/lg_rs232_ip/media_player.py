@@ -20,6 +20,22 @@ async def async_setup_entry(hass, entry, async_add_entities):
     hass.data[DOMAIN][entry.entry_id]["media_player"] = player
     async_add_entities([player])
     services = {
+        "configure_video_wall": (
+            {
+                vol.Required("enabled"): cv.boolean,
+                vol.Optional("rows"): vol.All(
+                    cv.positive_int, vol.Range(min=1, max=15)
+                ),
+                vol.Optional("columns"): vol.All(
+                    cv.positive_int, vol.Range(min=1, max=15)
+                ),
+                vol.Optional("tile_id"): vol.All(
+                    cv.positive_int, vol.Range(min=1, max=225)
+                ),
+                vol.Optional("natural_mode"): cv.boolean,
+            },
+            "async_configure_video_wall",
+        ),
         "show_view": (
             {
                 vol.Required("view"): vol.All(cv.string, vol.Length(min=1, max=80)),
@@ -367,6 +383,42 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
 
     async def async_turn_off(self):
         await self.controller.async_turn_off()
+
+    async def async_configure_video_wall(
+        self, enabled, rows=None, columns=None, tile_id=None, natural_mode=None
+    ):
+        """Configure this panel's tile geometry; this does not synchronize playback."""
+        from .native_presentations import settle_mutation
+
+        manager = self.display_app
+        if manager is None or not manager.resident_connected:
+            raise HomeAssistantError("Connect the resident display app first")
+        settings = {"enabled": enabled}
+        for key, value in (
+            ("row", rows),
+            ("column", columns),
+            ("tileId", tile_id),
+            ("naturalMode", natural_mode),
+        ):
+            if value is not None:
+                settings[key] = value
+
+        async def apply():
+            async with self.controller._control_lock:
+                if (
+                    self.controller.external_owner
+                    or self.controller.presentation_active
+                ):
+                    raise HomeAssistantError("Display is busy with a presentation")
+                async with self.controller._lg_display.async_suppress_osd_for_switch():
+                    await manager.platform.configure_wall(settings)
+                await manager.platform.refresh()
+
+        _, cancelled = await settle_mutation(apply())
+        if cancelled:
+            import asyncio
+
+            raise asyncio.CancelledError
 
     async def async_show_view(self, view, transition="none", duration=0):
         """Display a saved Studio view, optionally animating its HDMI geometry."""

@@ -1,3 +1,42 @@
+configure_video_wall:
+  name: Configure video wall tile
+  description: Read, apply and verify this panel's tile geometry through the resident app. Unspecified settings remain unchanged. Failed verification attempts to restore the previous geometry. This does not synchronize video playback across displays.
+  target:
+    entity:
+      domain: media_player
+      integration: lg_rs232_ip
+  fields:
+    enabled:
+      name: Enable tile mode
+      required: true
+      selector:
+        boolean: {}
+    rows:
+      name: Rows
+      selector:
+        number:
+          min: 1
+          max: 15
+          mode: box
+    columns:
+      name: Columns
+      selector:
+        number:
+          min: 1
+          max: 15
+          mode: box
+    tile_id:
+      name: Tile ID
+      description: Must be between 1 and rows multiplied by columns.
+      selector:
+        number:
+          min: 1
+          max: 225
+          mode: box
+    natural_mode:
+      name: Compensate for display bezels
+      selector:
+        boolean: {}
 show_view:
   name: Show saved Studio view
   description: Show a saved view using its stable ID. hdmi_full uses the current HDMI input. Smooth transitions animate HDMI geometry when both views contain the same HDMI input. Requires custom layouts and resident SI mode.

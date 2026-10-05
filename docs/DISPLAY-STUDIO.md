@@ -1,6 +1,6 @@
 # LG Display Studio
 
-Ab **LG Professional Display 2.17.0 / App 1.14.2** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
+Ab **LG Professional Display 2.18.0 / App 1.15.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
 
 Die App bleibt optional. Für dauerhafte Quellen müssen **Display-App**, **SI-App**, **SI-Dauerbetrieb mit automatischem Start** und **Eigenes Layout verwenden** aktiv sein. Das Öffnen und Bearbeiten installiert keine SI-App und weckt das Display nicht. **Anzeigen** ist eine ausdrückliche Quellenwahl und kann das mit Strom versorgte Display wecken.
 
@@ -224,3 +224,12 @@ data:
 Nach Ablauf kehrt die Anzeige zur vorherigen Ansicht bzw. zum vorherigen HDMI-Eingang zurück. Weitere zeitliche Anzeigen ersetzen den Timer und behalten die ursprüngliche Rückkehransicht; sie werden nicht aufgestaut. Quellenwahl, Ausschalten, Leeren oder eine neue Präsentation beenden diese Rückkehr. Bei Verbindungsverlust, ausgeschaltetem Display oder anderer Präsentationshoheit wird keine verspätete Rückkehr erzwungen. HA-Neustart/Entladen beendet den Timer; die zuletzt gewählte Ansicht bleibt wie bei anderen Quellen gespeichert. Zeitliche Ansichten berücksichtigen die vorhandenen Ruhezeiten. Der Service selbst kann das Display wecken; die Blaupause prüft davor die Aufweckoption.
 
 Die Regeln bleiben in HA-Automationen. Eine zusätzliche globale Zuordnung von Ansichten im Studio ist dafür nicht nötig.
+
+
+### UDP-Multicast als Kameraquelle (2.18)
+
+Im Kamera-Widget **Kameraquelle → UDP-Multicast · lokales Netz** wählen und eine Adresse wie `udp://239.255.20.35:15000` eintragen. Unterstützt werden IPv4-Gruppen im administrativen Bereich `239.0.0.0/8` mit Port 1–65535. Benutzername, Passwort, Pfad und URL-Parameter sind nicht zulässig. Die Gruppe muss von einem vorhandenen Sender mit H.264 in MPEG-TS versorgt werden; HA erzeugt durch das Speichern keinen Stream. Das Netzwerk muss Multicast zwischen Sender und Display weiterleiten.
+
+HDMI und Multicast benötigen getrennte Rechtecke. Es bleibt bei einem zusätzlichen, stummen Video pro Ansicht. Die Auswahl **Wiedergabe** und der Einzelbild-Abstand betreffen nur HA-Kameras; Multicast hat keinen Screenshot-Ersatz. Bei Ausfall wird der Decoder freigegeben und höchstens einmal pro Minute ein neuer Versuch gestartet. Beim Verlassen oder Entfernen der Karte endet die Wiedergabe. Die Studio-Vorschau zeigt nur einen Platzhalter.
+
+Am 75UH5F-HJ wurde ein lokaler 640×360-Teststream gemeinsam mit HDMI sichtbar bestätigt. Andere Auflösungen, Codecs, Netzwerke und verschlüsselte Streams benötigen eigene Tests. Die vorhandene Ansicht **Kamera · Teststream** verwendet weiterhin den integrierten HLS-Testclip und benötigt keinen externen Multicast-Sender.

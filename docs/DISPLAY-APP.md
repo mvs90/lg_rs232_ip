@@ -50,7 +50,7 @@ Original SI settings are saved to a private HA `.storage` journal **before** cha
 
 Each config entry has its own random pairing token. The panel receives no HA login or long-lived HA access token. Its narrow endpoint serves only bundled files, current presentation data and bounded status events and individually requested JPEG uploads (maximum 5 MiB; no unsolicited frames). The endpoint cannot call HA services or read arbitrary entities. Disabling the app immediately revokes this endpoint. Do not share its private URL or expose the panel's management ports to the internet. A browser connected through plain HTTP shares the same transport limitations as that LAN connection.
 
-The app uses local assets and ES5-compatible JavaScript for the tested Chromium 53 platform. It clears transient notification content after expiration or 15 seconds without a successful HA response. An enabled Studio dashboard retains its last received values during a connection outage; those values are no longer live. A loaded resident app keeps its HDMI view visible during that outage. A bounded acknowledgement retry handles lost responses independently of HDMI signal readiness. App assets are included in HACS updates; version changes trigger a reload, and the app requests closing when it leaves the foreground. This is a hosted app, not an offline-installed package.
+The app uses local assets and ES5-compatible JavaScript for the tested Chromium 53 platform. It clears transient notification content after expiration or 15 seconds without a successful HA response. An enabled Studio dashboard retains its last received values during a connection outage; those values are no longer live. A loaded resident app keeps its HDMI view visible during that outage. A bounded acknowledgement retry handles lost responses independently of HDMI signal readiness. App assets are included in HACS updates; version changes trigger a reload, and the app requests closing when it leaves the foreground. This is a hosted app with an optional device-side startup cache on compatible LG browsers; no local ZIP/IPK application slot is replaced.
 
 ## Confirmed capabilities and limits
 
@@ -75,7 +75,7 @@ The app stays **in the foreground with HDMI embedded full-screen**, including be
 
 SI configuration is applied automatically from HA; existing third-party SI settings are never overwritten. Resident mode does not wake a sleeping display by itself. A confirmed off/on cycle or **Resume display app** can start it again. A physical source change pauses it, preventing the controller from repeatedly taking the screen back. A missing HDMI signal is a diagnostic state (`hdmi_signal_ready`), not an app disconnection. Missing heartbeats report a connection error while retaining the loaded HDMI view; they never trigger recurring HDMI/SI relaunches. The app retries its HA connection itself. An explicit Resume after a physical source change adopts that source inside the app. Required transitions retain the OSD guard; a manually disabled OSD stays disabled.
 
-**Cold-start limit:** this remains a hosted SI app. The panel must reach HA to load its HTML/JavaScript after a cold start. An already loaded app retains HDMI during an HA outage, but this is not an offline-installed package and does not guarantee HDMI during a cold boot while HA is unavailable. No hardware video encoder or audio/video stream is exposed.
+**Startup:** without the offline option, HA must be reachable to load the hosted app after restart. Version 2.18 adds the opt-in cache described below and verifies HDMI after a display reboot with its app endpoints unavailable. A first launch, cleared/evicted cache or changed pairing still needs HA. No hardware video encoder or HDMI audio/video stream is exposed.
 
 The camera chooses its backend automatically without changing its entity ID or dashboard configuration. Active intervals may be **0.5–10 seconds** (0 disables acceleration); the normal background interval remains 1–3600 seconds. Requests are shared across viewers, never run as parallel captures, and slow panels determine the achievable rate. Closing viewers restores the slower interval; disabling the camera stops collection. Screenshots include the composed screen (HDMI and overlays) and remain in memory.
 
@@ -96,3 +96,34 @@ On the physical 75UH5F-HJ, six consecutive connected layout/message requests wer
 Studio can place one additional camera/test-stream widget beside its existing HDMI plane. Playback is demand-driven and muted; leaving the view releases the decoder. A paired route resolves only saved camera bindings, using HA's camera API and scoped HLS endpoint. It never exposes camera login credentials or a generic URL proxy. Automatic mode falls back to bounded snapshots when streaming fails. The bundled 640×360, 15 fps synthetic H.264/MPEG-TS clip demonstrates the hardware path without a real camera. See [Studio setup and automation instructions](DISPLAY-STUDIO.md#kamera-und-teststream-neben-hdmi).
 
 Timed `show_view` actions use one replaceable timer and explicit ownership checks, not a queue of old events. Native OSD suppression still wraps view changes and the return transition. The additional camera is excluded from CSS entrance animation. Ordinary widgets use a 280 ms entrance on smooth view changes; there is no permanent animation loop for this feature.
+
+
+### Offline HDMI startup (2.18)
+
+In the integration's **Configure** form, enable resident SI mode and **Offline HDMI startup using device cache**. This is optional and disabled by default. Load the app once with HA online. The **Display app** sensor's `offline_start` attribute must report `enabled: true`, `supported: true`, `cache_status: 1` before relying on the cached start. Status 2/3 indicates checking/downloading; 4 means an update is ready. Modern browsers may report unsupported; the tested webOS 4 Chromium 53 supports its legacy Application Cache.
+
+The cache contains the paired app's HTML, scripts, styles and small grain texture. It excludes HA state, personal background uploads, artwork, camera images and test-video segments. A separate scoped local record stores only the last valid HDMI input and fit. During offline startup that input opens full-screen immediately; HA layouts, widgets and notifications resume after reconnection. App version plus an asset-content digest invalidates old assets. Disabling the option obsoletes the manifest after the app contacts HA and removes its HDMI record. Removing pairing prevents network access, although already cached static code/HDMI can remain on the device until its cache is cleared.
+
+Hardware evidence: the native reboot was issued, the LG web port became unreachable, and a subsequent capture showed HDMI in the SI launcher while all paired app endpoints returned 503 and HA reported the app disconnected. Endpoints and original OSD state were then restored. This verifies restart from an already populated cache, **not** a mains-loss test, cache durability after factory reset, or offline boot on every LG model. The local ZIP installation slot was left untouched.
+
+### Platform diagnostics and video-wall configuration (2.18)
+
+Press **Refresh platform diagnostics** / **Plattformdiagnose aktualisieren** on the LG device. Three read-only native calls run once; there is no extra background poll. The **Display app** sensor exposes `platform_diagnostics` with `sampled_at`, availability flags, `memory_bytes`, supported sensor values and `video_wall` geometry. CPU percentage requires two valid samples and uses cumulative counter differences; counter resets or changes in online CPU count omit the percentage. It describes the device's CPU activity, not only this app. RAM fields are native categories and should not be assumed to sum to total. Unsupported sensors are listed explicitly instead of reporting zero.
+
+The resident app must be connected to configure a tile through **Developer tools → Actions → LG Professional Display: Configure video wall tile**:
+
+```yaml
+action: lg_rs232_ip.configure_video_wall
+target:
+  entity_id: media_player.lg_display_display
+data:
+  enabled: true
+  rows: 2
+  columns: 2
+  tile_id: 1
+  natural_mode: false
+```
+
+Rows/columns are 1–15, tile ID is 1–rows×columns, and natural mode compensates for bezels. Unspecified settings are preserved. The action reads the complete original settings, checks the requested geometry, applies it and verifies readback. On failure it attempts to restore and verify the original settings. It shares the normal control lock and OSD-suppression option; initially disabled OSD stays disabled. A device/network failure can prevent verified restoration and is reported as an error. Save the prior geometry before deliberate changes. Disabling tile mode does not imply resetting its row/column settings.
+
+On the tested panel, 2×2 tile 1 was applied and captured, then the exact prior disabled geometry was restored. This configures **one display's crop**; it does not provide frame synchronization or discover/link multiple panels. No arbitrary native-service passthrough is exposed.

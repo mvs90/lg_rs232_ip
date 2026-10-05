@@ -15,7 +15,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     if manager.enabled:
         keys += ["test_display_app", "display_app_dashboard"]
         if manager.resident:
-            keys += ["resume_display_app"]
+            keys += ["resume_display_app", "refresh_platform"]
     async_add_entities([DisplayAppButton(manager, entry, key) for key in keys])
 
 
@@ -28,12 +28,16 @@ class DisplayAppButton(ButtonEntity):
         self._attr_translation_key = key
         self._attr_unique_id = f"{entry.entry_id}_{key}"
         self._attr_device_info = {"identifiers": {(DOMAIN, entry.entry_id)}}
+        if key == "refresh_platform":
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
         if key == "restore_si":
             self._attr_entity_category = EntityCategory.CONFIG
 
     async def async_press(self):
         if self.key == "restore_si":
             await self.manager.async_restore_si()
+        elif self.key == "refresh_platform":
+            await self.manager.platform.refresh()
         elif self.key == "resume_display_app":
             await self.manager.async_resume()
         else:

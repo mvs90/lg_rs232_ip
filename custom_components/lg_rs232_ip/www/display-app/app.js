@@ -1,7 +1,7 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.14.2", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.15.0", video = null, sourceNode = null, videoSource = null;
   var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
   var hdmiFit = "contain";
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
@@ -55,6 +55,7 @@
   function heartbeat() {
     if (heartbeatBusy || stopped) { return; } heartbeatBusy = true;
     event({type:"hello", version:VERSION, bridge:typeof window.PalmServiceBridge === "function",
+      offline:window.LGOffline ? window.LGOffline.status() : {},
       camera:designer ? designer.cameraStatus() : {mode:"inactive",ready:false},
       rendering:{width:window.innerWidth,height:window.innerHeight,pixel_ratio:window.devicePixelRatio || 1,screen_width:window.screen.width,screen_height:window.screen.height},
       visible:!document.hidden, layout_scene:sceneKey, layout_revision:design ? design.revision : null, hdmi_ready:!!(video && video.videoWidth && video.videoHeight && !video.error),
@@ -184,12 +185,13 @@
       pollXHR = null;
       if (stopped) { return; }
       if (data) {
-        if (data.version !== VERSION) { window.location.reload(); return; }
+        if (data.version !== VERSION || (window.LGOffline && window.LGOffline.status().enabled !== (data.offline_enabled===true))) { if(window.LGOffline){window.LGOffline.update();}else{window.location.reload();} pollTimer=window.setTimeout(poll,2000); return; }
         text("connection", "Mit Home Assistant verbunden");
         var first = revision === null;
         animateHdmi = !!(data.input_request && data.input_request !== inputRequest && data.input_transition === "smooth" && !first && idleHdmi && idleHdmi === data.idle_hdmi);
         revision = data.revision; idleHdmi = data.idle_hdmi || null; inputRequest = data.input_request;
         hdmiFit = data.hdmi_fit === "fill" ? "fill" : "contain";
+        if(window.LGOffline){window.LGOffline.remember(idleHdmi,hdmiFit);}
         design = data.layout || null; selectedView = data.selected_view || null; dashboardSelected = data.dashboard === true; pipSelected = data.pip === true; mediaSelected = data.media_view === true;
         if (design && design.now) { serverOffset = new Date(design.now).getTime() - Date.now(); }
         try {
@@ -198,6 +200,7 @@
           if (inputRequest) { window.requestAnimationFrame(acknowledgeInput); }
         } catch (_) { event({type:"error", id:active}); clear("Anzeige fehlgeschlagen"); }
         if (first) { heartbeat(); }
+        if(data.diagnostics && window.LGPlatform){var diagnosticId=data.diagnostics.id;(data.diagnostics.operation==="video_wall" ? window.LGVideoWall : window.LGPlatform.sample)(data.diagnostics,function(result){event({type:"diagnostics",id:diagnosticId,result:result});});}
         // Paint commands first; a frame is collected only for an outstanding HA ticket.
         if (data.capture) { window.setTimeout(function () { capture(data.capture); }, 50); }
       } else { text("connection", "Verbindung unterbrochen"); }
@@ -218,6 +221,7 @@
   }, 1000);
   var heartbeatTimer = window.setInterval(heartbeat, 5000);
   function stop() {
+    if(window.LGPlatform){window.LGPlatform.close();}
     if (designer) { designer.cancelHdmiAnimation(); designer.stopCameras(); }
     stopped = true; clearTimeout(pollTimer); clearInterval(tickTimer); clearInterval(heartbeatTimer);
     if (pollXHR) { pollXHR.abort(); pollXHR = null; }
@@ -229,5 +233,7 @@
   });
   window.addEventListener("pagehide", stop);
   window.addEventListener("resize", function () { if (designer) { renderDesign(currentContent); } });
+  var boot=window.LGOffline && window.LGOffline.restore();
+  if(boot){idleHdmi=boot.hdmi;hdmiFit=boot.fit;clear("Offline HDMI");}
   poll();
 }());

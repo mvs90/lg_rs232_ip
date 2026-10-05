@@ -1,5 +1,6 @@
 """Exercise the real HA entity-service registry, not just direct method calls."""
 
+from contextlib import asynccontextmanager
 from datetime import timedelta
 import logging
 from types import SimpleNamespace
@@ -87,6 +88,47 @@ async def test_real_entity_services_target_registered_display(tmp_path):
                 {"entity_id": player.entity_id, "media_id": "test", "duration": 0},
                 blocking=True,
             )
+        platform_api = SimpleNamespace(configure_wall=AsyncMock(), refresh=AsyncMock())
+        hass.data["lg_rs232_ip"]["display"]["display_app"] = SimpleNamespace(
+            resident_connected=True, platform=platform_api
+        )
+        guard = []
+
+        @asynccontextmanager
+        async def suppress():
+            guard.append("enter")
+            try:
+                yield
+            finally:
+                guard.append("exit")
+
+        display.async_suppress_osd_for_switch = suppress
+        await hass.services.async_call(
+            "lg_rs232_ip",
+            "configure_video_wall",
+            {
+                "entity_id": player.entity_id,
+                "enabled": True,
+                "rows": 2,
+                "columns": 2,
+                "tile_id": 1,
+                "natural_mode": False,
+            },
+            blocking=True,
+        )
+        platform_api.configure_wall.assert_awaited_once_with(
+            {"enabled": True, "row": 2, "column": 2, "tileId": 1, "naturalMode": False}
+        )
+        platform_api.refresh.assert_awaited_once()
+        assert guard == ["enter", "exit"]
+        with pytest.raises(vol.Invalid):
+            await hass.services.async_call(
+                "lg_rs232_ip",
+                "configure_video_wall",
+                {"entity_id": player.entity_id, "enabled": True, "rows": 16},
+                blocking=True,
+            )
+        hass.data["lg_rs232_ip"]["display"].pop("display_app")
         assert not hass.services.has_service("lg_rs232_ip", "announce")
         assert hass.services.has_service("lg_rs232_ip", "show_native_image")
         for service in ("show_native_video", "show_stream", "show_website"):

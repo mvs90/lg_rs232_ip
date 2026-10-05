@@ -11,7 +11,7 @@ async function mount(page, state) {
     if(name === 'camera.json')return route.fulfill({contentType:'application/json',body:JSON.stringify({stream:state.cameraStream || null})});
     if(name === 'camera.jpg'){state.cameraFrames=(state.cameraFrames || 0)+1;return route.fulfill({contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});}
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.14.2', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.15.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -19,7 +19,7 @@ async function mount(page, state) {
       if (event.type === 'rendered' && state.content) state.content.rendered = true;
       return route.fulfill({contentType: 'application/json', body: '{"ok":true}'});
     }
-    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: fs.readFileSync(path.join(assets, name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src 'self' ext:; frame-ancestors 'none'"}});
+    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: name==='index.html' && state.cacheEnabled ? fs.readFileSync(path.join(assets,name),'utf8').replace('<html lang="de">','<html lang="de" manifest="offline.appcache" data-offline-hdmi="ext://hdmi:1">') : fs.readFileSync(path.join(assets, name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'"}});
   });
   await page.goto('http://display-app.test/index.html');
   return events;
@@ -765,4 +765,104 @@ test('camera overlapping HDMI uses snapshots without starting a hidden stream',a
   await expect(page.locator('.lg-camera-picture img')).toBeVisible();
   await expect.poll(()=>state.cameraFrames).toBeGreaterThan(1);
   expect(streams).toBe(0);await expect(page.locator('video')).toHaveCount(1);
+});
+
+test('offline boot restores only the scoped HDMI input and recovers online without replacing its decoder',async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('lg-display-hdmi-v1',JSON.stringify({scope:'/index.html',hdmi:'ext://hdmi:2',fit:'fill'})));
+  const state={cacheEnabled:true,offline:true,content:null,idle_hdmi:'ext://hdmi:2'};
+  await mount(page,state);
+  await expect(page.locator('#hdmi-slot source')).toHaveAttribute('src','ext://hdmi:2');
+  await expect(page.locator('body')).toHaveClass('hdmi');
+  await page.evaluate(()=>window.bootDecoder=document.querySelector('video'));
+  state.offline=false;
+  await expect(page.locator('#connection')).toHaveText('Mit Home Assistant verbunden',{timeout:5000});
+  expect(await page.evaluate(()=>window.bootDecoder===document.querySelector('video'))).toBe(true);
+  state.idle_hdmi='ext://hdmi:3';
+  await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('lg-display-hdmi-v1')).hdmi)).toBe('ext://hdmi:3');
+  expect(Object.keys(await page.evaluate(()=>JSON.parse(localStorage.getItem('lg-display-hdmi-v1'))))).toEqual(['scope','hdmi','fit']);
+});
+
+test('offline cache never restores another pairing or an injected URI and opt-out clears remembered input',async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('lg-display-hdmi-v1',JSON.stringify({scope:'/other-token/index.html',hdmi:'javascript:alert(1)'})));
+  await mount(page,{cacheEnabled:true,offline:true,content:null});
+  await expect(page.locator('#hdmi-slot source')).toHaveAttribute('src','ext://hdmi:1');
+  await page.evaluate(()=>document.documentElement.removeAttribute('manifest'));
+  await mount(page,{cacheEnabled:false,offline:true,content:null});
+  await expect(page.locator('#hdmi-slot video')).toHaveCount(0);
+  expect(await page.evaluate(()=>localStorage.getItem('lg-display-hdmi-v1'))).toBeNull();
+});
+
+test('cached app updates once while the new cache downloads instead of reloading repeatedly',async({page})=>{
+  await page.addInitScript(()=>{
+    window.cacheUpdates=0;window.cacheEvents={};
+    Object.defineProperty(window,'applicationCache',{configurable:true,value:{status:1,update(){window.cacheUpdates++;},addEventListener(name,fn){window.cacheEvents[name]=fn;}}});
+  });
+  await mount(page,{cacheEnabled:true,content:null,idle_hdmi:'ext://hdmi:1'});
+  await page.evaluate(()=>{LGOffline.update();LGOffline.update();LGOffline.update();});
+  expect(await page.evaluate(()=>cacheUpdates)).toBe(1);
+});
+
+test('on-demand platform diagnostics use a fixed whitelist and do not repeat a ticket',async({page})=>{
+  await page.addInitScript(()=>{
+    window.nativeCalls=[];
+    window.PalmServiceBridge=function(){this.cancel=()=>{};this.call=(url,args)=>{
+      nativeCalls.push([url,JSON.parse(args)]);
+      const result=url.endsWith('getSystemUsageInfo')?{returnValue:true,memory:{used:10},cpus:[]}:url.endsWith('getSensorValues')?{returnValue:true,temperature:36,humidity:'Unsupported or Error',password:'private'}:{returnValue:true,enabled:false,row:1,column:1,tileId:1,naturalMode:false};
+      this.onservicecallback(JSON.stringify(result));
+    };};
+  });
+  const state={content:null,idle_hdmi:'ext://hdmi:1',diagnostics:{id:'sample1',operation:'diagnostics'}};
+  const events=await mount(page,state);
+  await expect.poll(()=>events.filter(e=>e.type==='diagnostics').length).toBe(1);
+  expect(await page.evaluate(()=>nativeCalls.length)).toBe(3);
+  expect(events.find(e=>e.type==='diagnostics').result.sensors.password).toBeUndefined();
+});
+
+test('video wall verifies changes and rolls back a rejected readback without arbitrary methods',async({page})=>{
+  await page.addInitScript(()=>{
+    window.tile={enabled:false,row:2,column:2,tileId:1,naturalMode:true};window.tileWrites=[];window.rejectChange=false;
+    window.PalmServiceBridge=function(){this.cancel=()=>{};this.call=(url,args)=>{
+      if(url.endsWith('setTileInfo')){const requested=JSON.parse(args).tileInfo;tileWrites.push(requested);if(!rejectChange || requested.enabled===false)tile=requested;this.onservicecallback('{"returnValue":true}');}
+      else this.onservicecallback(JSON.stringify({returnValue:true,...tile}));
+    };};
+  });
+  const state={content:null,diagnostics:{id:'wall1',operation:'video_wall',settings:{enabled:true}}};
+  const events=await mount(page,state);
+  await expect.poll(()=>events.find(e=>e.id==='wall1')?.result.ok).toBe(true);
+  expect(await page.evaluate(()=>tile)).toEqual({enabled:true,row:2,column:2,tileId:1,naturalMode:true});
+  await page.evaluate(()=>{tile.enabled=false;rejectChange=true;});
+  state.diagnostics={id:'wall2',operation:'video_wall',settings:{enabled:true}};
+  await expect.poll(()=>events.find(e=>e.id==='wall2')?.result.restored).toBe(true);
+  expect(await page.evaluate(()=>tile.enabled)).toBe(false);
+  state.diagnostics={id:'wall3',operation:'video_wall',settings:{enabled:true,row:1,column:1,tileId:2}};
+  const before=await page.evaluate(()=>tileWrites.length);
+  await expect.poll(()=>events.find(e=>e.id==='wall3')?.result.ok).toBe(false);
+  expect(await page.evaluate(()=>tileWrites.length)).toBe(before);
+});
+
+test('multicast rebinds only on address change, releases its decoder and never requests HA snapshots',async({page})=>{
+  await page.addInitScript(()=>{
+    Object.defineProperty(HTMLMediaElement.prototype,'src',{get(){return this._src || '';},set(value){this._src=value;}});
+    HTMLMediaElement.prototype.play=function(){return Promise.resolve();};
+    HTMLMediaElement.prototype.pause=function(){this._paused=true;};
+    HTMLMediaElement.prototype.load=function(){this._loads=(this._loads || 0)+1;};
+  });
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  const scene=state.layout.config.scenes.hdmi_full;scene.elements[0].width=60;
+  const item=cameraItem(state.layout,{camera_source:'multicast',multicast_url:'udp://239.1.2.3:5000'});scene.elements.push(item);
+  await mount(page,state);
+  await expect(page.locator('.lg-camera video')).toHaveCount(1);
+  await page.evaluate(()=>{window.first=document.querySelector('.lg-camera video');window.originalHDMI=document.querySelector('#hdmi-slot video');});
+  expect(await page.evaluate(()=>first.src)).toBe('udp://239.1.2.3:5000');
+  await page.waitForTimeout(1100);
+  expect(await page.evaluate(()=>first===document.querySelector('.lg-camera video'))).toBe(true);
+  item.multicast_url='udp://239.1.2.4:5000';
+  await expect.poll(()=>page.evaluate(()=>document.querySelector('.lg-camera video').src)).toBe(item.multicast_url);
+  expect(await page.evaluate(()=>first._paused&&first._loads===1)).toBe(true);
+  await page.evaluate(()=>document.querySelector('.lg-camera video').onerror());
+  await expect(page.locator('.lg-camera')).toContainText('Stream nicht verfügbar');
+  await expect(page.locator('.lg-camera video')).toHaveCount(0);
+  expect(state.cameraFrames).toBeUndefined();
+  scene.elements.pop();await expect(page.locator('.lg-camera')).toHaveCount(0);
+  expect(await page.evaluate(()=>originalHDMI===document.querySelector('#hdmi-slot video'))).toBe(true);
 });

@@ -2,6 +2,8 @@
 
 from copy import deepcopy
 import math
+import ipaddress
+from urllib.parse import urlsplit
 import re
 
 SCENES = (
@@ -73,6 +75,7 @@ def element(kind, x, y, width, height):
         status_coloring=True,
         accent_color="#79e5c0",
         camera_source="test",
+        multicast_url="",
         camera_mode="auto",
         camera_interval=2,
         camera_fit="contain",
@@ -455,7 +458,7 @@ def validate_layout(value):
             obj["show_playback_icon"] = item.get("show_playback_icon", False)
             obj.update(
                 camera_source=_choice(
-                    item.get("camera_source", "test"), ("test", "entity")
+                    item.get("camera_source", "test"), ("test", "entity", "multicast")
                 ),
                 camera_mode=_choice(
                     item.get("camera_mode", "auto"), ("auto", "stream", "snapshot")
@@ -464,6 +467,10 @@ def validate_layout(value):
                 camera_fit=_choice(
                     item.get("camera_fit", "contain"), ("contain", "cover")
                 ),
+            )
+            obj["multicast_url"] = validate_multicast_url(
+                item.get("multicast_url", ""),
+                required=kind == "camera" and obj["camera_source"] == "multicast",
             )
             obj["media_style"] = _choice(
                 item.get("media_style", "compact"), ("compact", "poster", "stage")
@@ -511,7 +518,7 @@ def validate_layout(value):
             video
             and hdmi_item
             and rectangles_overlap(video, hdmi_item)
-            and (video["camera_source"] == "test" or video["camera_mode"] == "stream")
+            and (video["camera_source"] != "entity" or video["camera_mode"] == "stream")
         ):
             raise ValueError(
                 "Place the camera stream beside HDMI; use automatic/snapshot mode for overlays"
@@ -557,3 +564,34 @@ def media_background_entities(config):
         if scene.get("media_background_enabled")
         and scene.get("media_background_entity")
     }
+
+
+def validate_multicast_url(value, *, required=False):
+    """Only administratively scoped IPv4 groups; never credentials or unicast."""
+    if value == "" and not required:
+        return ""
+    try:
+        if (
+            not isinstance(value, str)
+            or len(value) > 80
+            or any(c.isspace() for c in value)
+        ):
+            raise ValueError
+        url = urlsplit(value)
+        host = ipaddress.IPv4Address(url.hostname)
+        if (
+            url.scheme != "udp"
+            or host not in ipaddress.IPv4Network("239.0.0.0/8")
+            or not url.port
+            or url.username is not None
+            or url.password is not None
+            or url.path
+            or url.query
+            or url.fragment
+        ):
+            raise ValueError
+        return f"udp://{host}:{url.port}"
+    except (ValueError, TypeError, AttributeError):
+        raise ValueError(
+            "Use udp://239.x.x.x:port without credentials, path or query"
+        ) from None

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hmac
+import hashlib
 import ipaddress
 import json
 from pathlib import Path
@@ -21,9 +22,10 @@ from yarl import URL
 
 from .const import DOMAIN
 from .resident_app import ResidentApp, SI_APP_ID
+from .platform_diagnostics import PlatformDiagnostics
 from .web_manager import LGWebError
 
-APP_VERSION = "1.14.2"
+APP_VERSION = "1.15.0"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -70,6 +72,7 @@ class DisplayAppManager(ResidentApp):
         self.saved = {}
         self.token = None
         self.assets = {}
+        self.asset_digest = ""
         self.content = None
         self.last_seen = 0.0
         self.client_version = None
@@ -78,6 +81,8 @@ class DisplayAppManager(ResidentApp):
         self.client_has_bridge = False
         self.client_rendering = {}
         self.client_camera = {}
+        self.client_offline = {}
+        self.platform = PlatformDiagnostics(self)
         self.last_error = None
         self._rendered = asyncio.Event()
         self.closed = False
@@ -132,11 +137,17 @@ class DisplayAppManager(ResidentApp):
                         "layout.css",
                         "grain.png",
                         "camera.js",
+                        "offline.js",
+                        "platform.js",
+                        "wall.js",
                         "test-stream.m3u8",
                         "test-stream.ts",
                     )
                 }
             )
+            self.asset_digest = hashlib.sha256(
+                b"".join(self.assets[name] for name in sorted(self.assets))
+            ).hexdigest()[:16]
             entities = self.entry.options.get("display_app_entities", [])[:12]
             if entities:
 
@@ -151,6 +162,7 @@ class DisplayAppManager(ResidentApp):
 
     async def async_close(self):
         self.closed = True
+        self.platform.close()
         if self._aspect_unsub:
             self._aspect_unsub()
             self._aspect_unsub = None
@@ -256,6 +268,8 @@ class DisplayAppManager(ResidentApp):
             "platform_bridge_present": self.client_has_bridge,
             "rendering": self.client_rendering if self.connected else {},
             "camera_widget": self.client_camera if self.connected else {},
+            "offline_start": self.client_offline if self.connected else {},
+            "platform_diagnostics": self.platform.data,
             "si_configured": bool(self.saved.get("installed")),
             "si_restore_pending": "previous" in self.saved and not self.resident,
             "last_error": self.last_error,
@@ -479,6 +493,8 @@ class DisplayAppManager(ResidentApp):
             "media_view": self.media_view_selected,
             "selected_view": self.selected_view,
             "capture": self._capture,
+            "diagnostics": self.platform.ticket,
+            "offline_enabled": self.resident and self.entry.options.get("display_app_offline", False),
             "input_request": self._input_request,
             "input_transition": self._input_transition,
             "layout": self.layouts.payload() if self.layouts else None,
@@ -512,6 +528,9 @@ class DisplayAppManager(ResidentApp):
         return {**base, "content": payload}
 
     def event(self, value):
+        if isinstance(value, dict) and value.get("type") == "diagnostics":
+            self.platform.accept(value)
+            return
         if not isinstance(value, dict) or value.get("type") not in {
             "hello",
             "heartbeat",
@@ -526,6 +545,7 @@ class DisplayAppManager(ResidentApp):
             self.client_version,
             dict(self.client_rendering),
             dict(self.client_camera),
+            dict(self.client_offline),
             self.client_layout_scene,
             self.client_layout_revision,
             self.client_hdmi,
@@ -574,6 +594,15 @@ class DisplayAppManager(ResidentApp):
                 ratio = rendering.get("pixel_ratio")
                 if type(ratio) in (int, float) and 0.5 <= ratio <= 4:
                     self.client_rendering["pixel_ratio"] = ratio
+            offline = value.get("offline", {})
+            if isinstance(offline, dict):
+                self.client_offline = {
+                    key: offline.get(key) is True
+                    for key in ("enabled", "supported", "restored_hdmi")
+                }
+                status = offline.get("cache_status")
+                if type(status) is int and 0 <= status <= 5:
+                    self.client_offline["cache_status"] = status
             camera_status = value.get("camera", {})
             if isinstance(camera_status, dict):
                 self.client_camera = {
@@ -621,6 +650,7 @@ class DisplayAppManager(ResidentApp):
             self.client_version,
             dict(self.client_rendering),
             dict(self.client_camera),
+            dict(self.client_offline),
             self.client_layout_scene,
             self.client_layout_revision,
             self.client_hdmi,
@@ -657,8 +687,30 @@ class DisplayAppView(HomeAssistantView):
             "Cache-Control": "no-store",
             "Referrer-Policy": "no-referrer",
             "X-Content-Type-Options": "nosniff",
-            "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src 'self' ext:; frame-ancestors 'none'",
+            "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'",
         }
+        if resource == "offline.appcache":
+            if not manager.resident or not manager.entry.options.get(
+                "display_app_offline", False
+            ):
+                # A 404 obsoletes a previously opted-in browser cache.
+                raise web.HTTPNotFound()
+            names = [
+                name
+                for name in manager.assets
+                if name not in ("test-stream.ts", "test-stream.m3u8")
+            ]
+            return web.Response(
+                text="CACHE MANIFEST\n# "
+                + APP_VERSION
+                + " "
+                + manager.asset_digest
+                + "\nCACHE:\n"
+                + "\n".join(names)
+                + "\nNETWORK:\n*\n",
+                content_type="text/cache-manifest",
+                headers={**headers, "Cache-Control": "no-cache"},
+            )
         if resource == "state":
             return web.json_response(
                 await manager.async_state(request.query.get("since")), headers=headers
@@ -748,14 +800,30 @@ class DisplayAppView(HomeAssistantView):
             "layout.css": "text/css",
             "grain.png": "image/png",
             "camera.js": "application/javascript",
+            "offline.js": "application/javascript",
+            "platform.js": "application/javascript",
+            "wall.js": "application/javascript",
             "test-stream.m3u8": "application/vnd.apple.mpegurl",
             "test-stream.ts": "video/mp2t",
         }
         if resource not in mime:
             raise web.HTTPNotFound()
-        return web.Response(
-            body=manager.assets[resource], content_type=mime[resource], headers=headers
-        )
+        body = manager.assets[resource]
+        if (
+            resource == "index.html"
+            and manager.resident
+            and manager.entry.options.get("display_app_offline", False)
+        ):
+            hdmi = manager.idle_hdmi() or ""
+            body = body.replace(
+                b'<html lang="de">',
+                (
+                    '<html lang="de" manifest="offline.appcache" data-offline-hdmi="'
+                    + hdmi
+                    + '">'
+                ).encode(),
+            )
+        return web.Response(body=body, content_type=mime[resource], headers=headers)
 
     async def post(self, request, entry_id, token, resource):
         manager = self._manager(request, entry_id, token)
