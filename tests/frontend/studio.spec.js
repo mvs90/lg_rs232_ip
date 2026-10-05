@@ -341,6 +341,7 @@ test('Mediaplayer context configures full-screen view, saves and selects its own
   await page.locator('.layer .name').filter({hasText:'JETZT LÄUFT'}).click();
   await page.getByLabel('Home-Assistant-Entität').fill('media_player.sonos');await page.getByLabel('Home-Assistant-Entität').press('Tab');
   await expect(page.locator('.scene .lg-media')).toHaveAttribute('data-media-style','stage');
+  await page.getByLabel('Eigenes Layout verwenden').check();
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   expect(await page.evaluate(()=>saved.scenes.media_view.elements.find(i=>i.kind==='media').entity_id)).toBe('media_player.sonos');
   await page.getByRole('button',{name:'Mediaplayer anzeigen',exact:true}).click();
@@ -355,4 +356,44 @@ test('gallery displays assigned music view without replacing Dashboard',async({p
   await page.locator('.view-card').filter({has:page.getByRole('heading',{name:'Mediaplayer',exact:true})}).getByRole('button',{name:'Anzeigen',exact:true}).click();
   expect(await page.evaluate(()=>calls.some(c=>c[0]==='media_player'&&c[1]==='select_source'&&c[2].source==='Mediaplayer'))).toBe(true);
   expect(await page.evaluate(()=>studio.config.assignments.dashboard)).toBe('dashboard');
+});
+
+
+test('source buttons switch saved views without reassigning the open music view or saving drafts',async({page})=>{
+  await mount(page);await openView(page,'Mediaplayer');
+  await page.getByLabel('Eigenes Layout verwenden').check();await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await page.evaluate(()=>{calls.length=0;});
+  const assignments=await page.evaluate(()=>JSON.stringify(studio.config.assignments));
+  await page.getByLabel('Name der Ansicht').fill('Musik-Entwurf');await page.getByLabel('Name der Ansicht').press('Tab');
+  for(const source of ['Mediaplayer','Dashboard','PiP','Dashboard']){
+    await page.getByRole('button',{name:source+' anzeigen',exact:true}).click();
+    expect(await page.evaluate(()=>calls.filter(c=>c[0]==='media_player').at(-1)[2].source)).toBe(source);
+    expect(await page.evaluate(()=>JSON.stringify(studio.config.assignments))).toBe(assignments);
+  }
+  expect(await page.evaluate(()=>calls.filter(c=>c[0]==='POST').length)).toBe(0);
+  await expect(page.getByLabel('Name der Ansicht')).toHaveValue('Musik-Entwurf');
+  await expect(page.locator('.status')).toHaveText('Ungespeichert');
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  expect(await page.evaluate(()=>saved.assignments.dashboard)).toBe('dashboard');
+  expect(await page.evaluate(()=>saved.assignments.media_view)).toBe('media_view');
+});
+
+test('source selection failure and unassigned defaults do not alter the library',async({page})=>{
+  await mount(page);await openView(page,'Mediaplayer');
+  await page.getByLabel('Eigenes Layout verwenden').check();await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await page.evaluate(()=>{calls.length=0;});
+  await page.evaluate(()=>{studio.config.assignments.dashboard='';hass.callService=async()=>{throw Error('offline');};});
+  await page.getByRole('button',{name:'Dashboard anzeigen',exact:true}).click();
+  await expect(page.locator('.flash')).toContainText('Quelle nicht erreichbar');
+  expect(await page.evaluate(()=>studio.config.assignments.dashboard)).toBe('');
+  expect(await page.evaluate(()=>calls.filter(c=>c[0]==='POST').length)).toBe(0);
+});
+
+test('an unassigned gallery view explicitly offers assignment instead of ambiguous source selection',async({page})=>{
+  await mount(page);await page.getByRole('button',{name:'Mediaplayer duplizieren',exact:true}).click();
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  const card=page.locator('.view-card').filter({has:page.getByRole('heading',{name:'Mediaplayer · Kopie',exact:true})});
+  await expect(card.getByRole('button',{name:'Anzeigen',exact:true})).toHaveCount(0);
+  await card.getByRole('button',{name:'Als Dashboard verwenden',exact:true}).click();
+  expect(await page.evaluate(()=>saved.views.find(v=>v.id===saved.assignments.dashboard).name)).toBe('Mediaplayer · Kopie');
 });

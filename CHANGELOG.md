@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.12.1
+
+- Fix Studio source buttons silently assigning the currently edited view to Dashboard, PiP or Mediaplayer. Source selection now shows the saved source without changing views, assignments or unsaved drafts.
+- Label the gallery action for unassigned views explicitly as “Als Dashboard verwenden”; already assigned views retain their source. Existing assignments are never automatically rewritten by the update.
+
 ## 2.12.0
 
 - Add the persistent Mediaplayer source and configurable full-screen media view in Display Studio, with artwork, metadata, playback state and progress. Keep independent named views, colour themes and optional cover backgrounds.

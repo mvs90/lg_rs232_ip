@@ -1,5 +1,11 @@
 # Release acceptance
 
+## LG 2.12.1: source selection preserves view assignments — 2026-10-05
+
+**38 Studio browser cases pass across Chromium and WebKit.** Regression checks select all three sources from an open music view with an unsaved draft, assert no library POST or assignment changes, preserve the draft through subsequent save, cover unavailable sources/unassigned defaults and require an explicit gallery action for assigning an unassigned view.
+
+The existing HA 2026.9.4 container and physical LG reproduced the issue: Dashboard and Mediaplayer had been assigned to the same music view. The original Dashboard view was intact. Restoring only its assignment preserved every saved view. Repeated Mediaplayer ↔ Dashboard service selections then showed the two distinct compositions in native captures; app scene, entity source and selection flags matched, the SI app remained foreground, and assignments stayed unchanged. The fix changes Studio behavior; it does not rewrite existing assignments automatically.
+
 ## LG 2.12.0 / AV 1.3.0: full-screen media and UHD assets — 2026-10-05
 
 **331 LG and 95 AV Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14.** **116 browser cases pass across Chromium and WebKit**, including 3840×2160 at density 1 and the physical LG's 1920×1080 CSS viewport at density 2. New checks exercise persistent media-source selection, same-HDMI exit, OSD rollback, restart state, standby/supply guards, name collisions, old saved views, artwork tiers/shared fetches/cache-byte limits, oversize-cache completion, strict resolution queries, 4K background retention, long-title geometry and gallery source assignment.
