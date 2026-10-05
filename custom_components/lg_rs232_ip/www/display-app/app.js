@@ -1,8 +1,8 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.10.0", video = null, sourceNode = null, videoSource = null;
-  var dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
+  var VERSION = "1.11.0", video = null, sourceNode = null, videoSource = null;
+  var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
   var hdmiFit = "contain";
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
   var captureBusy = false, lastCapture = null, cancelCapture = null;
@@ -113,7 +113,7 @@
   function renderDesign(content) {
     // Physical HDMI selection always uses the full native video plane. Custom
     // compositions are entered only through explicit app sources or messages.
-    if ((!content && !dashboardSelected && !pipSelected && !mediaSelected) || !design || !design.config.enabled || !window.LGLayoutRenderer) {
+    if ((!content && !selectedView && !dashboardSelected && !pipSelected && !mediaSelected) || !design || !design.config.enabled || !window.LGLayoutRenderer) {
       if (designer) { designer.clear(); designer = null; sceneKey = null; }
       sceneKey = !content && idleHdmi ? "signal" : null;
       return false;
@@ -121,12 +121,15 @@
     if (!designer) { designer = new window.LGLayoutRenderer(el("layout-root"), el("hdmi-slot"), false); }
     var key;
     if (content) { key = content.layout || "fullscreen"; }
+    else if (selectedView && design.config.scenes[selectedView]) { key = selectedView; }
     else if (dashboardSelected) { key = "dashboard"; }
     else if (mediaSelected) { key = "media_view"; }
     else { key = "pip_view"; }
+    var baseKey = selectedView || (dashboardSelected ? "dashboard" : mediaSelected ? "media_view" : pipSelected ? "pip_view" : null);
+    var baseScene = baseKey && design.config.scenes[baseKey];
     sceneKey = key;
     layout("designed");
-    designer.render(design.config.scenes[key], design.values, {message:content, timezone:design.timezone, sun:design.sun, hideHdmi:(dashboardSelected || pipSelected || mediaSelected) && !design.config.scenes[dashboardSelected ? "dashboard" : mediaSelected ? "media_view" : "pip_view"].elements.some(function (item) { return item.kind === "hdmi"; }), mediaUrl:function(entity,id,size) {return "cover.jpg?entity="+encodeURIComponent(entity)+"&v="+encodeURIComponent(id)+"&size="+(size || 640);}, imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date(Date.now()+serverOffset)});
+    designer.render(design.config.scenes[key], design.values, {message:content, timezone:design.timezone, sun:design.sun, hideHdmi:!!baseScene && !baseScene.elements.some(function (item) { return item.kind === "hdmi"; }), mediaUrl:function(entity,id,size) {return "cover.jpg?entity="+encodeURIComponent(entity)+"&v="+encodeURIComponent(id)+"&size="+(size || 640);}, imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date(Date.now()+serverOffset)});
     return true;
   }
   function clear(message) {
@@ -183,7 +186,7 @@
         var first = revision === null;
         revision = data.revision; idleHdmi = data.idle_hdmi || null; inputRequest = data.input_request;
         hdmiFit = data.hdmi_fit === "fill" ? "fill" : "contain";
-        design = data.layout || null; dashboardSelected = data.dashboard === true; pipSelected = data.pip === true; mediaSelected = data.media_view === true;
+        design = data.layout || null; selectedView = data.selected_view || null; dashboardSelected = data.dashboard === true; pipSelected = data.pip === true; mediaSelected = data.media_view === true;
         if (design && design.now) { serverOffset = new Date(design.now).getTime() - Date.now(); }
         try {
           render(data.content);

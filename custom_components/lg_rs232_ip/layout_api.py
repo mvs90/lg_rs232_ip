@@ -41,9 +41,11 @@ class LayoutValidateView(HomeAssistantView):
         try:
             config = validate_layout(data.get("config"))
             if "views" in data.get("config", {}):
-                from .layout_library import validate_library
+                from .layout_library import upgrade_library, validate_library
 
-                config, library = validate_library(data["config"], config)
+                config, library = validate_library(
+                    upgrade_library(data["config"], config), config
+                )
                 config.update(library)
         except (ValueError, TypeError, KeyError, AttributeError) as err:
             raise web.HTTPBadRequest(text=str(err)) from None

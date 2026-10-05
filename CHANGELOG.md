@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.14.0
+
+- Replace view assignments with six protected, editable views: Dashboard, Dashboard PiP, Mediaplayer, Mitteilung, Mitteilung PiP and Mitteilung Vollbild. Add per-view default restoration with undo and explicit save; remove the assignment section.
+- Make every added or duplicated view an independent source. Preserve stable IDs across renames; deleting the active view returns to Dashboard. Keep existing user designs, bindings and backgrounds during conversion.
+- Extend public API v1 for dynamic sources, consumed by AV Companion 1.4.0. Preserve OSD restoration, acknowledgement rollback, notification return, restart state and standby protection.
+- Release app 1.11.0 with dynamic scene selection on the existing HDMI decoder. Retain the 32-entity bound and shared data/image caches across six fixed plus up to 24 custom views.
+
 ## 2.13.0
 
 - Add a colour-only cover background: sample the cover edges for a full-screen gradient without displaying the cover twice. Make this the default background mode for new Mediaplayer views; retain the existing image modes for other designs. Decode only the small artwork tier for colour sampling, including at 4K.

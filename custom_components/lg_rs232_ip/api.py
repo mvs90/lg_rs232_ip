@@ -36,6 +36,7 @@ class DisplayAPI:
             or self.dashboard_active
             or self.pip_active
             or self.media_view_active
+            or self.active_view is not None
         )
 
     @property
@@ -86,6 +87,21 @@ class DisplayAPI:
         await self.controller.async_select_media_view()
 
     @property
+    def view_sources(self):
+        return self.controller.app_view_sources if self.dashboard_available else {}
+
+    @property
+    def active_view(self):
+        if not self.ready or self.controller.power is False:
+            return None
+        app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
+        selected = getattr(app, "selected_view", None) if app else None
+        return selected if isinstance(selected, str) else None
+
+    async def async_select_view(self, view_id):
+        await self.controller.async_select_app_view(view_id)
+
+    @property
     def is_available(self):
         return self.ready and self.display.is_available
 
@@ -121,7 +137,10 @@ class DisplayAPI:
         if self.ready:
             app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
             if app and (
-                app.dashboard_selected or app.pip_selected or app.media_view_selected
+                app.dashboard_selected
+                or app.pip_selected
+                or app.media_view_selected
+                or self.active_view is not None
             ):
                 return None
             if app and app.logical_input is not None:
@@ -133,7 +152,12 @@ class DisplayAPI:
         )
 
     async def async_get_signal_status(self):
-        if self.dashboard_active or self.pip_active or self.media_view_active:
+        if (
+            self.dashboard_active
+            or self.pip_active
+            or self.media_view_active
+            or self.active_view is not None
+        ):
             return None
         return await self.display.async_get_signal_status() if self.ready else None
 
@@ -162,6 +186,7 @@ class DisplayAPI:
                 app.saved.pop("dashboard", None)
                 app.saved.pop("pip", None)
                 app.saved.pop("media_view", None)
+                app.saved.pop("custom_view", None)
                 await app.async_pause_resident(leave=False)
             return await getattr(self.display, method)(*args)
 

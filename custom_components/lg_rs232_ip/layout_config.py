@@ -327,7 +327,12 @@ def validate_layout(value):
     ):
         raise ValueError("Select a sun entity")
     entities = set()
-    for key in SCENES:
+    extra = [key for key in value["scenes"] if key not in SCENES]
+    if len(extra) > 24 or any(
+        not re.fullmatch(r"view_[a-zA-Z0-9_-]{1,35}", key) for key in extra
+    ):
+        raise ValueError("Invalid custom view IDs or too many custom views")
+    for key in (*SCENES, *extra):
         raw = value.get("scenes", {}).get(key)
         if key == "media_view" and raw is None:
             raw = make_layout()["scenes"]["media_view"]

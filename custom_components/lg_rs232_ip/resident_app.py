@@ -41,50 +41,55 @@ class ResidentApp:
         return bool(self.resident and self.layouts and self.layouts.config["enabled"])
 
     @property
+    def view_sources(self):
+        return self.layouts.source_views if self.layouts else {}
+
+    @property
+    def selected_view(self):
+        if not self.dashboard_available or self.saved.get("paused"):
+            return None
+        if self.saved.get("custom_view"):
+            value = self.saved["custom_view"]
+            return value if value in self.view_sources else "dashboard"
+        for flag, key in (
+            ("dashboard", "dashboard"),
+            ("pip", "pip_view"),
+            ("media_view", "media_view"),
+        ):
+            if self.saved.get(flag):
+                return key
+        return None
+
+    @property
     def dashboard_selected(self):
-        return bool(
-            self.dashboard_available
-            and self.saved.get("dashboard")
-            and not self.saved.get("paused")
-        )
+        return self.selected_view == "dashboard"
 
     async def async_select_dashboard(self):
         await self.async_select_view("dashboard")
 
     @property
     def pip_selected(self):
-        return bool(
-            self.dashboard_available
-            and self.saved.get("pip")
-            and not self.saved.get("paused")
-        )
+        return self.selected_view == "pip_view"
 
     async def async_select_pip(self):
-        await self.async_select_view("pip")
+        await self.async_select_view("pip_view")
 
     @property
     def media_view_selected(self):
-        return bool(
-            self.dashboard_available
-            and self.saved.get("media_view")
-            and not self.saved.get("paused")
-        )
+        return self.selected_view == "media_view"
 
     async def async_select_media_view(self):
         await self.async_select_view("media_view")
 
     async def async_select_view(self, view):
-        if view not in ("dashboard", "pip", "media_view"):
+        view = "pip_view" if view == "pip" else view
+        if view not in self.view_sources:
             raise HomeAssistantError("Unknown app view")
         if not self.dashboard_available or not self.resident_connected:
             raise HomeAssistantError(
                 "Enable custom layouts and connect the resident display app first"
             )
-        if (
-            (view == "dashboard" and self.dashboard_selected)
-            or (view == "pip" and self.pip_selected)
-            or (view == "media_view" and self.media_view_selected)
-        ):
+        if self.selected_view == view:
             return
         from .native_presentations import settle_mutation
 
@@ -93,8 +98,11 @@ class ResidentApp:
                 self.selected_input,
                 self.selected_app,
                 dashboard=view == "dashboard",
-                pip=view == "pip",
+                pip=view == "pip_view",
                 media_view=view == "media_view",
+                custom_view=view
+                if view not in ("dashboard", "pip_view", "media_view")
+                else None,
             )
         )
         if cancelled:
@@ -140,6 +148,7 @@ class ResidentApp:
             and not self.saved.get("dashboard")
             and not self.saved.get("pip")
             and not self.saved.get("media_view")
+            and not self.saved.get("custom_view")
         ):
             return True
         from .native_presentations import settle_mutation
@@ -154,8 +163,16 @@ class ResidentApp:
         return True
 
     async def _async_apply_hdmi(
-        self, input_id, target_app, *, dashboard=False, pip=False, media_view=False
+        self,
+        input_id,
+        target_app,
+        *,
+        dashboard=False,
+        pip=False,
+        media_view=False,
+        custom_view=None,
     ):
+        previous_custom = self.saved.get("custom_view")
         previous_dashboard = self.saved.get("dashboard", False)
         previous_pip = self.saved.get("pip", False)
         previous_media = self.saved.get("media_view", False)
@@ -168,6 +185,7 @@ class ResidentApp:
                 self.saved["dashboard"] = dashboard
                 self.saved["pip"] = pip
                 self.saved["media_view"] = media_view
+                self.saved["custom_view"] = custom_view
                 self.saved["selected_input"] = input_id
                 self.saved["selected_app"] = target_app
                 if self.content:
@@ -180,6 +198,7 @@ class ResidentApp:
                     self.saved["dashboard"] = previous_dashboard
                     self.saved["pip"] = previous_pip
                     self.saved["media_view"] = previous_media
+                    self.saved["custom_view"] = previous_custom
                     self.saved["selected_input"] = previous
                     self.saved["selected_app"] = previous_app
                     self._input_request = None

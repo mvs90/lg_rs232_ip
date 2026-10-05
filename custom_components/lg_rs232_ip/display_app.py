@@ -23,7 +23,7 @@ from .const import DOMAIN
 from .resident_app import ResidentApp, SI_APP_ID
 from .web_manager import LGWebError
 
-APP_VERSION = "1.10.0"
+APP_VERSION = "1.11.0"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -93,7 +93,19 @@ class DisplayAppManager(ResidentApp):
         self._init_resident()
         self.layouts = hass.data.get(DOMAIN, {}).get(entry.entry_id, {}).get("layouts")
         if self.layouts:
-            self.layouts.changed = self.changed
+            self.layouts.changed = self._layouts_changed
+
+    def _layouts_changed(self):
+        if (
+            self.saved.get("custom_view")
+            and self.saved["custom_view"] not in self.view_sources
+        ):
+            self.saved["custom_view"] = None
+            self.saved["dashboard"] = True
+            self.saved["pip"] = self.saved["media_view"] = False
+            self.store.async_delay_save(lambda: dict(self.saved), 1)
+        self.changed()
+        self._notify()
 
     async def async_start(self):
         self.saved = await self.store.async_load() or {}
@@ -228,6 +240,7 @@ class DisplayAppManager(ResidentApp):
             "dashboard_selected": self.dashboard_selected,
             "pip_selected": self.pip_selected,
             "media_view_selected": self.media_view_selected,
+            "selected_view": self.selected_view,
             "resident_connected": self.resident_connected,
             "resident_paused": bool(self.saved.get("paused")),
             "capture_capable": self.connected and self.capture_capable,
@@ -459,6 +472,7 @@ class DisplayAppManager(ResidentApp):
             "dashboard": self.dashboard_selected,
             "pip": self.pip_selected,
             "media_view": self.media_view_selected,
+            "selected_view": self.selected_view,
             "capture": self._capture,
             "input_request": self._input_request,
             "layout": self.layouts.payload() if self.layouts else None,
@@ -522,16 +536,21 @@ class DisplayAppManager(ResidentApp):
             revision = value.get("layout_revision")
             self.client_layout_scene = (
                 scene
-                if scene
+                if isinstance(scene, str)
+                and scene
                 in (
-                    "signal",
-                    "no_signal",
-                    "dashboard",
-                    "pip_view",
-                    "media_view",
-                    "overlay",
-                    "pip",
-                    "fullscreen",
+                    self.layouts.config["scenes"]
+                    if self.layouts
+                    else (
+                        "signal",
+                        "no_signal",
+                        "dashboard",
+                        "pip_view",
+                        "media_view",
+                        "overlay",
+                        "pip",
+                        "fullscreen",
+                    )
                 )
                 else None
             )

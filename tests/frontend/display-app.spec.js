@@ -9,7 +9,7 @@ async function mount(page, state) {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.10.0', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.11.0', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -583,4 +583,25 @@ test('all media styles show an optional state icon beside the timeline without s
   }
   media.state='playing';delete media.media_duration;
   await expect(page.locator('[data-layout-id=stage] .lg-media-progress')).toBeHidden();
+});
+
+test('custom source survives notifications, live edits and deletion fallback without rebuilding HDMI',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',selected_view:'view_extra',layout:designed()};
+  const extra=JSON.parse(JSON.stringify(state.layout.config.scenes.dashboard));
+  extra.elements=[{...extra.elements[0],kind:'text',label:'MEINE QUELLE',text:'Eigene Ansicht'}];
+  state.layout.config.scenes.view_extra=extra;
+  await mount(page,state);
+  await expect(page.locator('.lg-text')).toContainText('Eigene Ansicht');
+  await expect(page.locator('#hdmi-slot')).toBeHidden();
+  await page.evaluate(()=>window.originalPlane=document.querySelector('video'));
+  state.content={...content(),layout:'overlay'};await expect(page.locator('.lg-message')).toBeVisible();
+  await expect(page.locator('#hdmi-slot')).toBeHidden();
+  state.content=null;await expect(page.locator('.lg-text')).toContainText('Eigene Ansicht');
+  extra.elements[0].text='Live geändert';await expect(page.locator('.lg-text')).toContainText('Live geändert');
+  // Backend selects the protected Dashboard if the active custom view is removed.
+  delete state.layout.config.scenes.view_extra;state.selected_view='dashboard';state.dashboard=true;
+  await expect(page.locator('.lg-text')).not.toContainText('Live geändert');
+  state.selected_view=null;state.dashboard=false;
+  await expect(page.locator('body')).toHaveClass('hdmi');
+  expect(await page.evaluate(()=>window.originalPlane===document.querySelector('video'))).toBe(true);
 });

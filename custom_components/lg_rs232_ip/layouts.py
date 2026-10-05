@@ -25,7 +25,13 @@ from .layout_config import (
     media_background_entities,
     validate_layout,
 )
-from .layout_library import from_config, sync_legacy, validate_library
+from .layout_library import (
+    from_config,
+    source_views,
+    sync_legacy,
+    upgrade_library,
+    validate_library,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,7 +63,10 @@ class DisplayLayouts:
             try:
                 self.config = validate_layout(saved["config"])
                 self.config, self.library = validate_library(
-                    saved.get("library", from_config(self.config)), self.config
+                    upgrade_library(
+                        saved.get("library", from_config(self.config)), self.config
+                    ),
+                    self.config,
                 )
                 self.revision = int(saved.get("revision", 0))
             except (ValueError, TypeError, KeyError):
@@ -79,6 +88,10 @@ class DisplayLayouts:
             self._fetch_task.cancel()
             await asyncio.gather(self._fetch_task, return_exceptions=True)
             self._fetch_task = None
+
+    @property
+    def source_views(self):
+        return source_views(self.library)
 
     def document(self):
         return {"config": deepcopy(self.config), "revision": self.revision}

@@ -26,6 +26,7 @@ async function mount(page,width=1500) {
         if(window.failSave)throw {status_code:409};
         if(url==='lg_rs232_ip/layout_validate')return {config:data.config};
         window.saved=JSON.parse(JSON.stringify(data.config));window.revision++;
+        if(saved.views)hass.states['media_player.display']={entity_id:'media_player.display',state:'on',attributes:{view_sources:Object.fromEntries(saved.views.filter(v=>!['overlay','pip','fullscreen'].includes(v.id)).map(v=>[v.id,v.name]))}};
       }
       return {config:window.saved,revision:window.revision,values:{},timezone:'Europe/Berlin'};
     },callWS:async()=>[{config_entry_id:'one',entity_id:'media_player.display'}],callService:async(...args)=>window.calls.push(args)};
@@ -41,43 +42,43 @@ async function openView(page,name) {
 
 test('templates, entities, geometry and styling save a complete layout without losing edits',async({page})=>{
   await mount(page);
-  await openView(page,'Ohne HDMI');
+  await openView(page,'Dashboard');
   await page.locator('.sidebar').getByRole('button',{name:/Aurora/}).click();
-  await page.locator('.layer .name').filter({hasText:'Draußen'}).click();
+  await page.locator('.layer .name').filter({hasText:'Dein Wetter'}).click();
   await page.getByLabel('Home-Assistant-Entität').fill('weather.home');await page.getByLabel('Home-Assistant-Entität').press('Tab');
   await expect(page.locator('.scene .lg-weather')).toContainText('23 °C');
-  await page.getByLabel('Links (%)',{exact:true}).fill('55');await page.getByLabel('Links (%)',{exact:true}).press('Tab');
+  await page.getByLabel('Links (%)',{exact:true}).fill('40');await page.getByLabel('Links (%)',{exact:true}).press('Tab');
   await expect(page.locator('.selection.selected')).toHaveCSS('left',/[0-9.]+px/);
   await page.getByLabel('Eigenes Layout verwenden').check();
   await page.getByRole('button',{name:'Speichern'}).click();
   await expect(page.locator('.status')).toHaveText('Gespeichert');
-  expect(await page.evaluate(()=>saved.scenes.no_signal.elements.find(i=>i.kind==='weather').x)).toBe(55);
-  expect(await page.evaluate(()=>saved.scenes.no_signal.elements.find(i=>i.kind==='weather').entity_id)).toBe('weather.home');
+  expect(await page.evaluate(()=>saved.scenes.dashboard.elements.find(i=>i.kind==='weather').x)).toBe(40);
+  expect(await page.evaluate(()=>saved.scenes.dashboard.elements.find(i=>i.kind==='weather').entity_id)).toBe('weather.home');
   expect(await page.evaluate(()=>saved.enabled)).toBe(true);
   expect(await page.evaluate(()=>saved.scenes.overlay.elements.filter(i=>i.kind==='message').length)).toBe(1);
 });
 
 test('selected widget remains editable after successive saves without reopening it',async({page})=>{
-  await mount(page);await openView(page,'Ohne HDMI');
-  await page.locator('.layer .name').filter({hasText:'WILLKOMMEN'}).click();
+  await mount(page);await openView(page,'Dashboard');
+  await page.locator('.layer .name').filter({hasText:'Text'}).click();
   const text=page.getByLabel('Text',{exact:true});
   for(const value of ['Erster Entwurf','Weiter bearbeitet']){
     await text.fill(value);await text.press('Tab');
     await page.getByRole('button',{name:'Speichern',exact:true}).click();
     await expect(page.locator('.status')).toHaveText('Gespeichert');
-    expect(await page.evaluate(()=>saved.scenes.no_signal.elements.find(i=>i.kind==='text').text)).toBe(value);
+    expect(await page.evaluate(()=>saved.scenes.dashboard.elements.find(i=>i.kind==='text').text)).toBe(value);
   }
   await page.getByLabel('Widget-Typ').selectOption('clock');
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
-  expect(await page.evaluate(()=>saved.scenes.no_signal.elements.some(i=>i.kind==='text'))).toBe(false);
-  await page.getByLabel('Breite (%)',{exact:true}).fill('30');await page.getByLabel('Breite (%)',{exact:true}).press('Tab');
+  expect(await page.evaluate(()=>saved.scenes.dashboard.elements.some(i=>i.kind==='text'))).toBe(false);
+  await page.getByLabel('Breite (%)',{exact:true}).fill('25');await page.getByLabel('Breite (%)',{exact:true}).press('Tab');
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
-  expect(await page.evaluate(()=>saved.scenes.no_signal.elements.find(i=>i.id===studio.selected).width)).toBe(30);
+  expect(await page.evaluate(()=>saved.scenes.dashboard.elements.find(i=>i.id===studio.selected).width)).toBe(25);
 });
 
 test('pointer move and resize are bounded; keyboard and undo restore exact geometry',async({page})=>{
   await mount(page);
-  await openView(page,'PiP');
+  await openView(page,'Dashboard PiP');
   await page.locator('.sidebar').getByRole('button',{name:/Aurora/}).click();
   await page.locator('.layer .name').filter({hasText:'HDMI / PiP'}).click();
   const selected=page.locator('.selection.selected');let box=await selected.boundingBox();
@@ -94,8 +95,8 @@ test('pointer move and resize are bounded; keyboard and undo restore exact geome
 
 test('HA updates preserve text editing; error keeps draft and prevents silent overwrite',async({page})=>{
   await mount(page);
-  await openView(page,'Ohne HDMI');
-  await page.locator('.layer .name').filter({hasText:'WILLKOMMEN'}).click();
+  await openView(page,'Dashboard');
+  await page.locator('.layer .name').filter({hasText:'Text'}).click();
   const input=page.getByLabel('Text',{exact:true});await input.fill('<img src=x onerror="window.hacked=true">');
   await page.evaluate(()=>{studio.hass={...hass};});await page.waitForTimeout(400);
   await expect(input).toHaveValue('<img src=x onerror="window.hacked=true">');
@@ -107,14 +108,14 @@ test('HA updates preserve text editing; error keeps draft and prevents silent ov
 
 test('notification scene is editable, every widget can be deleted and restored',async({page})=>{
   await mount(page);
-  await openView(page,'Meldung · Overlay');
+  await openView(page,'Mitteilung');
   await page.locator('.layer .name').filter({hasText:'Meldungsfenster'}).click();
   await expect(page.getByRole('button',{name:'Element entfernen'})).toBeEnabled();
   await page.getByRole('button',{name:'Element entfernen'}).click();
   await expect(page.locator('.scene .lg-message')).toHaveCount(0);
   await page.getByTitle('Rückgängig',{exact:true}).click();
   await page.locator('.layer .name').filter({hasText:'Meldungsfenster'}).click();
-  await page.getByLabel('Breite (%)',{exact:true}).fill('30');await page.getByLabel('Breite (%)',{exact:true}).press('Tab');
+  await page.getByLabel('Breite (%)',{exact:true}).fill('25');await page.getByLabel('Breite (%)',{exact:true}).press('Tab');
   await page.getByRole('button',{name:'Speichern'}).click();
   await page.getByRole('button',{name:'10 Sekunden anzeigen'}).click();
   const call=await page.evaluate(()=>calls.find(c=>c[0]==='lg_rs232_ip'));
@@ -123,12 +124,12 @@ test('notification scene is editable, every widget can be deleted and restored',
 
 test('editor fits mobile and supports adding, ordering and deleting a selected entity',async({page})=>{
   await mount(page,390);
-  await openView(page,'Mit HDMI');
+  await openView(page,'Dashboard PiP');
   await page.getByLabel('Elementtyp').selectOption('entity');await page.getByRole('button',{name:'＋',exact:true}).click();
   await page.getByLabel('Home-Assistant-Entität').fill('sensor.temperature');await page.getByLabel('Home-Assistant-Entität').press('Tab');
-  await expect(page.locator('.scene .lg-entity')).toContainText('22.5 °C');
+  await expect(page.locator('.scene .lg-entity').filter({hasText:'22.5 °C'})).toHaveCount(1);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
-  await page.getByRole('button',{name:'Element entfernen'}).click();await expect(page.locator('.scene .lg-entity')).toHaveCount(0);
+  await page.getByRole('button',{name:'Element entfernen'}).click();await expect(page.locator('.scene .lg-entity').filter({hasText:'22.5 °C'})).toHaveCount(0);
 });
 
 test('widgets can change type and every element including messages can be removed; Dashboard is a source',async({page})=>{
@@ -201,38 +202,36 @@ test('room suggestions add styled media/status cards once, support editing and r
   expect(await page.evaluate(()=>saved.scenes.dashboard.elements.some(i=>i.kind==='media'&&i.media_style==='poster'))).toBe(true);
 });
 
-test('overview manages independent named views, assignments, deletion undo and persistence',async({page})=>{
+test('overview creates, renames, duplicates and deletes independent source views with undo',async({page})=>{
   await mount(page);
-  await expect(page.locator('.overview')).toBeVisible();await expect(page.locator('.workspace')).toBeHidden();
-  await expect(page.locator('.view-card')).toHaveCount(8);
+  await expect(page.locator('.view-card')).toHaveCount(6);
+  await expect(page.getByText('Wann wird welche Ansicht angezeigt?',{exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'＋ Neue Ansicht',exact:true}).click();
   await page.getByLabel('Name',{exact:true}).fill('Mein Sonnenplatz');
   await page.getByLabel('Vorlage',{exact:true}).selectOption('morning');
   await page.getByRole('button',{name:'Ansicht anlegen',exact:true}).click();
-  await expect(page.getByLabel('Name der Ansicht')).toHaveValue('Mein Sonnenplatz');
   await expect(page.getByLabel('Hintergrund',{exact:true})).toHaveValue('solar');
   await page.getByLabel('Name der Ansicht').fill('Mein Tageslicht');await page.getByLabel('Name der Ansicht').press('Tab');
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  const id=await page.evaluate(()=>studio.viewId);
+  expect(await page.evaluate(id=>saved.scenes[id].background,id)).toBe('solar');
   await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
-  await expect(page.locator('.view-card')).toHaveCount(9);
   await page.getByRole('button',{name:'Mein Tageslicht duplizieren',exact:true}).click();
-  await expect(page.locator('.view-card')).toHaveCount(10);
+  await expect(page.locator('.view-card')).toHaveCount(8);
   await openView(page,'Mein Tageslicht · Kopie');
   await page.getByLabel('Hintergrund',{exact:true}).selectOption('ocean');
   await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
-  const id=await page.evaluate(()=>studio.config.views.find(v=>v.name==='Mein Tageslicht').id);
-  await page.getByLabel('Ansicht für Dashboard',{exact:true}).selectOption(id);
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
-  expect(await page.evaluate(()=>saved.scenes.dashboard.background)).toBe('solar');
+  expect(await page.evaluate(()=>saved.scenes.dashboard.background)).toBe('midnight');
+  expect(await page.evaluate(id=>saved.scenes[id].background,id)).toBe('solar');
   expect(await page.evaluate(()=>saved.views.find(v=>v.name==='Mein Tageslicht · Kopie').scene.background)).toBe('ocean');
   await page.getByRole('button',{name:'Mein Tageslicht löschen',exact:true}).click();
-  await expect(page.getByLabel('Ansicht für Dashboard',{exact:true})).toHaveValue('');
+  await expect(page.locator('.view-card')).toHaveCount(7);
   await page.getByTitle('Rückgängig',{exact:true}).click();
-  await expect(page.getByLabel('Ansicht für Dashboard',{exact:true})).toHaveValue(id);
-  await page.screenshot({path:'test-results/studio-views-'+test.info().project.name+'.png',fullPage:true});
+  await expect(page.locator('.view-card')).toHaveCount(8);
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   await page.evaluate(()=>{studio.remove();document.body.append(studio);});
-  await expect(page.locator('.view-card')).toHaveCount(10);
+  await expect(page.locator('.view-card')).toHaveCount(8);
   await expect(page.locator('.overview')).toBeVisible();
 });
 
@@ -241,30 +240,41 @@ test('solar view follows live HA updates without reload and preserves edited fie
   await page.locator('.sidebar').getByRole('button',{name:/Sonnenstand/}).click();
   await page.evaluate(()=>{hass.states['sun.sun']={entity_id:'sun.sun',state:'above_horizon',attributes:{elevation:35,azimuth:130,rising:true}};studio.hass={...hass};});
   const day=await page.locator('.scene').evaluate(n=>n.style.background);
-  await page.getByLabel('Name der Ansicht').fill('Noch im Entwurf');
+  await page.locator('.layer .name').filter({hasText:'Text'}).click();
+  await page.getByLabel('Text',{exact:true}).fill('Noch im Entwurf');
   await page.evaluate(()=>{hass.states['sun.sun']={entity_id:'sun.sun',state:'below_horizon',attributes:{elevation:-18,azimuth:320,rising:false}};studio.hass={...hass};});
   await expect.poll(()=>page.locator('.scene').evaluate(n=>n.style.background)).not.toBe(day);
-  await expect(page.getByLabel('Name der Ansicht')).toHaveValue('Noch im Entwurf');
+  await expect(page.getByLabel('Text',{exact:true})).toHaveValue('Noch im Entwurf');
   await expect(page.locator('.workspace')).toBeVisible();
   expect(await page.evaluate(()=>calls.filter(c=>c[0]==='POST').length)).toBe(0);
 });
 
-test('empty overview remains usable, supports new views and fits a phone',async({page})=>{
+test('six fixed views are protected, reset independently and support undo on a phone',async({page})=>{
   await mount(page,390);
-  for(const name of ['Mit HDMI','Ohne HDMI','Dashboard','Meldung · Overlay','Meldung · PiP','Meldung · Vollbild','PiP','Mediaplayer'])await page.getByRole('button',{name:name+' löschen',exact:true}).click();
-  await expect(page.locator('.view-card')).toHaveCount(0);
-  await expect(page.getByRole('button',{name:'Neue Ansicht anlegen',exact:true})).toBeVisible();
+  const names=['Dashboard','Dashboard PiP','Mediaplayer','Mitteilung','Mitteilung PiP','Mitteilung Vollbild'];
+  for(const name of names){
+    await expect(page.getByRole('button',{name:name+' löschen',exact:true})).toHaveCount(0);
+    await expect(page.getByRole('button',{name:name+' Standard wiederherstellen',exact:true})).toHaveCount(1);
+  }
+  await openView(page,'Dashboard');
+  await expect(page.getByLabel('Name der Ansicht')).toBeDisabled();
+  await page.getByLabel('Hintergrund',{exact:true}).selectOption('ocean');
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
-  expect(await page.evaluate(()=>saved.views)).toEqual([]);
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(391);
-  await page.getByRole('button',{name:'Neue Ansicht anlegen',exact:true}).click();
-  await page.getByRole('button',{name:'Ansicht anlegen',exact:true}).click();
-  await expect(page.getByLabel('Name der Ansicht')).toHaveValue('Sonnenstand');
-  await expect(page.locator('.scene .lg-clock')).toHaveCount(1);
+  await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
+  const others=await page.evaluate(()=>JSON.stringify(studio.config.views.slice(1)));
+  await page.getByRole('button',{name:'Dashboard Standard wiederherstellen',exact:true}).click();
+  expect(await page.evaluate(()=>studio.config.scenes.dashboard.background)).toBe('midnight');
+  expect(await page.evaluate(()=>JSON.stringify(studio.config.views.slice(1)))).toBe(others);
+  await page.getByTitle('Rückgängig',{exact:true}).click();
+  expect(await page.evaluate(()=>studio.config.scenes.dashboard.background)).toBe('ocean');
+  expect(await page.evaluate(()=>studio.dirty)).toBe(false);
+  await page.evaluate(()=>studio.deleteView('dashboard'));
+  await expect(page.locator('.view-card')).toHaveCount(6);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
 test('themes change colours only, palette is editable and top buttons preserve drafts without source changes',async({page})=>{
-  await mount(page);await openView(page,'PiP');
+  await mount(page);await openView(page,'Dashboard PiP');
   await page.locator('.layer .name').filter({hasText:'Draußen'}).click();
   await page.getByLabel('Home-Assistant-Entität').fill('weather.home');await page.getByLabel('Home-Assistant-Entität').press('Tab');
   await page.getByLabel('Links (%)',{exact:true}).fill('5');await page.getByLabel('Links (%)',{exact:true}).press('Tab');
@@ -284,8 +294,9 @@ test('themes change colours only, palette is editable and top buttons preserve d
   await expect(page.getByLabel('Name der Ansicht')).toBeDisabled();
   await expect(page.locator('.selection')).toHaveCount(0);
   await expect(page.locator('.sidebar')).toBeHidden();
+  await expect(page.locator('[data-action=reset-view]')).toBeHidden();
   expect(await page.locator('.lg-hdmi-placeholder').evaluate(n=>n.style.width)).toBe('100%');
-  await page.locator('.context-tabs').getByRole('button',{name:'PiP',exact:true}).click();
+  await page.locator('.context-tabs').getByRole('button',{name:'Dashboard PiP',exact:true}).click();
   expect(await page.evaluate(()=>studio.scene.elements.find(i=>i.kind==='weather').entity_id)).toBe('weather.home');
   expect(await page.evaluate(()=>studio.scene.elements.find(i=>i.kind==='weather').x)).toBe(5);
   expect(await page.evaluate(()=>calls.some(c=>['POST','media_player'].includes(c[0])))).toBe(false);
@@ -293,8 +304,8 @@ test('themes change colours only, palette is editable and top buttons preserve d
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   await page.getByLabel('Eigenes Layout verwenden').check();
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
-  await page.getByRole('button',{name:'PiP anzeigen',exact:true}).click();
-  expect(await page.evaluate(()=>calls.some(c=>c[0]==='media_player'&&c[2].source==='PiP'))).toBe(true);
+  await page.getByRole('button',{name:'Dashboard PiP anzeigen',exact:true}).click();
+  expect(await page.evaluate(()=>calls.some(c=>c[0]==='media_player'&&c[2].source==='Dashboard PiP'))).toBe(true);
 });
 
 test('a background player is independent of cards, previews live, survives save, themes, undo and duplicate',async({page})=>{
@@ -355,7 +366,7 @@ test('gallery displays assigned music view without replacing Dashboard',async({p
   await mount(page);
   await page.locator('.view-card').filter({has:page.getByRole('heading',{name:'Mediaplayer',exact:true})}).getByRole('button',{name:'Anzeigen',exact:true}).click();
   expect(await page.evaluate(()=>calls.some(c=>c[0]==='media_player'&&c[1]==='select_source'&&c[2].source==='Mediaplayer'))).toBe(true);
-  expect(await page.evaluate(()=>studio.config.assignments.dashboard)).toBe('dashboard');
+  expect(await page.evaluate(()=>studio.config.assignments)).toBeUndefined();
 });
 
 
@@ -363,42 +374,46 @@ test('source buttons switch saved views without reassigning the open music view 
   await mount(page);await openView(page,'Mediaplayer');
   await page.getByLabel('Eigenes Layout verwenden').check();await page.getByRole('button',{name:'Speichern',exact:true}).click();
   await page.evaluate(()=>{calls.length=0;});
-  const assignments=await page.evaluate(()=>JSON.stringify(studio.config.assignments));
-  await page.getByLabel('Name der Ansicht').fill('Musik-Entwurf');await page.getByLabel('Name der Ansicht').press('Tab');
-  for(const source of ['Mediaplayer','Dashboard','PiP','Dashboard']){
+  const dashboard=await page.evaluate(()=>JSON.stringify(studio.config.scenes.dashboard));
+  await page.getByLabel('Hintergrund',{exact:true}).selectOption('ocean');
+  for(const source of ['Mediaplayer','Dashboard','Dashboard PiP','Dashboard']){
     await page.getByRole('button',{name:source+' anzeigen',exact:true}).click();
     expect(await page.evaluate(()=>calls.filter(c=>c[0]==='media_player').at(-1)[2].source)).toBe(source);
-    expect(await page.evaluate(()=>JSON.stringify(studio.config.assignments))).toBe(assignments);
+    expect(await page.evaluate(()=>JSON.stringify(studio.config.scenes.dashboard))).toBe(dashboard);
   }
   expect(await page.evaluate(()=>calls.filter(c=>c[0]==='POST').length)).toBe(0);
-  await expect(page.getByLabel('Name der Ansicht')).toHaveValue('Musik-Entwurf');
+  await expect(page.getByLabel('Hintergrund',{exact:true})).toHaveValue('ocean');
   await expect(page.locator('.status')).toHaveText('Ungespeichert');
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
-  expect(await page.evaluate(()=>saved.assignments.dashboard)).toBe('dashboard');
-  expect(await page.evaluate(()=>saved.assignments.media_view)).toBe('media_view');
+  expect(await page.evaluate(()=>saved.assignments)).toBeUndefined();
+  expect(await page.evaluate(()=>saved.scenes.media_view.background)).toBe('ocean');
 });
 
 test('source selection failure and unassigned defaults do not alter the library',async({page})=>{
   await mount(page);await openView(page,'Mediaplayer');
   await page.getByLabel('Eigenes Layout verwenden').check();await page.getByRole('button',{name:'Speichern',exact:true}).click();
   await page.evaluate(()=>{calls.length=0;});
-  await page.evaluate(()=>{studio.config.assignments.dashboard='';hass.callService=async()=>{throw Error('offline');};});
+  await page.evaluate(()=>{hass.callService=async()=>{throw Error('offline');};});
   await page.getByRole('button',{name:'Dashboard anzeigen',exact:true}).click();
   await expect(page.locator('.flash')).toContainText('Quelle nicht erreichbar');
-  expect(await page.evaluate(()=>studio.config.assignments.dashboard)).toBe('');
+  expect(await page.evaluate(()=>studio.config.views[0].id)).toBe('dashboard');
   expect(await page.evaluate(()=>calls.filter(c=>c[0]==='POST').length)).toBe(0);
 });
 
-test('an unassigned gallery view explicitly offers assignment instead of ambiguous source selection',async({page})=>{
+test('custom gallery and editor select their own source without replacing fixed views',async({page})=>{
   await mount(page);await page.getByRole('button',{name:'Mediaplayer duplizieren',exact:true}).click();
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   const card=page.locator('.view-card').filter({has:page.getByRole('heading',{name:'Mediaplayer · Kopie',exact:true})});
-  await expect(card.getByRole('button',{name:'Anzeigen',exact:true})).toHaveCount(0);
-  await card.getByRole('button',{name:'Als Dashboard verwenden',exact:true}).click();
-  expect(await page.evaluate(()=>saved.views.find(v=>v.id===saved.assignments.dashboard).name)).toBe('Mediaplayer · Kopie');
+  await card.getByRole('button',{name:'Anzeigen',exact:true}).click();
+  expect(await page.evaluate(()=>calls.filter(c=>c[0]==='media_player').at(-1)[2].source)).toBe('Mediaplayer · Kopie');
+  await openView(page,'Mediaplayer · Kopie');
+  await page.getByRole('button',{name:'Ansicht anzeigen',exact:true}).click();
+  expect(await page.evaluate(()=>calls.filter(c=>c[0]==='media_player').at(-1)[2].source)).toBe('Mediaplayer · Kopie');
+  expect(await page.evaluate(()=>saved.views[0].id)).toBe('dashboard');
+  expect(await page.evaluate(()=>saved.assignments)).toBeUndefined();
 });
 
-test('music view saves colour-only background and optional timeline state without changing assignments',async({page})=>{
+test('music view saves colour-only background and optional timeline state without changing other views',async({page})=>{
   await mount(page);
   await page.evaluate(png=>{
     hass.states['media_player.sonos']={entity_id:'media_player.sonos',state:'playing',attributes:{friendly_name:'Sonos Wohnzimmer',entity_picture:'/private-art',media_title:'First'}};
@@ -416,7 +431,7 @@ test('music view saves colour-only background and optional timeline state withou
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   expect(await page.evaluate(()=>saved.scenes.media_view.elements[0].show_playback_icon)).toBe(false);
   expect(await page.evaluate(()=>saved.scenes.media_view.media_background_fit)).toBe('colors');
-  expect(await page.evaluate(()=>saved.assignments.dashboard)).toBe('dashboard');
+  expect(await page.evaluate(()=>saved.assignments)).toBeUndefined();
   await page.getByLabel('Play-/Pause-Symbol anzeigen').check();
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   expect(await page.evaluate(()=>saved.scenes.media_view.elements[0].show_playback_icon)).toBe(true);

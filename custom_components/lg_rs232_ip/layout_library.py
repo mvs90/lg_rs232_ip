@@ -1,42 +1,73 @@
-"""Named, reusable views and their assignment to display contexts."""
+"""Six protected views and custom views that each become a display source."""
 
 from copy import deepcopy
 import re
 
-from .layout_config import SCENES, make_layout, validate_layout
+from .layout_config import make_layout, validate_layout
 
-MAX_VIEWS = 24
-SCENE_NAMES = {
-    "signal": "Mit HDMI",
-    "no_signal": "Ohne HDMI",
+FIXED_VIEWS = {
     "dashboard": "Dashboard",
-    "overlay": "Meldung · Overlay",
-    "pip": "Meldung · PiP",
-    "fullscreen": "Meldung · Vollbild",
-    "pip_view": "PiP",
+    "pip_view": "Dashboard PiP",
     "media_view": "Mediaplayer",
+    "overlay": "Mitteilung",
+    "pip": "Mitteilung PiP",
+    "fullscreen": "Mitteilung Vollbild",
 }
+SOURCE_VIEWS = {
+    key: FIXED_VIEWS[key] for key in ("dashboard", "pip_view", "media_view")
+}
+MAX_VIEWS = 30  # Six fixed views plus up to 24 custom sources.
+CUSTOM_ID = re.compile(r"view_[a-zA-Z0-9_-]{1,35}")
 
 
 def from_config(config):
     return {
+        "library_version": 2,
         "views": [
-            {
-                "id": key,
-                "name": SCENE_NAMES[key],
-                "scene": deepcopy(config["scenes"][key]),
-            }
-            for key in SCENES
+            {"id": key, "name": name, "scene": deepcopy(config["scenes"][key])}
+            for key, name in FIXED_VIEWS.items()
         ],
-        "assignments": {key: key for key in SCENES},
     }
 
 
+def upgrade_library(value, settings):
+    """Keep the user's previously assigned designs when adopting fixed slots."""
+    if value.get("library_version") == 2:
+        return deepcopy(value)
+    by_id = {view["id"]: view for view in value["views"]}
+    assignments = value.get("assignments", {})
+    assignments = {"pip_view": assignments.get("signal", ""), **assignments}
+    result = from_config(settings)
+    used = set()
+    for view in result["views"]:
+        old_id = assignments.get(view["id"])
+        if old_id in by_id:
+            view["scene"] = deepcopy(by_id[old_id]["scene"])
+            used.add(old_id)
+    for old in value["views"]:
+        if old["id"] in used:
+            continue
+        copy = deepcopy(old)
+        identifier = "view_" + old["id"][:30]
+        base, suffix = identifier, 2
+        while any(view["id"] == identifier for view in result["views"]):
+            identifier = base + "_" + str(suffix)
+            suffix += 1
+        copy["id"] = identifier
+        result["views"].append(copy)
+    return result
+
+
 def validate_library(value, settings):
-    if not isinstance(value, dict) or not isinstance(value.get("views"), list):
-        raise ValueError("Supply a view library")
+    if (
+        not isinstance(value, dict)
+        or value.get("library_version") != 2
+        or not isinstance(value.get("views"), list)
+        or "assignments" in value
+    ):
+        raise ValueError("Supply a fixed-view library (version 2)")
     if len(value["views"]) > MAX_VIEWS:
-        raise ValueError("Use at most 24 saved views")
+        raise ValueError("Use at most 24 custom views")
     views, ids = [], set()
     for raw in value["views"]:
         if not isinstance(raw, dict):
@@ -44,7 +75,7 @@ def validate_library(value, settings):
         identifier, name = raw.get("id"), raw.get("name")
         if (
             not isinstance(identifier, str)
-            or not re.fullmatch(r"[a-zA-Z0-9_-]{1,40}", identifier)
+            or (identifier not in FIXED_VIEWS and not CUSTOM_ID.fullmatch(identifier))
             or identifier in ids
         ):
             raise ValueError("View IDs must be unique")
@@ -55,63 +86,51 @@ def validate_library(value, settings):
             or any(ord(c) < 32 for c in name)
         ):
             raise ValueError("Use a view name with 1–80 characters")
+        if identifier in FIXED_VIEWS and name != FIXED_VIEWS[identifier]:
+            raise ValueError("Fixed views cannot be renamed")
         ids.add(identifier)
         candidate = make_layout()
         candidate["scenes"]["dashboard"] = raw.get("scene")
         normalized = validate_layout(candidate)["scenes"]["dashboard"]
         views.append({"id": identifier, "name": name.strip(), "scene": normalized})
-    assignments = value.get("assignments")
-    if isinstance(assignments, dict) and set(assignments) in (
-        set(SCENES) - {"media_view"},
-        set(SCENES) - {"media_view", "pip_view"},
-    ):
-        assignments = {**assignments, "media_view": ""}
-    if isinstance(assignments, dict) and set(assignments) == set(SCENES) - {"pip_view"}:
-        # Keep the existing HDMI composition available as the explicit PiP view.
-        assignments = {**assignments, "pip_view": assignments["signal"]}
-    if not isinstance(assignments, dict) or set(assignments) != set(SCENES):
-        raise ValueError("Assign each display context")
-    if any(
-        not isinstance(v, str) or (v and v not in ids) for v in assignments.values()
-    ):
-        raise ValueError("Assigned view does not exist")
-    library = {"views": views, "assignments": dict(assignments)}
+    if not set(FIXED_VIEWS).issubset(ids):
+        raise ValueError("Fixed views cannot be deleted")
+    by_id = {view["id"]: view for view in views}
+    views = [by_id[key] for key in FIXED_VIEWS] + [
+        view for view in views if view["id"] not in FIXED_VIEWS
+    ]
     config = deepcopy(settings)
-    defaults = make_layout()["scenes"]
-    by_id = {v["id"]: v["scene"] for v in views}
     config["scenes"] = {
-        key: deepcopy(by_id.get(assignments[key], defaults[key])) for key in SCENES
+        key: deepcopy(settings["scenes"][key]) for key in ("signal", "no_signal")
     }
-    # Also enforce the combined active-entity bound across assigned views.
-    return validate_layout(config), library
+    config["scenes"].update({view["id"]: deepcopy(view["scene"]) for view in views})
+    return validate_layout(config), {"library_version": 2, "views": views}
 
 
 def sync_legacy(library, config):
-    """Keep saved views when older editor/API clients change a runtime scene."""
+    """A runtime editor can update layouts, but cannot remove protected views."""
     result = deepcopy(library)
-    defaults = make_layout()["scenes"]
-    for key in SCENES:
-        identifier = result["assignments"].get(key, "")
-        view = next((v for v in result["views"] if v["id"] == identifier), None)
-        if view and view["scene"] == config["scenes"][key]:
-            continue
-        if not identifier and config["scenes"][key] == defaults[key]:
-            continue
-        if view and list(result["assignments"].values()).count(identifier) == 1:
-            view["scene"] = deepcopy(config["scenes"][key])
-        else:
-            identifier = "legacy_" + key
-            ids = {v["id"] for v in result["views"]}
-            suffix = 1
-            while identifier in ids:
-                identifier = f"legacy_{key}_{suffix}"
-                suffix += 1
-            result["views"].append(
-                {
-                    "id": identifier,
-                    "name": SCENE_NAMES[key],
-                    "scene": deepcopy(config["scenes"][key]),
-                }
-            )
-            result["assignments"][key] = identifier
+    for view in result["views"]:
+        if view["id"] in config["scenes"]:
+            view["scene"] = deepcopy(config["scenes"][view["id"]])
     return validate_library(result, config)[1]
+
+
+def source_views(library):
+    return {
+        view["id"]: view["name"]
+        for view in library["views"]
+        if view["id"] in SOURCE_VIEWS or view["id"] not in FIXED_VIEWS
+    }
+
+
+def source_names(views, occupied):
+    """Keep all HDMI, fixed and user-defined source labels unambiguous."""
+    used, result = set(occupied), {}
+    for key, title in views.items():
+        name = title
+        while name in used:
+            name += " (App)"
+        used.add(name)
+        result[key] = name
+    return result

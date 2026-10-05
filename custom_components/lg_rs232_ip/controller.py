@@ -128,12 +128,8 @@ class DisplayController(NativeControls):
                 if app and app.logical_input is not None:
                     self._current_input_id = app.logical_input
                 self._source = (
-                    "Dashboard"
-                    if app and app.dashboard_selected and app.resident_connected
-                    else "PiP"
-                    if app and app.pip_selected and app.resident_connected
-                    else "Mediaplayer"
-                    if app and app.media_view_selected and app.resident_connected
+                    self.app_view_sources.get(app.selected_view)
+                    if app and app.selected_view and app.resident_connected
                     else self._resolve_source_name(self._current_input_id)
                 )
                 self.volume = await self._lg_display.async_get_volume()
@@ -176,6 +172,22 @@ class DisplayController(NativeControls):
                 raise HomeAssistantError("LG rejected power off")
         await self.async_refresh()
 
+    @property
+    def app_view_sources(self):
+        from .layout_library import SOURCE_VIEWS, source_names
+
+        app = (
+            self.hass.data.get(DOMAIN, {})
+            .get(self._config_entry.entry_id, {})
+            .get("display_app")
+        )
+        views = app.view_sources if app else SOURCE_VIEWS
+        occupied = [
+            self._config_entry.options.get(f"input_name_hdmi{i}", f"HDMI {i}")
+            for i in range(1, 4)
+        ]
+        return source_names(views, occupied)
+
     async def async_select_dashboard(self):
         await self.async_select_app_view("dashboard")
 
@@ -186,7 +198,8 @@ class DisplayController(NativeControls):
         await self.async_select_app_view("media_view")
 
     async def async_select_app_view(self, view):
-        if view not in ("dashboard", "pip", "media_view"):
+        view = "pip_view" if view == "pip" else view
+        if view not in self.app_view_sources:
             raise HomeAssistantError("Unknown app view")
         app = (
             self.hass.data.get(DOMAIN, {})
@@ -216,11 +229,7 @@ class DisplayController(NativeControls):
             if self.external_owner or self.presentation_active:
                 raise HomeAssistantError("Display is busy with another presentation")
             await app.async_select_view(view)
-            self._source = {
-                "dashboard": "Dashboard",
-                "pip": "PiP",
-                "media_view": "Mediaplayer",
-            }[view]
+            self._source = self.app_view_sources[view]
             self.async_write_ha_state()
 
     async def async_select_input(self, input_id):
@@ -240,6 +249,7 @@ class DisplayController(NativeControls):
                 app.saved.pop("dashboard", None)
                 app.saved.pop("pip", None)
                 app.saved.pop("media_view", None)
+                app.saved.pop("custom_view", None)
                 await app.async_pause_resident(leave=False)
             if not await self._lg_display.async_set_input(input_id):
                 raise HomeAssistantError("LG rejected input")

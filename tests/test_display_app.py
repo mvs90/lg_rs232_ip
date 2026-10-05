@@ -1075,7 +1075,7 @@ async def test_dashboard_source_is_persistent_excludes_av_standby_and_hdmi_selec
             app.controller, SimpleNamespace(entry_id="test", options={})
         )
         api = get_display_api(app.hass, "test")
-        assert entity.source_list[-3:] == ["Dashboard", "PiP", "Mediaplayer"]
+        assert entity.source_list[-3:] == ["Dashboard", "Dashboard PiP", "Mediaplayer"]
         assert api.dashboard_available
         app.web.reset_mock()
         app.controller._lg_display.async_set_input.reset_mock()
@@ -1183,7 +1183,7 @@ async def test_dashboard_source_does_not_hide_a_custom_hdmi_label(app):
             "HDMI 2",
             "HDMI 3",
             "Dashboard (App)",
-            "PiP",
+            "Dashboard PiP",
             "Mediaplayer",
         ]
         await acknowledge_selection(app, entity.async_select_source("Dashboard (App)"))
@@ -1284,10 +1284,12 @@ async def test_pip_source_is_independent_persisted_and_same_hdmi_exits_it(app):
             app.controller, SimpleNamespace(entry_id="test", options={})
         )
         api = get_display_api(app.hass, "test")
-        assert api.pip_available and "PiP" in entity.source_list
-        await acknowledge_selection(app, entity.async_select_source("PiP"))
+        assert api.pip_available and "Dashboard PiP" in entity.source_list
+        await acknowledge_selection(app, entity.async_select_source("Dashboard PiP"))
         assert (
-            app.pip_selected and not app.dashboard_selected and entity.source == "PiP"
+            app.pip_selected
+            and not app.dashboard_selected
+            and entity.source == "Dashboard PiP"
         )
         assert app.state()["pip"] and not app.state()["dashboard"]
         assert (await app.store.async_load())["pip"] is True
@@ -1350,13 +1352,20 @@ async def test_pip_label_collision_does_not_hide_physical_hdmi(app):
     try:
         entity = LGDisplayMediaPlayer(
             app.controller,
-            SimpleNamespace(entry_id="test", options={"input_name_hdmi1": "PiP"}),
+            SimpleNamespace(
+                entry_id="test", options={"input_name_hdmi1": "Dashboard PiP"}
+            ),
         )
-        assert entity.pip_source == "PiP (App)"
-        assert "PiP" in entity.source_list and "PiP (App)" in entity.source_list
-        await acknowledge_selection(app, entity.async_select_source("PiP (App)"))
-        assert entity.source == "PiP (App)"
-        await acknowledge_selection(app, entity.async_select_source("PiP"))
+        assert entity.pip_source == "Dashboard PiP (App)"
+        assert (
+            "Dashboard PiP" in entity.source_list
+            and "Dashboard PiP (App)" in entity.source_list
+        )
+        await acknowledge_selection(
+            app, entity.async_select_source("Dashboard PiP (App)")
+        )
+        assert entity.source == "Dashboard PiP (App)"
+        await acknowledge_selection(app, entity.async_select_source("Dashboard PiP"))
         assert not app.pip_selected
     finally:
         await layouts.async_close()
@@ -1478,7 +1487,7 @@ async def test_rendering_diagnostics_only_accept_bounded_dimensions(app):
     app.event(
         {
             "type": "hello",
-            "version": "1.10.0",
+            "version": "1.11.0",
             "visible": True,
             "rendering": {
                 "width": 3840,
@@ -1510,3 +1519,85 @@ async def test_rendering_diagnostics_only_accept_bounded_dimensions(app):
         }
     )
     assert app.attributes["rendering"] == {}
+
+
+async def test_custom_view_source_rename_delete_persistence_and_av_protection(app):
+    from copy import deepcopy
+    from custom_components.lg_rs232_ip.api import get_display_api
+    from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
+
+    layouts = await configure_dashboard(app)
+    layouts.changed = app._layouts_changed
+    try:
+        library = deepcopy(layouts.library)
+        view = deepcopy(library["views"][0])
+        view.update(id="view_morning", name="Mein Morgen")
+        library["views"].append(view)
+        await layouts.async_save(layouts.config, layouts.revision, library)
+        entity = LGDisplayMediaPlayer(app.controller, app.entry)
+        api = get_display_api(app.hass, "test")
+        assert "Mein Morgen" in entity.source_list
+        assert (
+            entity.extra_state_attributes["view_sources"]["view_morning"]
+            == "Mein Morgen"
+        )
+        await acknowledge_selection(app, entity.async_select_source("Mein Morgen"))
+        assert (
+            entity.source == "Mein Morgen"
+            and app.state()["selected_view"] == "view_morning"
+        )
+        assert api.active_view == "view_morning" and api.presentation_active
+        assert await api.async_get_input() is None
+        assert await api.async_get_signal_status() is None
+        assert (await app.store.async_load())["custom_view"] == "view_morning"
+        library["views"][-1]["name"] = "Mein Abend"
+        await layouts.async_save(layouts.config, layouts.revision, library)
+        assert "Mein Morgen" not in entity.source_list
+        assert entity.source == "Mein Abend" and api.active_view == "view_morning"
+        with pytest.raises(HomeAssistantError):
+            await entity.async_select_source("Mein Morgen")
+        # Deleting the active custom source falls back immediately and persists it.
+        library["views"].pop()
+        await layouts.async_save(layouts.config, layouts.revision, library)
+        assert (
+            entity.source == "Dashboard" and app.state()["selected_view"] == "dashboard"
+        )
+        assert "Mein Abend" not in entity.source_list
+        await asyncio.sleep(1.1)
+        assert (await app.store.async_load())["custom_view"] is None
+        await acknowledge_selection(app, entity.async_select_source("HDMI 1"))
+        assert api.active_view is None and not api.presentation_active
+    finally:
+        await layouts.async_close()
+
+
+async def test_custom_source_timeout_restores_previous_selection(app):
+    from copy import deepcopy
+
+    layouts = await configure_dashboard(app)
+    try:
+        library = deepcopy(layouts.library)
+        library["views"].append(
+            dict(
+                id="view_extra",
+                name="Extra",
+                scene=deepcopy(library["views"][0]["scene"]),
+            )
+        )
+        await layouts.async_save(layouts.config, layouts.revision, library)
+        await acknowledge_selection(app, app.async_select_media_view())
+
+        async def timeout(awaitable, _):
+            awaitable.close()
+            raise TimeoutError
+
+        with patch(
+            "custom_components.lg_rs232_ip.resident_app.asyncio.wait_for", timeout
+        ):
+            with pytest.raises(HomeAssistantError, match="confirm"):
+                await app.async_select_view("view_extra")
+        assert (
+            app.selected_view == "media_view" and app.saved.get("custom_view") is None
+        )
+    finally:
+        await layouts.async_close()

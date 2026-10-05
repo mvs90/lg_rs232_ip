@@ -1,5 +1,13 @@
 # Release acceptance
 
+## LG 2.14.0 / AV 1.4.0: fixed views and dynamic sources — 2026-10-05
+
+**335 LG tests and 97 AV tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14. All 130 browser cases pass across Chromium and WebKit.** New coverage protects fixed names/IDs from deletion, tests per-view reset and undo, custom creation/duplication/rename/deletion, API revisions and conversion of existing designs, scoped data/image access and combined entity limits. Source tests cover collisions, stable IDs, acknowledgement timeout rollback, notification return, HDMI element identity, deletion fallback and AV standby/linked-source behavior. The final Studio fix canonicalizes scene order so undo correctly restores the saved indicator.
+
+The existing **unifi-air-quality-ha-dev / HA 2026.9.4** container runs **LG 2.14.0 / app 1.11.0 / AV 1.4.0**. The physical **75UH5F-HJ** verified a temporary custom source, live renaming with unchanged ID, notification return, persistence across a restart of this same HA container, and deletion of the active source returning to Dashboard. A temporary AV entry selected the custom source and followed its rename/deletion live. Mediaplayer, Dashboard PiP and HDMI full-screen selection still work; native capture confirmed the custom composition and the SI app remained foreground. No Sonos playback command was sent.
+
+All existing assigned designs were compared with the converted fixed views; unused Ohne HDMI remains a deletable custom source. The live API rejected deleting/renaming protected views without changing the library. Browser inspection verified fixed-view controls and reset/undo against the real HA frontend. Temporary view and AV entry were removed and the original source restored as **Dashboard PiP** (formerly PiP). Private backups and captures remain excluded from Git. HomeKit source exposure is through the combined entity; new Apple Home pairing was not tested.
+
 ## LG 2.13.0: cover colours and optional playback icon — 2026-10-05
 
 **332 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 128 browser cases pass across Chromium and WebKit.** Coverage adds colour-only 4K backgrounds without a second visible cover, small sampling-image requests, one edge analysis per cover across fit/dimming changes, missing artwork and pause fallback, optional playing/paused SVGs across all three media styles, timeline alignment, paused progress, no repeated icon DOM mutations, removal of status text, strict config validation and saving the new Studio controls without changing source assignments.

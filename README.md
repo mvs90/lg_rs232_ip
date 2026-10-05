@@ -1,6 +1,6 @@
 # LG Professional Display
 
-Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.13.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
+Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.14.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
 
 [Deutsche Anleitung](docs/README.de.md) · [Display Studio](docs/DISPLAY-STUDIO.md) · [Dashboard remote](docs/DASHBOARD-CARD.md) · [Features and actions](docs/FEATURES.md) · [Device reference](docs/devices/LG-UH5F-H.md) · [MIT license](LICENSE)
 
@@ -17,7 +17,9 @@ Requires Home Assistant 2025.3 or later; tested on 2025.3.4 and 2026.9.4. Availa
 
 ## Design your display
 
-**LG Display Studio** appears automatically in the HA sidebar for administrators. Its home page is a gallery of named views: create from Cinema, Aurora, Sonnenstand or Paper & Sand, edit, duplicate or delete each independently. Assign saved views to the separate **Dashboard** and **PiP** sources or overlay/PiP/fullscreen notifications. Physical HDMI selections always show full-screen video in the app. The editor offers context buttons above the preview and colour-only themes on the left; changing a theme preserves all content, bindings and geometry. Existing layouts are preserved as six named views. Arrange widgets freely; daily/hourly weather, calendars, HA states and your own JPEG/PNG backgrounds remain available. **Sonnenstand** replaces the Morgenlicht template and follows live solar colour/position updates every 30 seconds without reloading. Save the complete library or export/import it (images separately). An optional **playing-media background** follows any selected HA player: stretch, proportional fit or centered cover, adjustable dimming and a gradient sampled from the cover edges. Pause, stop and missing artwork restore the normal theme.
+**LG Display Studio** appears automatically in the HA sidebar for administrators. Its gallery contains six fixed editable views: **Dashboard**, **Dashboard PiP**, **Mediaplayer**, **Mitteilung**, **Mitteilung PiP**, and **Mitteilung Vollbild**. Each has a **Restore default** action and cannot be deleted. Additional views created from Cinema, Aurora, Sonnenstand or Paper & Sand automatically become sources when saved; rename, duplicate or delete them independently. There is no separate assignment step. Existing designs and bindings are preserved. Deleting the active custom view returns to Dashboard.
+
+Physical HDMI selections always show full-screen video in the app. The editor offers context buttons above the preview and colour themes on the left that preserve content and geometry. Arrange media, weather, calendar and status widgets freely. **Sonnenstand** follows live solar colour/position updates every 30 seconds. Upload backgrounds up to 4K, export/import the library, or use a playing-media background with adjustable cover fitting and edge colours. Six fixed views plus up to 24 custom views share the existing 32-entity limit. See the [Studio guide](docs/DISPLAY-STUDIO.md).
 
 **Media and room cards:** add a Sonos or other HA media player with album artwork, title, artist, playback state and optional progress/volume, in compact or large-cover form. Room-based suggestions use HA entity/device areas to propose media, weather/calendar and styled status cards. Add or remove each card individually; changes apply only after saving.
 
@@ -69,4 +71,4 @@ Picture controls: [aspect-ratio options, backlight locks and DPM/PM dependencies
 
 ### Full-screen music view and 4K assets
 
-Select **Mediaplayer** in Display Studio to configure a full-screen cover, title, artist, playback state and progress view. Bind any existing HA media player, customize widgets and backgrounds, then select the new source on the LG or AV Companion 1.3.0. Artwork tiers honor display pixel density; uploaded backgrounds retain up to 3840×2160 pixels. See [configuration, resource limits and measured LG rendering](docs/DISPLAY-STUDIO.md#mediaplayer-im-vollbild).
+Select **Mediaplayer** in Display Studio to configure a full-screen cover, title, artist, playback state and progress view. Bind any existing HA media player, customize widgets and backgrounds, then select the new source on the LG or AV Companion 1.4.0. Artwork tiers honor display pixel density; uploaded backgrounds retain up to 3840×2160 pixels. See [configuration, resource limits and measured LG rendering](docs/DISPLAY-STUDIO.md#mediaplayer-im-vollbild).

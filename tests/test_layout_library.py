@@ -17,6 +17,9 @@ from custom_components.lg_rs232_ip.layout_library import (
     from_config,
     validate_library,
     sync_legacy,
+    upgrade_library,
+    FIXED_VIEWS,
+    source_names,
 )
 from custom_components.lg_rs232_ip.layouts import DisplayLayouts, LayoutConflict
 from tests.test_layouts import layouts
@@ -27,7 +30,7 @@ def test_named_library_validation_and_independent_copies():
     config = make_layout("morning")
     library = from_config(config)
     copy = deepcopy(library["views"][2])
-    copy.update(id="evening", name="Abend")
+    copy.update(id="view_evening", name="Abend")
     copy["scene"]["color"] = "#112233"
     library["views"].append(copy)
     runtime, normalized = validate_library(library, config)
@@ -40,7 +43,8 @@ def test_named_library_validation_and_independent_copies():
         lambda lib: lib["views"][0].update(name="  "),
         lambda lib: lib["views"][0].update(id="../outside"),
         lambda lib: lib["views"][0]["scene"].update(color="url(https://bad)"),
-        lambda lib: lib["assignments"].update(dashboard="absent"),
+        lambda lib: lib["views"].pop(0),
+        lambda lib: lib["views"][0].update(name="Renamed"),
         lambda lib: lib.update(views=[dict(copy, id=f"view_{i}") for i in range(25)]),
     ):
         invalid = deepcopy(library)
@@ -49,40 +53,38 @@ def test_named_library_validation_and_independent_copies():
             validate_library(invalid, config)
 
 
-def test_legacy_save_preserves_defaults_and_shared_or_unassigned_views():
+def test_runtime_save_preserves_custom_views_and_fixed_identity():
     config = make_layout()
-    empty = {"views": [], "assignments": {key: "" for key in config["scenes"]}}
-    assert sync_legacy(empty, config) == empty
     library = from_config(config)
-    library["assignments"]["no_signal"] = "dashboard"
-    reserved = deepcopy(library["views"][2])
-    reserved.update(id="legacy_dashboard", name="Saved draft")
+    reserved = deepcopy(library["views"][0])
+    reserved.update(id="view_draft", name="Saved view")
     library["views"].append(reserved)
     runtime, library = validate_library(library, config)
     runtime["scenes"]["dashboard"]["color"] = "#123456"
     result = sync_legacy(library, runtime)
     assert next(v for v in result["views"] if v["id"] == reserved["id"]) == reserved
-    assert result["assignments"]["no_signal"] == "dashboard"
-    assert result["assignments"]["dashboard"] == "legacy_dashboard_1"
+    assert result["views"][0]["id"] == "dashboard"
     compiled, _ = validate_library(result, runtime)
     assert compiled == runtime
     assert sync_legacy(result, runtime) == result
 
 
-async def test_saved_views_only_publish_assigned_data_and_survive_restart(layouts):
+async def test_custom_views_publish_as_sources_survive_restart_and_delete(layouts):
     config = make_layout()
     config["enabled"] = True
     library = from_config(config)
-    spare = deepcopy(library["views"][2])
-    spare.update(id="private", name="Unbenutzte Ansicht")
+    spare = deepcopy(library["views"][0])
+    spare.update(id="view_morning", name="Mein Morgen")
     item = element("entity", 5, 5, 40, 40)
-    item["entity_id"] = "sensor.private"
+    item["entity_id"] = "sensor.room"
     spare["scene"]["elements"] = [item]
     library["views"].append(spare)
-    layouts.hass.states.async_set("sensor.private", "secret")
+    layouts.hass.states.async_set("sensor.room", "22")
     await layouts.async_save(config, 0, library)
-    assert "private" not in str(layouts.payload())
-    assert len(layouts.editor_document()["config"]["views"]) == 9
+    assert layouts.source_views["view_morning"] == "Mein Morgen"
+    assert layouts.payload()["values"]["sensor.room"]["state"] == "22"
+    assert "view_morning" in layouts.payload()["config"]["scenes"]
+    assert len(layouts.editor_document()["config"]["views"]) == 7
     second = DisplayLayouts(layouts.hass, layouts.entry)
     await second.async_start()
     try:
@@ -90,16 +92,15 @@ async def test_saved_views_only_publish_assigned_data_and_survive_restart(layout
         assert second.config == layouts.config
     finally:
         await second.async_close()
-    library["assignments"]["dashboard"] = "private"
+    library["views"][-1]["name"] = "Abend"
     await layouts.async_save(config, 1, library)
-    assert layouts.payload()["values"]["sensor.private"]["state"] == "secret"
-    assert "views" not in layouts.payload()["config"]
+    assert layouts.source_views["view_morning"] == "Abend"
     with pytest.raises(LayoutConflict):
         await layouts.async_save(config, 1, library)
-    library["views"] = [v for v in library["views"] if v["id"] != "private"]
-    library["assignments"]["dashboard"] = ""
+    library["views"].pop()
     await layouts.async_save(config, 2, library)
-    assert "sensor.private" not in layouts.values()
+    assert "sensor.room" not in layouts.values()
+    assert "view_morning" not in layouts.source_views
     assert layouts.config["scenes"]["dashboard"] == make_layout()["scenes"]["dashboard"]
 
 
@@ -111,7 +112,7 @@ async def test_existing_runtime_is_adopted_without_losing_user_bindings(layouts)
     await second.async_start()
     try:
         assert second.config == config and second.revision == 7
-        assert second.library["views"][2]["scene"] == config["scenes"]["dashboard"]
+        assert second.library["views"][0]["scene"] == config["scenes"]["dashboard"]
         # The original storage remains intact until the user saves.
         assert "library" not in await second.store.async_load()
     finally:
@@ -122,7 +123,7 @@ async def test_library_api_authorization_and_inactive_background_protection(layo
     image_id = await layouts.backgrounds.async_upload(cover())
     editor = layouts.editor_document()["config"]
     extra = deepcopy(editor["views"][2])
-    extra.update(id="spare", name="Später")
+    extra.update(id="view_spare", name="Später")
     extra["scene"]["image_id"] = image_id
     editor["views"].append(extra)
 
@@ -146,7 +147,7 @@ async def test_library_api_authorization_and_inactive_background_protection(layo
             path, headers=headers, json={"config": editor, "revision": 0}
         )
         assert response.status == 200
-        assert len((await response.json())["config"]["views"]) == 9
+        assert len((await response.json())["config"]["views"]) == 7
         assert (
             await client.post(
                 path, headers=headers, json={"config": editor, "revision": 0}
@@ -157,7 +158,7 @@ async def test_library_api_authorization_and_inactive_background_protection(layo
                 f"/api/lg_rs232_ip/layout_background/one/{image_id}", headers=headers
             )
         ).status == 409
-        editor["assignments"]["dashboard"] = "deleted"
+        editor["views"].pop(0)
         assert (
             await client.post(
                 path, headers=headers, json={"config": editor, "revision": 1}
@@ -193,18 +194,36 @@ async def test_live_sun_updates_are_bounded_published_and_cleaned_up(layouts):
     assert layouts._sun_timer is None
 
 
-def test_29_library_keeps_its_hdmi_composition_as_explicit_pip():
+def test_existing_assignments_become_fixed_views_without_losing_designs():
     config = make_layout("morning")
-    del config["scenes"]["pip_view"]
-    library = from_config(make_layout("morning"))
-    library["views"] = [view for view in library["views"] if view["id"] != "pip_view"]
-    del library["assignments"]["pip_view"]
-    original = deepcopy(library)
-    runtime, normalized = validate_library(library, config)
-    assert normalized["views"] == original["views"]
-    assert normalized["assignments"]["pip_view"] == "signal"
-    assert runtime["scenes"]["pip_view"] == config["scenes"]["signal"]
-    assert library == original
+    old = {
+        "views": [
+            {
+                "id": "music",
+                "name": "Music",
+                "scene": deepcopy(config["scenes"]["media_view"]),
+            },
+            {
+                "id": "unused",
+                "name": "Extra",
+                "scene": deepcopy(config["scenes"]["dashboard"]),
+            },
+        ],
+        "assignments": {"dashboard": "music", "media_view": "music"},
+    }
+    before = deepcopy(old)
+    upgraded = upgrade_library(old, config)
+    runtime, library = validate_library(upgraded, config)
+    assert [v["name"] for v in library["views"][:6]] == list(FIXED_VIEWS.values())
+    assert (
+        runtime["scenes"]["dashboard"]
+        == runtime["scenes"]["media_view"]
+        == old["views"][0]["scene"]
+    )
+    assert library["views"][-1]["id"] == "view_unused"
+    assert old == before
+    assert "assignments" not in library
+    assert upgrade_library(library, runtime) == library
 
 
 async def test_legacy_hdmi_scenes_stay_saved_but_do_not_publish_or_request_data(
@@ -226,14 +245,34 @@ async def test_legacy_hdmi_scenes_stay_saved_but_do_not_publish_or_request_data(
     assert layouts.forecast_requests() == {}
 
 
-def test_existing_views_gain_media_context_without_changing_saved_scenes():
-    original = from_config(make_layout("aurora"))
-    original["views"] = [v for v in original["views"] if v["id"] != "media_view"]
-    original["assignments"].pop("media_view")
-    runtime, normalized = validate_library(original, make_layout())
-    assert normalized["views"] == original["views"]
-    assert normalized["assignments"]["media_view"] == ""
-    assert runtime["scenes"]["media_view"]["elements"][0]["media_style"] == "stage"
-    assert all(
-        item["kind"] != "hdmi" for item in runtime["scenes"]["media_view"]["elements"]
+def test_sources_are_unique_even_when_names_collide_with_hdmi_and_each_other():
+    names = source_names(
+        {
+            "dashboard": "Dashboard",
+            "pip_view": "Dashboard PiP",
+            "view_one": "Dashboard",
+            "view_two": "Dashboard (App)",
+            "view_three": "HDMI 1",
+        },
+        {"Dashboard", "HDMI 1"},
     )
+    assert len(set(names.values())) == 5
+    assert names["dashboard"] == "Dashboard (App)"
+    assert names["view_three"] == "HDMI 1 (App)"
+
+
+async def test_custom_sources_share_the_32_entity_bound(layouts):
+    config = make_layout()
+    library = from_config(config)
+    for n in range(3):
+        scene = deepcopy(config["scenes"]["dashboard"])
+        scene["elements"] = []
+        for i in range(11):
+            item = element("entity", 0, 0, 10, 10)
+            item.update(id=f"card_{i}", entity_id=f"sensor.room_{n}_{i}")
+            scene["elements"].append(item)
+        library["views"].append(
+            {"id": f"view_{n}", "name": f"Room {n}", "scene": scene}
+        )
+    with pytest.raises(ValueError, match="32 distinct"):
+        validate_library(library, config)

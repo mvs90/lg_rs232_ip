@@ -205,7 +205,7 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
 
     @property
     def pip_source(self):
-        return self._app_source_name("PiP")
+        return self._app_source_name("Dashboard PiP")
 
     @property
     def media_view_source(self):
@@ -221,8 +221,30 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         return name
 
     @property
+    def app_view_sources(self):
+        from .layout_library import SOURCE_VIEWS, source_names
+
+        views = getattr(self.display_app, "view_sources", None)
+        if not isinstance(views, dict):
+            views = SOURCE_VIEWS
+        return source_names(
+            views,
+            [
+                self.entry.options.get(f"input_name_hdmi{i}", f"HDMI {i}")
+                for i in range(1, 4)
+            ],
+        )
+
+    @property
     def source(self):
         app = self.display_app
+        selected = getattr(app, "selected_view", None)
+        if (
+            isinstance(selected, str)
+            and selected in self.app_view_sources
+            and app.resident_connected
+        ):
+            return self.app_view_sources[selected]
         if app and app.dashboard_selected and app.resident_connected:
             return self.dashboard_source
         if app and app.pip_selected and app.resident_connected:
@@ -230,7 +252,7 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         if app and app.media_view_selected and app.resident_connected:
             return self.media_view_source
         if (
-            self.controller._source in ("Dashboard", "PiP", "Mediaplayer")
+            self.controller._source in self.app_view_sources.values()
             and app
             and not app.dashboard_selected
             and not app.pip_selected
@@ -247,9 +269,7 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             if self.entry.options.get(f"show_input_hdmi{i}", True)
         ]
         if self.display_app and self.display_app.dashboard_available:
-            sources.extend(
-                [self.dashboard_source, self.pip_source, self.media_view_source]
-            )
+            sources.extend(list(self.app_view_sources.values()))
         return sources
 
     @property
@@ -277,6 +297,10 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             "presentation_error": self.controller._presentation_error,
             "osd_restore_error": self.controller._lg_display.osd_restore_error,
             "signal_present": self.controller.signal,
+            "view_sources": self.app_view_sources
+            if self.display_app and self.display_app.dashboard_available
+            else {},
+            "selected_view": getattr(self.display_app, "selected_view", None),
             "dashboard_source": self.dashboard_source
             if self.display_app and self.display_app.dashboard_available
             else None,
@@ -341,6 +365,11 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         ):
             await self.controller.async_select_dashboard()
             return
+        if self.display_app and self.display_app.dashboard_available:
+            for view_id, name in self.app_view_sources.items():
+                if source == name:
+                    await self.controller.async_select_app_view(view_id)
+                    return
         for i in range(1, 4):
             if source == self.entry.options.get(f"input_name_hdmi{i}", f"HDMI {i}"):
                 await self.controller.async_select_input(INPUT_SOURCES[f"HDMI {i}"])
