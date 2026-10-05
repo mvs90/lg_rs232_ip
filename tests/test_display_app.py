@@ -1637,3 +1637,68 @@ async def test_studio_hdmi_target_retains_current_input_behind_app_views(
         assert entity.hdmi_source == ("Aktueller Zuspieler" if index == 3 else "HDMI 3")
     finally:
         await layouts.async_close()
+
+
+async def test_animated_studio_view_keeps_osd_guard_until_ack_and_discards_transition(
+    app,
+):
+    from contextlib import asynccontextmanager
+    from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
+
+    layouts = await configure_dashboard(app)
+    app.controller._config_entry = app.entry
+    entity = LGDisplayMediaPlayer(app.controller, app.entry)
+    guarded = False
+
+    @asynccontextmanager
+    async def guard():
+        nonlocal guarded
+        guarded = True
+        try:
+            yield
+        finally:
+            guarded = False
+
+    app.controller._lg_display.async_suppress_osd_for_switch = guard
+    try:
+        for view in ("pip_view", "hdmi_full"):
+            task = asyncio.create_task(entity.async_show_view(view, "smooth"))
+            async with asyncio.timeout(1):
+                while not app._input_request:
+                    await asyncio.sleep(0)
+            assert guarded and not task.done()
+            assert app.state()["input_transition"] == "smooth"
+            assert "transition" not in app.saved
+            app.event({"type": "input_applied", "id": "old-request"})
+            await asyncio.sleep(0)
+            assert guarded and not task.done()
+            app.event({"type": "input_applied", "id": app._input_request})
+            await task
+            assert not guarded and app.state()["input_transition"] == "none"
+            assert app._input_request is None
+        assert entity.source == "HDMI 1"
+        assert app.selected_input == 0x90 and app.selected_view is None
+        with pytest.raises(HomeAssistantError, match="Unknown view transition"):
+            await entity.async_show_view("pip_view", "invalid")
+    finally:
+        await layouts.async_close()
+
+
+async def test_animated_view_timeout_rolls_back_and_clears_transition(app):
+    layouts = await configure_dashboard(app)
+    try:
+
+        async def timeout(awaitable, _):
+            awaitable.close()
+            raise TimeoutError
+
+        with patch(
+            "custom_components.lg_rs232_ip.resident_app.asyncio.wait_for", timeout
+        ):
+            with pytest.raises(HomeAssistantError, match="confirm"):
+                await app.async_select_view("pip_view", transition="smooth")
+        assert app.selected_view is None and app.selected_input == 0x90
+        assert app.state()["input_request"] is None
+        assert app.state()["input_transition"] == "none"
+    finally:
+        await layouts.async_close()

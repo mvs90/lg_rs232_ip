@@ -24,6 +24,7 @@ class ResidentApp:
         self._resident_retry = 0.0
         self._resident_started = 0.0
         self._input_request = None
+        self._input_transition = "none"
         self._input_applied = asyncio.Event()
 
     @property
@@ -81,7 +82,7 @@ class ResidentApp:
     async def async_select_media_view(self):
         await self.async_select_view("media_view")
 
-    async def async_select_view(self, view):
+    async def async_select_view(self, view, *, transition="none"):
         view = "pip_view" if view == "pip" else view
         if view not in self.view_sources:
             raise HomeAssistantError("Unknown app view")
@@ -103,6 +104,7 @@ class ResidentApp:
                 custom_view=view
                 if view not in ("dashboard", "pip_view", "media_view")
                 else None,
+                transition=transition,
             )
         )
         if cancelled:
@@ -137,7 +139,7 @@ class ResidentApp:
             return "ext://hdmi:" + original[-1]
         return None
 
-    async def async_select_hdmi(self, input_id):
+    async def async_select_hdmi(self, input_id, *, transition="none"):
         """Called under the control lock. A missing signal is not an app failure."""
         if not self.resident_connected or input_id not in (0x90, 0x91, 0x92):
             return False
@@ -156,7 +158,7 @@ class ResidentApp:
         # Finish the bounded source/OSD transaction even if the service caller
         # disconnects. Never leave a new input paired with an old recovery journal.
         _, cancelled = await settle_mutation(
-            self._async_apply_hdmi(input_id, target_app)
+            self._async_apply_hdmi(input_id, target_app, transition=transition)
         )
         if cancelled:
             raise asyncio.CancelledError
@@ -171,6 +173,7 @@ class ResidentApp:
         pip=False,
         media_view=False,
         custom_view=None,
+        transition="none",
     ):
         previous_custom = self.saved.get("custom_view")
         previous_dashboard = self.saved.get("dashboard", False)
@@ -179,6 +182,7 @@ class ResidentApp:
         previous = self.selected_input
         previous_app = self.selected_app
         self._input_request = secrets.token_hex(16)
+        self._input_transition = transition
         self._input_applied.clear()
         try:
             async with self.controller._lg_display.async_suppress_osd_for_switch():
@@ -202,6 +206,7 @@ class ResidentApp:
                     self.saved["selected_input"] = previous
                     self.saved["selected_app"] = previous_app
                     self._input_request = None
+                    self._input_transition = "none"
                     if self.content:
                         self.content["hdmi"] = self.idle_hdmi()
                     self.changed()
@@ -211,6 +216,7 @@ class ResidentApp:
                 await self.store.async_save(self.saved)
         finally:
             self._input_request = None
+            self._input_transition = "none"
             self._notify()
 
     async def async_resume(self):

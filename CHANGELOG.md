@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.16.0
+
+- Add a Direct/Animated dropdown beside Studio display actions and a `show_view` action for automations. Keep transition choice separate from saved designs and unsaved drafts.
+- Animate the existing HDMI plane between saved positions and sizes in 700 ms, with at most 30 geometry updates per second. Keep one decoder, skip unchanged/hidden/new-input cases, respect reduced motion, and cancel superseded moves.
+- Acknowledge the source only after the final geometry, preserving the OSD guard and timeout rollback. Release app 1.13.0.
+
 ## 2.15.1
 
 - Add an Anzeigen action for Nur HDMI in the Studio overview and editor. Return from Dashboard, PiP, Mediaplayer or custom views to the currently selected HDMI input, including renamed or hidden inputs.

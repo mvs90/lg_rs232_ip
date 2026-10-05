@@ -9,7 +9,7 @@ async function mount(page, state) {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.12.0', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.13.0', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -629,4 +629,70 @@ test('edited HDMI view updates all inputs, returns after messages and resets wit
   expect(await page.evaluate(()=>document.querySelector('video')===window.originalHDMI)).toBe(true);
   state.layout.config.enabled=false;
   await expect(page.locator('body')).toHaveClass('hdmi');
+});
+
+test('animated HDMI shrinks and grows without decoder reload; acknowledgement waits for final geometry',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  const pip=state.layout.config.scenes.pip_view.elements.find(e=>e.kind==='hdmi');
+  Object.assign(pip,{x:40,y:12,width:55,height:55});
+  const events=await mount(page,state);
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('100%');
+  await page.evaluate(()=>{
+    window.originalVideo=document.querySelector('video');window.moves=[];window.reloads=0;
+    originalVideo.load=()=>window.reloads++;
+    const slot=document.querySelector('#hdmi-slot');
+    new MutationObserver(()=>{const w=parseFloat(slot.style.width);if(moves.at(-1)?.w!==w)moves.push({w,t:performance.now()});}).observe(slot,{attributes:true,attributeFilter:['style']});
+  });
+  state.selected_view='pip_view';state.input_request='shrink';state.input_transition='smooth';
+  await expect.poll(()=>page.evaluate(()=>moves.some(m=>m.w>55&&m.w<100)),{intervals:[25]}).toBe(true);
+  expect(events.some(e=>e.type==='input_applied'&&e.id==='shrink')).toBe(false);
+  await expect.poll(()=>events.some(e=>e.type==='input_applied'&&e.id==='shrink')).toBe(true);
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('55%');
+  const shrink=await page.evaluate(()=>moves);
+  expect(shrink.length).toBeGreaterThan(3);expect(shrink.length).toBeLessThanOrEqual(24);
+  expect(shrink.at(-1).t-shrink[0].t).toBeGreaterThan(550);
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(()=>moves.length)).toBe(shrink.length);
+  await page.evaluate(()=>moves=[]);
+  state.selected_view=null;state.input_request='grow';
+  await expect.poll(()=>page.evaluate(()=>moves.some(m=>m.w>55&&m.w<100)),{intervals:[25]}).toBe(true);
+  await expect.poll(()=>events.some(e=>e.type==='input_applied'&&e.id==='grow')).toBe(true);
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('100%');
+  expect(await page.evaluate(()=>window.reloads===0&&originalVideo===document.querySelector('video'))).toBe(true);
+  await expect(page.locator('#hdmi-slot')).toHaveCSS('z-index','1');
+});
+
+test('new direct targets, missing HDMI and decoder changes cancel or skip a smooth move',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  const pip=state.layout.config.scenes.pip_view.elements.find(e=>e.kind==='hdmi');
+  Object.assign(pip,{x:40,y:12,width:55,height:55});
+  const events=await mount(page,state);
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('100%');
+  state.selected_view='pip_view';state.input_request='moving';state.input_transition='smooth';
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>parseFloat(e.style.width)<100&&parseFloat(e.style.width)>55),{intervals:[25]}).toBe(true);
+  state.selected_view=null;state.input_request='interrupt';state.input_transition='none';
+  await expect.poll(()=>events.some(e=>e.type==='input_applied'&&e.id==='interrupt')).toBe(true);
+  await page.waitForTimeout(1100);
+  expect(events.some(e=>e.type==='input_applied'&&e.id==='moving')).toBe(false);
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('100%');
+  state.selected_view='media_view';state.input_request='hide';state.input_transition='smooth';
+  await expect(page.locator('#hdmi-slot')).toBeHidden();
+  await expect.poll(()=>events.some(e=>e.type==='input_applied'&&e.id==='hide')).toBe(true);
+  state.selected_view='pip_view';state.input_request='unhide';
+  await expect.poll(()=>events.some(e=>e.type==='input_applied'&&e.id==='unhide')).toBe(true);
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('55%');
+  state.idle_hdmi='ext://hdmi:2';state.selected_view=null;state.input_request='new-input';
+  await expect.poll(()=>events.some(e=>e.type==='input_applied'&&e.id==='new-input')).toBe(true);
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('100%');
+});
+
+test('reduced motion selects the exact HDMI target immediately',async({page})=>{
+  await page.emulateMedia({reducedMotion:'reduce'});
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  const events=await mount(page,state);
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('100%');
+  state.selected_view='pip_view';state.input_request='reduced';state.input_transition='smooth';
+  const width=state.layout.config.scenes.pip_view.elements.find(e=>e.kind==='hdmi').width;
+  await expect.poll(()=>events.some(e=>e.type==='input_applied'&&e.id==='reduced')).toBe(true);
+  await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe(width+'%');
 });

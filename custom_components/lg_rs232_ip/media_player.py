@@ -20,6 +20,13 @@ async def async_setup_entry(hass, entry, async_add_entities):
     hass.data[DOMAIN][entry.entry_id]["media_player"] = player
     async_add_entities([player])
     services = {
+        "show_view": (
+            {
+                vol.Required("view"): vol.All(cv.string, vol.Length(min=1, max=80)),
+                vol.Optional("transition", default="none"): vol.In(["none", "smooth"]),
+            },
+            "async_show_view",
+        ),
         "show_display_app": (
             {
                 vol.Optional("title", default="Home Assistant"): vol.All(
@@ -357,6 +364,10 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
 
     async def async_turn_off(self):
         await self.controller.async_turn_off()
+
+    async def async_show_view(self, view, transition="none"):
+        """Display a saved Studio view, optionally animating its HDMI geometry."""
+        await self.controller.async_select_app_view(view, transition=transition)
 
     async def async_select_source(self, source):
         if (

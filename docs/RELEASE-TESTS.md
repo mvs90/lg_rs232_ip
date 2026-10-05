@@ -1,5 +1,11 @@
 # Release acceptance
 
+## LG 2.16.0: animated HDMI geometry transitions — 2026-10-05
+
+**342 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 146 browser cases pass across Chromium and WebKit.** New tests inspect intermediate shrinking/growing geometry, bounded update counts, delayed acknowledgement, decoder identity/no reload, no animation replay on polling, direct interruption, hidden HDMI, input changes, reduced motion, Studio dropdown actions without saving drafts, service validation and timeout rollback with OSD protection.
+
+Installed **LG 2.16.0 / app 1.13.0** in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container. The physical **75UH5F-HJ** acknowledged animated full-screen → Dashboard PiP → full-screen transitions. Native captures during both moves show intermediate HDMI sizes with the programme continuing, followed by the exact saved target geometry. The HDMI input and SI foreground app remained unchanged. The saved library was compared before/after and preserved; the original HDMI 1 source was restored. Control images remain local and excluded from Git. AV Companion stays at 1.4.0.
+
 ## LG 2.15.1: show the current HDMI input from Studio — 2026-10-05
 
 **340 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 138 browser cases pass across Chromium and WebKit.** Coverage verifies both display buttons, a fresh backend input despite stale frontend state, renamed/hidden HDMI inputs, all three HDMI targets behind persistent app views, unknown-input handling and preservation of unsaved drafts.

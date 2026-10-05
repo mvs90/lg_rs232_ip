@@ -8,3 +8,5 @@ header{position:sticky;top:0;z-index:300}
 .cover-background-tools{padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--line)}.cover-background-tools h3{margin-top:0}.cover-background-tools .field:has(input[type=checkbox]){flex-direction:row;align-items:center;color:var(--ink)}
 
 .primary-views h2,.notification-views h2{font-size:18px;margin:0 0 18px}.notification-views{margin-top:36px;padding-top:26px;border-top:1px solid var(--line)}.notification-views>p{font-size:13px;color:var(--muted);margin:-6px 0 22px;line-height:1.6}
+
+.display-control{display:inline-flex;max-width:100%;align-items:stretch}.display-control .small{border-radius:9px 0 0 9px}.display-transition{font-size:11px;padding:6px;max-width:112px;cursor:pointer}.display-control .display-transition{border-radius:0 9px 9px 0;border-left:0}.output-controls>.display-transition{font-size:12px;padding:10px 8px}

@@ -1,6 +1,6 @@
 # LG Display Studio
 
-Ab **LG Professional Display 2.15.1 / App 1.12.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
+Ab **LG Professional Display 2.16.0 / App 1.13.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
 
 Die App bleibt optional. Für dauerhafte Quellen müssen **Display-App**, **SI-App**, **SI-Dauerbetrieb mit automatischem Start** und **Eigenes Layout verwenden** aktiv sein. Das Öffnen und Bearbeiten installiert keine SI-App und weckt das Display nicht. **Anzeigen** ist eine ausdrückliche Quellenwahl und kann das mit Strom versorgte Display wecken.
 
@@ -37,6 +37,28 @@ Für Wetter, Kalender und weitere Informationen passende HA-Entitäten wählen o
 **Eigenes Layout verwenden** und Sonnenentität sind gemeinsame Einstellungen des Displays. Eine Änderung daran gilt für alle Ansichten. **Exportieren/Importieren** im Editor überträgt die gesamte Bibliothek und ihre Einstellungen, maximal 1 MiB. Eigene Bilddateien zusätzlich übertragen. Importieren ändert zunächst nur den Entwurf; ältere Layout-Exporte werden als sechs Ansichten übernommen.
 
 ## Ansichten als Quellen
+
+### Animiert zwischen Vollbild und PiP wechseln
+
+Neben **Anzeigen** wählst du im Dropdown **Direkt** oder **Animiert**. Im Editor steht dieselbe Auswahl bei den Ausgabebuttons. Sie gilt für die folgenden Anzeigen-Klicks im geöffneten Studio und verändert keine gespeicherte Ansicht. Beim nächsten Laden ist wieder **Direkt** ausgewählt.
+
+**Animiert** bewegt und skaliert das aktuelle HDMI-Bild in 0,7 Sekunden auf die gespeicherte Position und Größe der Zielansicht. Das funktioniert in beide Richtungen zwischen **Nur HDMI**, **Dashboard PiP** und eigenen Ansichten mit HDMI-Element. Derselbe HDMI-Eingang und die verbundene SI-App sind Voraussetzung. Die übrigen Elemente der Zielansicht erscheinen direkt. Enthält eine Ansicht kein HDMI, ist der Eingang neu oder wird dieselbe Geometrie gewählt, erfolgt ein direkter Wechsel. Eine vom Browser gemeldete Einstellung für reduzierte Bewegung wird berücksichtigt.
+
+Die App verwendet weiter denselben HDMI-Decoder. Sie bewegt ausschließlich dessen Rechteck mit maximal 30 Geometrieänderungen pro Sekunde, ohne Screenshot-Schleife oder zusätzliche Videokopie. Wiederholte Zustandsabfragen starten die Animation nicht erneut. Neue direkte Zielgeometrien und Ansichten ohne HDMI brechen eine laufende Bewegung ab. Die OSD-Unterdrückung bleibt bis zur Bestätigung der Endposition aktiv; der bisherige OSD-Zustand wird anschließend wiederhergestellt.
+
+Für Automationen ist dieselbe Funktion verfügbar; `view` ist die stabile Ansichts-ID (bei eigenen Ansichten im Export):
+
+```yaml
+action: lg_rs232_ip.show_view
+target:
+  entity_id: media_player.lg_display_display
+data:
+  view: pip_view
+  transition: smooth
+```
+
+Mit `view: hdmi_full` geht es zum aktuellen HDMI-Eingang zurück; `transition: none` schaltet direkt. Ungespeicherte Entwürfe werden dabei nicht übernommen.
+
 
 **Anzeigen** auf der Karte **Nur HDMI** und **Nur HDMI anzeigen** im Editor zeigen den aktuell gewählten HDMI-Eingang in dieser gespeicherten Ansicht. Das funktioniert auch, während Dashboard, Dashboard PiP, Mediaplayer oder eine eigene Ansicht läuft. Der Eingang wird beim Klick frisch von Home Assistant abgefragt; umbenannte und in der Quellenliste ausgeblendete Eingänge werden berücksichtigt. Ist noch kein Eingang bekannt, fordert das Studio zur Auswahl in der Fernbedienung auf. Ungespeicherte Layoutänderungen bleiben im Entwurf.
 

@@ -1,10 +1,11 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.12.0", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.13.0", video = null, sourceNode = null, videoSource = null;
   var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
   var hdmiFit = "contain";
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
+  var animateHdmi = false;
   var captureBusy = false, lastCapture = null, cancelCapture = null;
   var active = null, dismissed = null, expires = 0, lastSuccess = Date.now();
   var acknowledged = false, ackBusy = false, heartbeatBusy = false, stopped = false;
@@ -129,7 +130,7 @@
     var baseScene = baseKey && design.config.scenes[baseKey];
     sceneKey = key;
     layout("designed");
-    designer.render(design.config.scenes[key], design.values, {message:content, timezone:design.timezone, sun:design.sun, hideHdmi:!!baseScene && !baseScene.elements.some(function (item) { return item.kind === "hdmi"; }), mediaUrl:function(entity,id,size) {return "cover.jpg?entity="+encodeURIComponent(entity)+"&v="+encodeURIComponent(id)+"&size="+(size || 640);}, imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date(Date.now()+serverOffset)});
+    designer.render(design.config.scenes[key], design.values, {animateHdmi:animateHdmi && !content, onHdmiSettled:function () {window.requestAnimationFrame(acknowledgeInput);}, message:content, timezone:design.timezone, sun:design.sun, hideHdmi:!!baseScene && !baseScene.elements.some(function (item) { return item.kind === "hdmi"; }), mediaUrl:function(entity,id,size) {return "cover.jpg?entity="+encodeURIComponent(entity)+"&v="+encodeURIComponent(id)+"&size="+(size || 640);}, imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date(Date.now()+serverOffset)});
     return true;
   }
   function clear(message) {
@@ -171,7 +172,7 @@
     }
   }
   function acknowledgeInput() {
-    if (!inputRequest || inputAck === inputRequest) { return; }
+    if (!inputRequest || inputAck === inputRequest || (designer && designer.hdmiAnimation)) { return; }
     var id = inputRequest;
     event({type:"input_applied", id:id}, function (result) { if (result && inputRequest === id) { inputAck = id; } });
   }
@@ -184,12 +185,14 @@
         if (data.version !== VERSION) { window.location.reload(); return; }
         text("connection", "Mit Home Assistant verbunden");
         var first = revision === null;
+        animateHdmi = !!(data.input_request && data.input_request !== inputRequest && data.input_transition === "smooth" && !first && idleHdmi && idleHdmi === data.idle_hdmi);
         revision = data.revision; idleHdmi = data.idle_hdmi || null; inputRequest = data.input_request;
         hdmiFit = data.hdmi_fit === "fill" ? "fill" : "contain";
         design = data.layout || null; selectedView = data.selected_view || null; dashboardSelected = data.dashboard === true; pipSelected = data.pip === true; mediaSelected = data.media_view === true;
         if (design && design.now) { serverOffset = new Date(design.now).getTime() - Date.now(); }
         try {
           render(data.content);
+          animateHdmi = false;
           if (inputRequest) { window.requestAnimationFrame(acknowledgeInput); }
         } catch (_) { event({type:"error", id:active}); clear("Anzeige fehlgeschlagen"); }
         if (first) { heartbeat(); }
@@ -213,6 +216,7 @@
   }, 1000);
   var heartbeatTimer = window.setInterval(heartbeat, 5000);
   function stop() {
+    if (designer) { designer.cancelHdmiAnimation(); }
     stopped = true; clearTimeout(pollTimer); clearInterval(tickTimer); clearInterval(heartbeatTimer);
     if (pollXHR) { pollXHR.abort(); pollXHR = null; }
     if (cancelCapture) { cancelCapture(); }

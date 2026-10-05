@@ -8,7 +8,7 @@ from homeassistant.components.frontend import (
 )
 from homeassistant.components.http import StaticPathConfig
 
-CARD_VERSION = "2.15.1"
+CARD_VERSION = "2.16.0"
 CARD_PATH = "/lg_rs232_ip/lg-display-remote.js"
 CARD_URL = f"{CARD_PATH}?v={CARD_VERSION}"
 

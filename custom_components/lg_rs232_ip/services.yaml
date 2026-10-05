@@ -1,3 +1,27 @@
+show_view:
+  name: Show saved Studio view
+  description: Show a saved view using its stable ID. hdmi_full uses the current HDMI input. Smooth transitions animate HDMI geometry when both views contain the same HDMI input. Requires custom layouts and resident SI mode.
+  target:
+    entity:
+      domain: media_player
+      integration: lg_rs232_ip
+  fields:
+    view:
+      name: View ID
+      description: hdmi_full, dashboard, pip_view, media_view, or a saved custom view ID.
+      required: true
+      selector:
+        text: {}
+    transition:
+      name: Transition
+      default: none
+      selector:
+        select:
+          options:
+          - label: Direct
+            value: none
+          - label: Animated
+            value: smooth
 clear_content:
   name: Clear temporary content
   description: Clear the queue, cancel the current presentation and restore its display

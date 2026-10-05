@@ -23,7 +23,7 @@ from .const import DOMAIN
 from .resident_app import ResidentApp, SI_APP_ID
 from .web_manager import LGWebError
 
-APP_VERSION = "1.12.0"
+APP_VERSION = "1.13.0"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -475,6 +475,7 @@ class DisplayAppManager(ResidentApp):
             "selected_view": self.selected_view,
             "capture": self._capture,
             "input_request": self._input_request,
+            "input_transition": self._input_transition,
             "layout": self.layouts.payload() if self.layouts else None,
         }
         content = self.content

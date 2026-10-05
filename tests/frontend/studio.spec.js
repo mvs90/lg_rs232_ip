@@ -492,3 +492,21 @@ test('Nur HDMI never guesses an input when the backend has no current HDMI',asyn
   await expect(page.locator('.flash')).toContainText('HDMI-Eingang ist noch nicht bekannt');
   expect(await page.evaluate(()=>calls.some(c=>c[0]==='media_player'||c[0]==='POST'))).toBe(false);
 });
+
+test('Anzeigen dropdown sends one animated saved-view action and keeps editor drafts',async({page})=>{
+  await mount(page);await openView(page,'Nur HDMI');
+  await page.getByLabel('Eigenes Layout verwenden').check();await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
+  await page.getByLabel('Übergang für Dashboard PiP',{exact:true}).selectOption('smooth');
+  await page.evaluate(()=>calls.length=0);
+  await page.locator('.view-card').filter({has:page.getByRole('heading',{name:'Dashboard PiP',exact:true})}).getByRole('button',{name:'Anzeigen',exact:true}).click();
+  expect(await page.evaluate(()=>calls.filter(c=>c[0]==='lg_rs232_ip'))).toEqual([['lg_rs232_ip','show_view',{entity_id:'media_player.display',view:'pip_view',transition:'smooth'}]]);
+  await openView(page,'Nur HDMI');
+  await expect(page.getByLabel('Übergang beim Anzeigen')).toHaveValue('smooth');
+  await page.getByLabel('Hintergrund',{exact:true}).selectOption('ocean');
+  await page.getByRole('button',{name:'Nur HDMI anzeigen',exact:true}).click();
+  expect(await page.evaluate(()=>calls.filter(c=>c[0]==='lg_rs232_ip').at(-1)[2])).toEqual({entity_id:'media_player.display',view:'hdmi_full',transition:'smooth'});
+  expect(await page.evaluate(()=>calls.some(c=>c[0]==='POST'||c[0]==='media_player'))).toBe(false);
+  await expect(page.locator('.status')).toHaveText('Ungespeichert');
+  await expect(page.getByLabel('Hintergrund',{exact:true})).toHaveValue('ocean');
+});

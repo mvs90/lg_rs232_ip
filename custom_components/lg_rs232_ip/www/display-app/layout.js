@@ -46,6 +46,53 @@
   function Renderer(root, hdmi, preview) {
     this.root = root; this.hdmi = hdmi; this.preview = !!preview; this.nodes = {}; this.scene = null; this.data = null; this.options = null;
   }
+  Renderer.prototype.cancelHdmiAnimation = function () {
+    if (!this.hdmiAnimation) { return; }
+    window.cancelAnimationFrame(this.hdmiAnimation.frame);
+    window.clearTimeout(this.hdmiAnimation.timer);
+    this.hdmiAnimation = null;
+  };
+  Renderer.prototype.hdmiGeometry = function (rect) {
+    this.hdmiRect = rect;
+    var self=this;
+    ["left","top","width","height"].forEach(function (key) { style(self.hdmi,key,rect[key]+"%"); });
+  };
+  Renderer.prototype.moveHdmi = function (rect, animate) {
+    var self=this, current=this.hdmiAnimation;
+    function equal(a,b) {return a && a.left===b.left && a.top===b.top && a.width===b.width && a.height===b.height;}
+    // Camera tickets and data refreshes must not restart an in-flight move.
+    if (current && equal(current.to,rect)) { return; }
+    this.cancelHdmiAnimation();
+    var from=this.hdmiRect;
+    if (!animate || !this.hdmiVisible || !from || equal(from,rect) || document.hidden || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
+      this.hdmiGeometry(rect); return;
+    }
+    // Native external-video planes need real geometry, not a transformed texture.
+    // At most 30 small geometry updates/sec for 700 ms; no screenshot or decoder copy.
+    var motion={to:rect,start:Date.now(),last:0,frame:null,timer:null,done:this.options.onHdmiSettled};
+    this.hdmiAnimation=motion;
+    function finish() {
+      if (self.hdmiAnimation!==motion) { return; }
+      self.cancelHdmiAnimation(); self.hdmiGeometry(rect);
+      style(self.hdmi,"zIndex",self.hdmiZ);
+      if (motion.done) { motion.done(); }
+    }
+    function step() {
+      if (self.hdmiAnimation!==motion) { return; }
+      var now=Date.now(), progress=Math.min(1,(now-motion.start)/700);
+      if (progress>=1) { finish(); return; }
+      if (now-motion.last>=1000/30) {
+        motion.last=now;
+        var eased=progress*progress*(3-2*progress), value={};
+        ["left","top","width","height"].forEach(function (key) {value[key]=from[key]+(rect[key]-from[key])*eased;});
+        self.hdmiGeometry(value);
+      }
+      motion.frame=window.requestAnimationFrame(step);
+    }
+    motion.frame=window.requestAnimationFrame(step);
+    // Finish even if the browser suspends animation frames; never strand the OSD guard.
+    motion.timer=window.setTimeout(finish,1000);
+  };
   function artworkSize(pixels) {return pixels>1280 ? 2160 : pixels>640 ? 1280 : 640;}
   function edgeBackground(image) {
     // One 32 x 32 sample per new cover, never per frame or progress update.
@@ -135,7 +182,15 @@
       }
       if (!node) { return; }
       style(node,"visibility","visible"); style(node,"display",hdmi && !self.preview ? "block" : "flex");
-      style(node,"position","absolute"); style(node,"left",item.x+"%"); style(node,"top",item.y+"%"); style(node,"width",item.width+"%"); style(node,"height",item.height+"%"); style(node,"zIndex",String(index+1));
+      style(node,"position","absolute");
+      if (hdmi) {
+        self.hdmiZ=String(index+1);
+        self.moveHdmi({left:item.x,top:item.y,width:item.width,height:item.height},self.options.animateHdmi === true);
+        self.hdmiVisible=true;
+        style(node,"zIndex",self.hdmiAnimation ? "32" : self.hdmiZ);
+      } else {
+        style(node,"left",item.x+"%"); style(node,"top",item.y+"%"); style(node,"width",item.width+"%"); style(node,"height",item.height+"%"); style(node,"zIndex",String(index+1));
+      }
       style(node,"fontSize",(height*item.font_size/100)+"px");
       if (hdmi) { return; }
       style(node,"color",item.color); style(node,"background",item.kind === "weather" && item.weather_style === "sky" && window.LGWeather ? window.LGWeather.sky(self.options.sun) : rgba(item.background,item.kind === "weather" && item.weather_style === "minimal" ? 0 : item.opacity));
@@ -147,6 +202,7 @@
     });
     Object.keys(this.nodes).forEach(function (key) { if (!wanted[key]) { root.removeChild(self.nodes[key]); delete self.nodes[key]; } });
     if (!found && this.hdmi) {
+      this.cancelHdmiAnimation(); this.hdmiVisible=false; this.hdmiRect=null;
       style(this.hdmi,"visibility","hidden"); style(this.hdmi,"display","block");
       style(this.hdmi,"width","100%"); style(this.hdmi,"height","100%");
     }
@@ -195,6 +251,7 @@
     var self=this; this.scene.elements.forEach(function (item) {if (item.kind === "clock" && self.nodes[item.id]) {self.fill(self.nodes[item.id],item);}if(item.kind === "media" && self.nodes[item.id] && window.LGCards){window.LGCards.tickMedia(self.nodes[item.id],item,self.data[item.entity_id],self.options);}});
   };
   Renderer.prototype.clear = function () {
+    this.cancelHdmiAnimation(); this.hdmiVisible=false; this.hdmiRect=null;
     this.clearCover();
     var self=this; Object.keys(this.nodes).forEach(function (key) {self.root.removeChild(self.nodes[key]);}); this.nodes={}; this.scene=null;
     this.root.classList.remove("lg-scene"); this.root.style.background=""; this.root._lgStyle={};

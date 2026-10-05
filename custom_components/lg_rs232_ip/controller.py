@@ -197,9 +197,11 @@ class DisplayController(NativeControls):
     async def async_select_media_view(self):
         await self.async_select_app_view("media_view")
 
-    async def async_select_app_view(self, view):
+    async def async_select_app_view(self, view, *, transition="none"):
         view = "pip_view" if view == "pip" else view
-        if view not in self.app_view_sources:
+        if transition not in ("none", "smooth"):
+            raise HomeAssistantError("Unknown view transition")
+        if view != "hdmi_full" and view not in self.app_view_sources:
             raise HomeAssistantError("Unknown app view")
         app = (
             self.hass.data.get(DOMAIN, {})
@@ -228,8 +230,16 @@ class DisplayController(NativeControls):
         async with self._control_lock:
             if self.external_owner or self.presentation_active:
                 raise HomeAssistantError("Display is busy with another presentation")
-            await app.async_select_view(view)
-            self._source = self.app_view_sources[view]
+            if view == "hdmi_full":
+                input_id = app.selected_input
+                if input_id not in (0x90, 0x91, 0x92):
+                    raise HomeAssistantError("Select an HDMI input first")
+                await app.async_select_hdmi(input_id, transition=transition)
+                self._current_input_id = input_id
+                self._source = self._resolve_source_name(input_id)
+            else:
+                await app.async_select_view(view, transition=transition)
+                self._source = self.app_view_sources[view]
             self.async_write_ha_state()
 
     async def async_select_input(self, input_id):
