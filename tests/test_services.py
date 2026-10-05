@@ -67,7 +67,7 @@ async def test_real_entity_services_target_registered_display(tmp_path):
             blocking=True,
         )
         player.controller.async_select_app_view.assert_awaited_once_with(
-            "hdmi_full", transition="smooth"
+            "hdmi_full", transition="smooth", duration=0
         )
         with pytest.raises(vol.Invalid):
             await hass.services.async_call(

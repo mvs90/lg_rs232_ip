@@ -23,7 +23,7 @@ from .const import DOMAIN
 from .resident_app import ResidentApp, SI_APP_ID
 from .web_manager import LGWebError
 
-APP_VERSION = "1.13.0"
+APP_VERSION = "1.14.2"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -77,6 +77,7 @@ class DisplayAppManager(ResidentApp):
         self.client_layout_revision = None
         self.client_has_bridge = False
         self.client_rendering = {}
+        self.client_camera = {}
         self.last_error = None
         self._rendered = asyncio.Event()
         self.closed = False
@@ -130,6 +131,9 @@ class DisplayAppManager(ResidentApp):
                         "cards.js",
                         "layout.css",
                         "grain.png",
+                        "camera.js",
+                        "test-stream.m3u8",
+                        "test-stream.ts",
                     )
                 }
             )
@@ -251,6 +255,7 @@ class DisplayAppManager(ResidentApp):
             "layout_revision": self.client_layout_revision if self.connected else None,
             "platform_bridge_present": self.client_has_bridge,
             "rendering": self.client_rendering if self.connected else {},
+            "camera_widget": self.client_camera if self.connected else {},
             "si_configured": bool(self.saved.get("installed")),
             "si_restore_pending": "previous" in self.saved and not self.resident,
             "last_error": self.last_error,
@@ -520,6 +525,7 @@ class DisplayAppManager(ResidentApp):
             self.connected,
             self.client_version,
             dict(self.client_rendering),
+            dict(self.client_camera),
             self.client_layout_scene,
             self.client_layout_revision,
             self.client_hdmi,
@@ -568,6 +574,20 @@ class DisplayAppManager(ResidentApp):
                 ratio = rendering.get("pixel_ratio")
                 if type(ratio) in (int, float) and 0.5 <= ratio <= 4:
                     self.client_rendering["pixel_ratio"] = ratio
+            camera_status = value.get("camera", {})
+            if isinstance(camera_status, dict):
+                self.client_camera = {
+                    "mode": camera_status.get("mode")
+                    if camera_status.get("mode") in ("inactive", "stream", "snapshot")
+                    else "inactive",
+                    "ready": camera_status.get("ready") is True,
+                    **{
+                        key: camera_status[key]
+                        for key in ("width", "height")
+                        if type(camera_status.get(key)) is int
+                        and 0 <= camera_status[key] <= 8192
+                    },
+                }
             self.client_visible = value.get("visible") is True
             self.client_hdmi = value.get("hdmi_ready") is True
             self.capture_capable = value.get("capture") is True
@@ -600,6 +620,7 @@ class DisplayAppManager(ResidentApp):
             self.connected,
             self.client_version,
             dict(self.client_rendering),
+            dict(self.client_camera),
             self.client_layout_scene,
             self.client_layout_revision,
             self.client_hdmi,
@@ -636,11 +657,46 @@ class DisplayAppView(HomeAssistantView):
             "Cache-Control": "no-store",
             "Referrer-Policy": "no-referrer",
             "X-Content-Type-Options": "nosniff",
-            "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src ext:; frame-ancestors 'none'",
+            "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src 'self' ext:; frame-ancestors 'none'",
         }
         if resource == "state":
             return web.json_response(
                 await manager.async_state(request.query.get("since")), headers=headers
+            )
+        if resource in ("camera.json", "camera.jpg") and manager.layouts:
+            from .layout_config import active_scenes
+
+            scene = active_scenes(manager.layouts.config).get(
+                request.query.get("view"), {}
+            )
+            item = next(
+                (
+                    item
+                    for item in scene.get("elements", [])
+                    if item["id"] == request.query.get("id")
+                    and item["kind"] == "camera"
+                ),
+                None,
+            )
+            if (
+                not manager.layouts.config["enabled"]
+                or not item
+                or item["camera_source"] != "entity"
+            ):
+                raise web.HTTPNotFound()
+            if resource == "camera.json":
+                url = None
+                if item["camera_mode"] != "snapshot":
+                    url = await manager.layouts.cameras.async_get(
+                        item["entity_id"], "stream"
+                    )
+                return web.json_response({"stream": url}, headers=headers)
+            data = await manager.layouts.cameras.async_get(item["entity_id"], "image")
+            return web.Response(
+                body=data,
+                status=200 if data else 204,
+                content_type="image/jpeg",
+                headers=headers,
             )
         if resource == "cover.jpg" and manager.layouts:
             entity = request.query.get("entity", "")
@@ -691,6 +747,9 @@ class DisplayAppView(HomeAssistantView):
             "cards.js": "application/javascript",
             "layout.css": "text/css",
             "grain.png": "image/png",
+            "camera.js": "application/javascript",
+            "test-stream.m3u8": "application/vnd.apple.mpegurl",
+            "test-stream.ts": "video/mp2t",
         }
         if resource not in mime:
             raise web.HTTPNotFound()

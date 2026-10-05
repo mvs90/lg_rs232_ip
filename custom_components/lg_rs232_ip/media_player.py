@@ -24,6 +24,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
             {
                 vol.Required("view"): vol.All(cv.string, vol.Length(min=1, max=80)),
                 vol.Optional("transition", default="none"): vol.In(["none", "smooth"]),
+                vol.Optional("duration", default=0): vol.All(
+                    cv.positive_int, vol.Range(min=0, max=3600)
+                ),
             },
             "async_show_view",
         ),
@@ -365,9 +368,11 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
     async def async_turn_off(self):
         await self.controller.async_turn_off()
 
-    async def async_show_view(self, view, transition="none"):
+    async def async_show_view(self, view, transition="none", duration=0):
         """Display a saved Studio view, optionally animating its HDMI geometry."""
-        await self.controller.async_select_app_view(view, transition=transition)
+        await self.controller.async_select_app_view(
+            view, transition=transition, duration=duration
+        )
 
     async def async_select_source(self, source):
         if (

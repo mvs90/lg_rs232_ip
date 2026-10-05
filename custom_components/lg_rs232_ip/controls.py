@@ -80,6 +80,7 @@ class NativeControls(NativePresentations):
                 or self._resident_request["priority"] != "urgent"
             ):
                 self._resident_replace.set()
+        self._cancel_temporary_view()
         if len(self._presentation_queue) >= 10:
             raise ServiceValidationError("Presentation queue is full (10 requests)")
         if request["priority"] == "urgent":
@@ -123,4 +124,5 @@ class NativeControls(NativePresentations):
         self._presentation_task = None
 
     async def async_clear_content(self):
+        self._cancel_temporary_view()
         await self._async_cancel_presentations()

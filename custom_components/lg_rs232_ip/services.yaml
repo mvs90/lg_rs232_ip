@@ -12,6 +12,16 @@ show_view:
       required: true
       selector:
         text: {}
+    duration:
+      name: Display duration
+      description: Seconds before returning to the previous view. Zero keeps this view. New temporary requests replace the timer; manual controls cancel the return. Timers are not resumed after a restart.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: s
+          mode: box
     transition:
       name: Transition
       default: none

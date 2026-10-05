@@ -17,6 +17,7 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN
 from .layout_backgrounds import LayoutBackgrounds
 from .layout_media import LayoutMedia
+from .layout_camera import LayoutCamera
 from .layout_cards import card_metadata
 from .layout_config import (
     active_scenes,
@@ -46,6 +47,7 @@ class DisplayLayouts:
         self.store = Store(hass, 1, f"{DOMAIN}.{entry.entry_id}.layouts")
         self.backgrounds = LayoutBackgrounds(hass, entry.entry_id)
         self.media = LayoutMedia(hass)
+        self.cameras = LayoutCamera(hass)
         self.config = make_layout()
         self.library = from_config(self.config)
         self.revision = 0
@@ -80,6 +82,7 @@ class DisplayLayouts:
     async def async_close(self):
         self._closed = True
         await self.media.async_close()
+        await self.cameras.async_close()
         for name in ("_unsub", "_timer", "_debounce", "_sun_timer"):
             if unsub := getattr(self, name):
                 unsub()

@@ -1,5 +1,17 @@
 # Release acceptance
 
+## LG 2.17.0: camera widgets and timed event views — 2026-10-06
+
+**356 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 156 browser cases pass across Chromium and WebKit.** Coverage includes camera binding authorization, recursive LG-camera exclusion, bounded image work/cache, cancellation, decoder reuse/release, stream failure/stall fallback, native-plane transparency, overlap validation and automatic snapshots for overlays. View tests cover timer replacement during an in-flight selection, preserved return targets, manual takeover, quiet hours, shutdown and blueprint installation without overwriting local edits. Reduced motion and unchanged-state animation behavior are covered.
+
+Installed **LG 2.17.0 / app 1.14.2** in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container. No new HA instance was created; AV Companion remains 1.4.0.
+
+- Native captures on the physical **75UH5F-HJ** visibly confirmed HDMI 1 alongside the bundled H.264/MPEG-TS HLS clip for direct and animated entry. Captures three seconds apart show advancing video content. Early captures sometimes contained two black native video surfaces despite reported readiness; captures after eight additional seconds showed both images. This is not a guarantee of instantaneous visible startup. Replacing a timed view returned to the original HDMI 1 view; the camera became inactive and the SI launcher remained foreground.
+- A temporary HA Generic Camera served alternating synthetic PNG frames. In automatic mode over full-screen HDMI, the app selected snapshots; a native capture confirmed the image visibly over HDMI. Image requests advanced while visible and stopped after leaving the view. The temporary camera and server were removed afterwards.
+- The real HA blueprint API accepted the installed event-view blueprint. It is available to create an automation; no automation was enabled. The custom **Kamera · Teststream** demo remains saved as an additional source. All pre-existing views were retained; temporary changes to the demo were restored. The final display source is HDMI 1.
+
+The second native video was hidden when overlapping full-screen HDMI, despite reporting a ready decoder. This firmware therefore uses separate rectangles for streams and snapshots for overlays. Only HDMI 1 has a connected source, so two independent HDMI signals remain unverified. HA-camera HLS using other containers/codecs, continuous HDMI export, offline cold start, multicast, video-wall synchronization and external panel sensors are not certified. See the [device capability record](devices/LG-UH5F-H.md#additional-video-and-platform-capability-tests-2026-10-06). Private captures, credentials and recovery records remain excluded from Git.
+
 ## LG 2.16.0: animated HDMI geometry transitions — 2026-10-05
 
 **342 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 146 browser cases pass across Chromium and WebKit.** New tests inspect intermediate shrinking/growing geometry, bounded update counts, delayed acknowledgement, decoder identity/no reload, no animation replay on polling, direct interruption, hidden HDMI, input changes, reduced motion, Studio dropdown actions without saving drafts, service validation and timeout rollback with OSD protection.

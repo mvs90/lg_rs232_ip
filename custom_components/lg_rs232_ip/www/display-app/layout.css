@@ -24,3 +24,12 @@
 .lg-media-playback{position:absolute;left:0;top:calc(1.5px - .7em);width:1.4em;height:1.4em;opacity:.8;display:none}.lg-media-playback svg{display:block;width:100%;height:100%}.lg-media-progress[data-playback-icon=true] .lg-media-bar,.lg-media-progress[data-playback-icon=true] .lg-media-elapsed{left:2.2em}
 /* Decode a small cover only for colour sampling; never paint a second cover. */
 .lg-cover-background[data-fit=colors]>img{display:none}
+
+/* Native video planes must not be transformed or faded with regular widgets. */
+.lg-camera-picture { position:absolute; left:0; right:0; top:0; bottom:0; background:transparent; }
+.lg-camera-picture video,.lg-camera-picture img { width:100%; height:100%; position:absolute; left:0; top:0; }
+.lg-camera > .lg-label,.lg-camera > .lg-detail { position:relative; z-index:1; text-shadow:0 1px 4px #000; }
+.lg-camera > .lg-detail { margin-top:auto; }
+.lg-widget-enter { animation:lg-widget-enter .28s ease-out; }
+@keyframes lg-widget-enter { from {opacity:0;transform:translateY(6px)} to {opacity:1;transform:translateY(0)} }
+@media (prefers-reduced-motion:reduce) { .lg-widget-enter { animation:none; } }

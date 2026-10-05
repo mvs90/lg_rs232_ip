@@ -163,17 +163,36 @@
     } else {style(image,"width","100%");style(image,"height","100%");}
     style(image,"objectFit",fit === "stretch" ? "fill" : "contain");
   };
+  Renderer.prototype.removeNode = function (node) {
+    if(node._camera){node._camera.close();}
+    this.root.removeChild(node);
+  };
+  Renderer.prototype.cameraStatus = function () {
+    var result={mode:"inactive",ready:false},self=this;
+    Object.keys(this.nodes).forEach(function (key) {
+      var camera=self.nodes[key]._camera;
+      if(camera){var media=camera.video || camera.image;result={mode:camera.video ? "stream" : "snapshot",ready:!!(media && (media.videoWidth || media.naturalWidth) && !media.error),width:media ? media.videoWidth || media.naturalWidth || 0 : 0,height:media ? media.videoHeight || media.naturalHeight || 0 : 0};}
+    });return result;
+  };
+  Renderer.prototype.stopCameras = function () {
+    var self=this;Object.keys(this.nodes).forEach(function (key) {var node=self.nodes[key];if(node._camera){node._camera.close();node._camera=null;node._cameraKey=null;}});
+  };
   Renderer.prototype.render = function (scene, data, options) {
     this.scene = scene; this.data = data || {}; this.options = options || {};
     var root=this.root, height=root.clientHeight || 720, wanted={}, found=false, self=this;
+    var hdmiItem=scene.elements.filter(function (item) {return item.kind === "hdmi";})[0];
     root.classList.add("lg-scene"); style(root,"background",background(scene, this.options));
     this.renderCover();
+    Object.keys(this.nodes).forEach(function (id) {
+      var node=self.nodes[id];
+      if(node._camera && !scene.elements.some(function (item) {return item.id===id && item.kind==="camera";})){node._camera.close();node._camera=null;}
+    });
     scene.elements.forEach(function (item,index) {
       var node, hdmi=item.kind === "hdmi";
       if (hdmi) { if(self.options.hideHdmi){return;} node=self.hdmi; found=true; }
       else {
         node=self.nodes[item.id];
-        if (node && node._lgKind !== item.kind) { root.removeChild(node); delete self.nodes[item.id]; node=null; }
+        if (node && node._lgKind !== item.kind) { self.removeNode(node); delete self.nodes[item.id]; node=null; }
         if (!node) {
           node=child(root,"widget lg-"+item.kind); node.dataset.layoutId=item.id; node._lgKind=item.kind;
           node._label=child(node,"label"); node._value=child(node,"value"); node._detail=child(node,"detail"); node._list=child(node,"list"); self.nodes[item.id]=node;
@@ -193,14 +212,29 @@
       }
       style(node,"fontSize",(height*item.font_size/100)+"px");
       if (hdmi) { return; }
-      style(node,"color",item.color); style(node,"background",item.kind === "weather" && item.weather_style === "sky" && window.LGWeather ? window.LGWeather.sky(self.options.sun) : rgba(item.background,item.kind === "weather" && item.weather_style === "minimal" ? 0 : item.opacity));
+      style(node,"color",item.color); style(node,"background",item.kind === "camera" && !self.preview ? "transparent" : item.kind === "weather" && item.weather_style === "sky" && window.LGWeather ? window.LGWeather.sky(self.options.sun) : rgba(item.background,item.kind === "weather" && item.weather_style === "minimal" ? 0 : item.opacity));
       style(node,"borderRadius",(height*item.radius/1080)+"px"); style(node,"padding",(height*.018)+"px "+(height*.026)+"px");
       style(node,"textAlign",item.align); style(node,"fontFamily",FONTS[item.font]);
       style(node._label,"fontSize",(height*.014)+"px");
-      self.fill(node,item);
+      if(item.kind === "camera"){
+        text(node._label,item.show_label ? item.label || "Kamera" : "");text(node._value,"");
+        style(node._label,"display",item.show_label ? "block" : "none");
+        if(self.preview){text(node._value,"◉");text(node._detail,item.camera_source === "entity" ? item.entity_id || "Kamera auswählen" : "Lokaler Teststream");}
+        else if(window.LGCamera && self.options.cameraUrls){
+          var cameraItem=item;
+          if(hdmiItem && !self.options.hideHdmi && item.camera_source === "entity" && item.camera_mode === "auto" && item.x<hdmiItem.x+hdmiItem.width && hdmiItem.x<item.x+item.width && item.y<hdmiItem.y+hdmiItem.height && hdmiItem.y<item.y+item.height){
+            cameraItem={};Object.keys(item).forEach(function (key) {cameraItem[key]=item[key];});cameraItem.camera_mode="snapshot";
+          }
+          var urls=self.options.cameraUrls(item), cameraKey=JSON.stringify([item.camera_source,item.entity_id,cameraItem.camera_mode,item.camera_interval,item.camera_fit,urls]);
+          if(node._cameraKey!==cameraKey){if(node._camera){node._camera.close();}node._camera=new window.LGCamera(node,cameraItem,urls);node._cameraKey=cameraKey;}
+        }
+      } else {self.fill(node,item);}
+      if(item.kind !== "camera" && self.options.animateWidgets && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)){
+        node.classList.remove("lg-widget-enter");void node.offsetWidth;node.classList.add("lg-widget-enter");
+      }
       if(item.kind === "media" && window.LGCards){window.LGCards.geometry(node,item);}
     });
-    Object.keys(this.nodes).forEach(function (key) { if (!wanted[key]) { root.removeChild(self.nodes[key]); delete self.nodes[key]; } });
+    Object.keys(this.nodes).forEach(function (key) { if (!wanted[key]) { self.removeNode(self.nodes[key]); delete self.nodes[key]; } });
     if (!found && this.hdmi) {
       this.cancelHdmiAnimation(); this.hdmiVisible=false; this.hdmiRect=null;
       style(this.hdmi,"visibility","hidden"); style(this.hdmi,"display","block");
@@ -253,7 +287,7 @@
   Renderer.prototype.clear = function () {
     this.cancelHdmiAnimation(); this.hdmiVisible=false; this.hdmiRect=null;
     this.clearCover();
-    var self=this; Object.keys(this.nodes).forEach(function (key) {self.root.removeChild(self.nodes[key]);}); this.nodes={}; this.scene=null;
+    var self=this; Object.keys(this.nodes).forEach(function (key) {self.removeNode(self.nodes[key]);}); this.nodes={}; this.scene=null;
     this.root.classList.remove("lg-scene"); this.root.style.background=""; this.root._lgStyle={};
     if (this.hdmi) {this.hdmi.removeAttribute("style"); this.hdmi._lgStyle={};}
   };

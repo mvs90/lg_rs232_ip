@@ -11,9 +11,10 @@ from datetime import timedelta
 
 from .const import DOMAIN, INPUT_SOURCES
 from .controls import NativeControls
+from .temporary_view import TemporaryView
 
 
-class DisplayController(NativeControls):
+class DisplayController(TemporaryView, NativeControls):
     def __init__(self, hass, entry, display):
         self.hass = hass
         self._config_entry = entry
@@ -30,6 +31,7 @@ class DisplayController(NativeControls):
         self.signal = None
         self._listeners = set()
         self._init_controls()
+        self._init_temporary_view()
         self._poll_unsub = None
         self._stop_unsub = None
         self._refresh_lock = asyncio.Lock()
@@ -197,8 +199,12 @@ class DisplayController(NativeControls):
     async def async_select_media_view(self):
         await self.async_select_app_view("media_view")
 
-    async def async_select_app_view(self, view, *, transition="none"):
+    async def async_select_app_view(self, view, *, transition="none", duration=0):
         view = "pip_view" if view == "pip" else view
+        if type(duration) is not int or not 0 <= duration <= 3600:
+            raise HomeAssistantError("Use a view duration between 0 and 3600 seconds")
+        if duration:
+            self._check_presentation_policy("normal")
         if transition not in ("none", "smooth"):
             raise HomeAssistantError("Unknown view transition")
         if view != "hdmi_full" and view not in self.app_view_sources:
@@ -214,7 +220,16 @@ class DisplayController(NativeControls):
             )
         if self.external_owner:
             raise HomeAssistantError("An external presentation owns the display")
+        previous = (
+            self._view_lease["previous"]
+            if duration and self._view_lease
+            else self._view_pending_previous
+            if duration and self._view_pending_previous
+            else (app.selected_view or "hdmi_full", app.selected_input)
+        )
         await self.async_clear_content()
+        generation = self._view_generation
+        self._view_pending_previous = previous if duration else None
         async with self._control_lock:
             await self.async_ensure_on("app view selection")
         if not app.resident_connected:
@@ -228,6 +243,8 @@ class DisplayController(NativeControls):
                     "Display app did not connect for view selection"
                 ) from None
         async with self._control_lock:
+            if generation != self._view_generation:
+                return
             if self.external_owner or self.presentation_active:
                 raise HomeAssistantError("Display is busy with another presentation")
             if view == "hdmi_full":
@@ -241,6 +258,10 @@ class DisplayController(NativeControls):
                 await app.async_select_view(view, transition=transition)
                 self._source = self.app_view_sources[view]
             self.async_write_ha_state()
+            if duration:
+                self._schedule_view_return(
+                    app, previous, view, duration, transition, generation
+                )
 
     async def async_select_input(self, input_id):
         await self.async_clear_content()
@@ -267,6 +288,7 @@ class DisplayController(NativeControls):
 
     async def async_close(self):
         self._ha_stopping = True
+        self._cancel_temporary_view()
         if self._poll_unsub:
             self._poll_unsub()
             self._poll_unsub = None

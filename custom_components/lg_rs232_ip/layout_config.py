@@ -17,6 +17,7 @@ SCENES = (
 )
 KINDS = (
     "hdmi",
+    "camera",
     "clock",
     "weather",
     "calendar",
@@ -71,6 +72,10 @@ def element(kind, x, y, width, height):
         show_volume=True,
         status_coloring=True,
         accent_color="#79e5c0",
+        camera_source="test",
+        camera_mode="auto",
+        camera_interval=2,
+        camera_fit="contain",
     )
 
 
@@ -388,7 +393,7 @@ def validate_layout(value):
         )
         if enabled and key not in ("signal", "no_signal"):
             entities.add(player)
-        ids, hdmi, messages = set(), 0, 0
+        ids, hdmi, messages, cameras = set(), 0, 0, 0
         for item in raw["elements"]:
             if not isinstance(item, dict):
                 raise ValueError("Invalid element")
@@ -401,6 +406,7 @@ def validate_layout(value):
                 raise ValueError("Element IDs must be unique within a scene")
             ids.add(identifier)
             hdmi += kind == "hdmi"
+            cameras += kind == "camera"
             messages += kind == "message"
             obj = dict(id=identifier, kind=kind)
             for field in ("x", "y", "width", "height"):
@@ -447,6 +453,18 @@ def validate_layout(value):
             if type(item.get("show_playback_icon", False)) is not bool:
                 raise ValueError("Invalid playback icon option")
             obj["show_playback_icon"] = item.get("show_playback_icon", False)
+            obj.update(
+                camera_source=_choice(
+                    item.get("camera_source", "test"), ("test", "entity")
+                ),
+                camera_mode=_choice(
+                    item.get("camera_mode", "auto"), ("auto", "stream", "snapshot")
+                ),
+                camera_interval=_number(item.get("camera_interval", 2), 1, 30),
+                camera_fit=_choice(
+                    item.get("camera_fit", "contain"), ("contain", "cover")
+                ),
+            )
             obj["media_style"] = _choice(
                 item.get("media_style", "compact"), ("compact", "poster", "stage")
             )
@@ -462,24 +480,55 @@ def validate_layout(value):
                     "media",
                     "weather",
                     "calendar",
+                    "camera",
                 ):
                     raise ValueError("Invalid entity binding")
                 if kind == "media" and not entity_id.startswith("media_player."):
                     raise ValueError("Select a media player")
-                if kind in ("weather", "calendar") and not entity_id.startswith(
-                    kind + "."
-                ):
-                    raise ValueError("Select a matching weather/calendar entity")
+                if kind in (
+                    "weather",
+                    "calendar",
+                    "camera",
+                ) and not entity_id.startswith(kind + "."):
+                    raise ValueError("Select a matching weather/calendar/camera entity")
                 if key not in ("signal", "no_signal"):
                     entities.add(entity_id)
             obj["entity_id"] = entity_id
             normalized["elements"].append(obj)
+        if cameras > 1:
+            raise ValueError(
+                "Use one additional camera/video element at most per scene"
+            )
         if hdmi > 1 or messages > 1:
             raise ValueError("Use one HDMI and one message element at most per scene")
+        video = next(
+            (item for item in normalized["elements"] if item["kind"] == "camera"), None
+        )
+        hdmi_item = next(
+            (item for item in normalized["elements"] if item["kind"] == "hdmi"), None
+        )
+        if (
+            video
+            and hdmi_item
+            and rectangles_overlap(video, hdmi_item)
+            and (video["camera_source"] == "test" or video["camera_mode"] == "stream")
+        ):
+            raise ValueError(
+                "Place the camera stream beside HDMI; use automatic/snapshot mode for overlays"
+            )
         result["scenes"][key] = normalized
     if len(entities) > 32:
         raise ValueError("Select no more than 32 distinct entities")
     return result
+
+
+def rectangles_overlap(first, second):
+    return (
+        first["x"] < second["x"] + second["width"]
+        and second["x"] < first["x"] + first["width"]
+        and first["y"] < second["y"] + second["height"]
+        and second["y"] < first["y"] + first["height"]
+    )
 
 
 def active_scenes(config):

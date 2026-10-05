@@ -1,7 +1,7 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.13.0", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.14.2", video = null, sourceNode = null, videoSource = null;
   var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
   var hdmiFit = "contain";
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
@@ -55,6 +55,7 @@
   function heartbeat() {
     if (heartbeatBusy || stopped) { return; } heartbeatBusy = true;
     event({type:"hello", version:VERSION, bridge:typeof window.PalmServiceBridge === "function",
+      camera:designer ? designer.cameraStatus() : {mode:"inactive",ready:false},
       rendering:{width:window.innerWidth,height:window.innerHeight,pixel_ratio:window.devicePixelRatio || 1,screen_width:window.screen.width,screen_height:window.screen.height},
       visible:!document.hidden, layout_scene:sceneKey, layout_revision:design ? design.revision : null, hdmi_ready:!!(video && video.videoWidth && video.videoHeight && !video.error),
       capture:typeof window.PalmServiceBridge === "function"}, function () { heartbeatBusy = false; });
@@ -128,9 +129,10 @@
     else { key = "hdmi_full"; }
     var baseKey = selectedView || (dashboardSelected ? "dashboard" : mediaSelected ? "media_view" : pipSelected ? "pip_view" : idleHdmi ? "hdmi_full" : null);
     var baseScene = baseKey && design.config.scenes[baseKey];
+    var changedScene=sceneKey!==null && sceneKey!==key;
     sceneKey = key;
     layout("designed");
-    designer.render(design.config.scenes[key], design.values, {animateHdmi:animateHdmi && !content, onHdmiSettled:function () {window.requestAnimationFrame(acknowledgeInput);}, message:content, timezone:design.timezone, sun:design.sun, hideHdmi:!!baseScene && !baseScene.elements.some(function (item) { return item.kind === "hdmi"; }), mediaUrl:function(entity,id,size) {return "cover.jpg?entity="+encodeURIComponent(entity)+"&v="+encodeURIComponent(id)+"&size="+(size || 640);}, imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date(Date.now()+serverOffset)});
+    designer.render(design.config.scenes[key], design.values, {animateWidgets:changedScene && (animateHdmi || !!content), cameraUrls:function(item) {var query="?view="+encodeURIComponent(key)+"&id="+encodeURIComponent(item.id);return {info:"camera.json"+query,image:"camera.jpg"+query,test:"test-stream.m3u8"};}, animateHdmi:animateHdmi && !content, onHdmiSettled:function () {window.requestAnimationFrame(acknowledgeInput);}, message:content, timezone:design.timezone, sun:design.sun, hideHdmi:!!baseScene && !baseScene.elements.some(function (item) { return item.kind === "hdmi"; }), mediaUrl:function(entity,id,size) {return "cover.jpg?entity="+encodeURIComponent(entity)+"&v="+encodeURIComponent(id)+"&size="+(size || 640);}, imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date(Date.now()+serverOffset)});
     return true;
   }
   function clear(message) {
@@ -216,7 +218,7 @@
   }, 1000);
   var heartbeatTimer = window.setInterval(heartbeat, 5000);
   function stop() {
-    if (designer) { designer.cancelHdmiAnimation(); }
+    if (designer) { designer.cancelHdmiAnimation(); designer.stopCameras(); }
     stopped = true; clearTimeout(pollTimer); clearInterval(tickTimer); clearInterval(heartbeatTimer);
     if (pollXHR) { pollXHR.abort(); pollXHR = null; }
     if (cancelCapture) { cancelCapture(); }

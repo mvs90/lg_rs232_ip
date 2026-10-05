@@ -72,3 +72,9 @@ The optional public API v1 extension adds `pip_available`, `pip_active` and `asy
 Public API v1 adds `media_view_available`, `media_view_active` and `async_select_media_view()`. AV Companion treats the extension as optional. Active media views participate in `presentation_active`; signal/input getters do not report a physical HDMI source while a persistent view is selected. Selection shares the existing app acknowledgement, OSD guard and rollback journal with Dashboard/PiP.
 
 `media_view` is now a fixed editable view and active runtime scene. Artwork requests accept only 640, 1280 and 2160; clients select the tier using image geometry × DPR. One shared upstream request produces variants on an executor; the LRU bounds compressed data to 32 MiB/32 entries. An oversized result is returned to its caller without a refetch loop even if immediately evicted. Display heartbeat rendering diagnostics accept only bounded dimensions/DPR, without arbitrary browser data.
+
+### Optional video widget
+
+`layout_camera.py` bridges saved camera widgets to HA's existing camera API. The paired API authorizes the view/widget ID before resolving its camera, blocks LG display cameras, bounds concurrent work and caches only a small set of RAM frames. The ES5 `camera.js` owns one extra muted decoder or one snapshot request, suspends on visibility changes and releases all work when removed. No RTSP credentials, arbitrary fetch URL, encoder or transcoding process is added to the panel. HA's existing stream provider may perform its normal camera remuxing; shared streams are not stopped globally by this integration.
+
+`temporary_view.py` owns one expiring selection. Repeated temporary requests retain the original return target, while manual controls invalidate its generation. Expiry checks connection, power, current view/input and presentation ownership before touching the display. Timers are intentionally not persisted or replayed after restart.

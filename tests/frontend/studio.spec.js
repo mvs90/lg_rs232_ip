@@ -510,3 +510,22 @@ test('Anzeigen dropdown sends one animated saved-view action and keeps editor dr
   await expect(page.locator('.status')).toHaveText('Ungespeichert');
   await expect(page.getByLabel('Hintergrund',{exact:true})).toHaveValue('ocean');
 });
+
+test('camera widget can be configured, bounded to one and removed without fetching camera content',async({page})=>{
+  await mount(page);await openView(page,'Nur HDMI');
+  await page.evaluate(()=>studio.insertCard('camera'));
+  await expect(page.getByLabel('Kameraquelle')).toBeVisible();
+  await page.getByLabel('Kameraquelle').selectOption('entity');
+  await page.getByLabel('Home-Assistant-Entität').fill('camera.door');
+  await page.getByLabel('Home-Assistant-Entität').press('Tab');
+  await page.getByLabel('Wiedergabe',{exact:true}).selectOption('snapshot');
+  await page.getByLabel('Einzelbild-Abstand (s)').fill('3');
+  await page.getByLabel('Einzelbild-Abstand (s)').press('Tab');
+  await page.evaluate(()=>studio.insertCard('camera'));
+  expect(await page.evaluate(()=>studio.scene.elements.filter(i=>i.kind==='camera').length)).toBe(1);
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  expect(await page.evaluate(()=>saved.scenes.hdmi_full.elements.find(i=>i.kind==='camera').camera_interval)).toBe(3);
+  expect(await page.locator('.scene video').count()).toBe(0);
+  await page.getByRole('button',{name:'Element entfernen',exact:true}).click();
+  await expect(page.locator('.scene .lg-camera')).toHaveCount(0);
+});

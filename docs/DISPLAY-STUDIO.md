@@ -1,6 +1,6 @@
 # LG Display Studio
 
-Ab **LG Professional Display 2.16.0 / App 1.13.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
+Ab **LG Professional Display 2.17.0 / App 1.14.2** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
 
 Die App bleibt optional. Für dauerhafte Quellen müssen **Display-App**, **SI-App**, **SI-Dauerbetrieb mit automatischem Start** und **Eigenes Layout verwenden** aktiv sein. Das Öffnen und Bearbeiten installiert keine SI-App und weckt das Display nicht. **Anzeigen** ist eine ausdrückliche Quellenwahl und kann das mit Strom versorgte Display wecken.
 
@@ -42,7 +42,7 @@ Für Wetter, Kalender und weitere Informationen passende HA-Entitäten wählen o
 
 Neben **Anzeigen** wählst du im Dropdown **Direkt** oder **Animiert**. Im Editor steht dieselbe Auswahl bei den Ausgabebuttons. Sie gilt für die folgenden Anzeigen-Klicks im geöffneten Studio und verändert keine gespeicherte Ansicht. Beim nächsten Laden ist wieder **Direkt** ausgewählt.
 
-**Animiert** bewegt und skaliert das aktuelle HDMI-Bild in 0,7 Sekunden auf die gespeicherte Position und Größe der Zielansicht. Das funktioniert in beide Richtungen zwischen **Nur HDMI**, **Dashboard PiP** und eigenen Ansichten mit HDMI-Element. Derselbe HDMI-Eingang und die verbundene SI-App sind Voraussetzung. Die übrigen Elemente der Zielansicht erscheinen direkt. Enthält eine Ansicht kein HDMI, ist der Eingang neu oder wird dieselbe Geometrie gewählt, erfolgt ein direkter Wechsel. Eine vom Browser gemeldete Einstellung für reduzierte Bewegung wird berücksichtigt.
+**Animiert** bewegt und skaliert das aktuelle HDMI-Bild in 0,7 Sekunden auf die gespeicherte Position und Größe der Zielansicht. Das funktioniert in beide Richtungen zwischen **Nur HDMI**, **Dashboard PiP** und eigenen Ansichten mit HDMI-Element. Derselbe HDMI-Eingang und die verbundene SI-App sind Voraussetzung. Normale Widgets der Zielansicht erscheinen mit einem kurzen 280-ms-Übergang. Kamera- und HDMI-Videoebenen werden dabei nicht per CSS transformiert oder vervielfacht. Enthält eine Ansicht kein HDMI, ist der Eingang neu oder wird dieselbe Geometrie gewählt, erfolgt ein direkter Wechsel. Eine vom Browser gemeldete Einstellung für reduzierte Bewegung wird berücksichtigt.
 
 Die App verwendet weiter denselben HDMI-Decoder. Sie bewegt ausschließlich dessen Rechteck mit maximal 30 Geometrieänderungen pro Sekunde, ohne Screenshot-Schleife oder zusätzliche Videokopie. Wiederholte Zustandsabfragen starten die Animation nicht erneut. Neue direkte Zielgeometrien und Ansichten ohne HDMI brechen eine laufende Bewegung ab. Die OSD-Unterdrückung bleibt bis zur Bestätigung der Endposition aktiv; der bisherige OSD-Zustand wird anschließend wiederhergestellt.
 
@@ -186,3 +186,41 @@ Der Sensor **Display app** zeigt `layout_scene` (`signal` für HDMI-Vollbild, `d
 Bibliothek, Zuordnungen und aktive Layouts werden gemeinsam in `.storage/lg_rs232_ip.<entry_id>.layouts` gespeichert. Bilder: `.storage/lg_rs232_ip.<entry_id>.backgrounds/`. Die Quellenwahl liegt im vorhandenen App-Wiederherstellungsjournal. Vorhandene Ansichten bleiben beim Update erhalten. Neue vollständige Vorlagen werden als zusätzliche Ansicht angelegt; im Editor werden nur Farbthemes übernommen.
 
 Weitere Informationen: [App-Einrichtung](DISPLAY-APP.md), [Prüfergebnisse](RELEASE-TESTS.md), [Gerätereferenz](devices/LG-UH5F-H.md).
+
+
+## Kamera und Teststream neben HDMI
+
+In einer Ansicht **Kamera / Teststream** hinzufügen. Position und Größe sind frei einstellbar. Die nativen Videoebenen dieses LG beachten bei Überlappung nicht zuverlässig die HTML-Ebenenreihenfolge: HDMI und Live-Kamerastream müssen daher getrennte Rechtecke belegen. Der Editor erklärt diese Grenze und verhindert das Speichern eines überlappenden Test-/Nur-Stream-Layouts. Eine HA-Kamera in **Automatisch** verwendet bei Überlappung mit HDMI direkt Einzelbilder; diese lassen sich über das HDMI-Vollbild legen. Es ist genau ein zusätzliches Kamera-/Video-Widget pro Ansicht möglich. Die Vorschau im Studio ist ein Platzhalter und startet keine Kamera.
+
+- **Lokaler HLS-Teststream**: mitgeliefertes, stummes 640×360-H.264-Testbild mit Bewegung, 15 Bilder/s. Keine externe URL, kein Cloudzugriff, keine Kamera erforderlich.
+- **Home-Assistant-Kamera**: vorhandene `camera.*`-Entität auswählen. **Automatisch** versucht den HLS-Stream von HA und fällt bei fehlender Unterstützung, Fehlern oder längerem Stillstand auf Einzelbilder zurück. **Nur HLS-Stream** und **Nur Einzelbilder** sind ebenfalls wählbar.
+- **Einzelbild-Abstand**: 1–30 Sekunden ab Abschluss des vorherigen Bildabrufs; keine überlappenden Bildanfragen. Bei Fehlern zehn Sekunden Pause. Bilder werden auf maximal 1280 Pixel Kantenlänge begrenzt und nur im RAM zwischengespeichert.
+- **Vollständig einpassen / Fläche füllen** bestimmt das Seitenverhältnis. Der zusätzliche Stream ist stumm, damit er den HDMI-Ton nicht ersetzt. Beim Verlassen der Ansicht oder Ausblenden der App werden Video, Bildabrufe und Timer freigegeben. Ein fehlgeschlagener Stream wird höchstens einmal pro Minute neu versucht.
+
+Die eigene LG-Vorschaukamera ist gesperrt, um eine Bildschirm-Rückkopplung zu vermeiden. Der gekoppelte Display-Zugang erhält nur Zugriff auf Kamera-Widgets, die für genau dieses Display gespeichert wurden, und keine Kamera-Zugangsdaten. HLS-Codecs müssen vom alten LG-Browser unterstützt werden; echtes Kamera-HLS mit fMP4 ist noch nicht hardwarebestätigt. Der getestete lokale HLS-Stream verwendet H.264 in MPEG-TS. Bei Problemen **Nur Einzelbilder** wählen.
+
+Der Sensor **Display app** meldet unter `camera_widget` Modus, geladenes Bild und Auflösung. Das zeigt Decoderbereitschaft; eine tatsächliche sichtbare Darstellung ist zusätzlich am Display oder über einen Screenshot zu prüfen. Während des Streamstarts können frühe native Screenshots noch schwarze Videoflächen zeigen. Im Hardwaretest waren beide Bilder nach zusätzlicher Anlaufzeit sichtbar; ein sofortiger sichtbarer Start wird nicht zugesichert.
+
+## Ereignisabhängige Ansichten
+
+Die Integration installiert die optionale HA-Blaupause **LG Display · Ereignisansicht mit automatischer Rückkehr** unter **Einstellungen → Automatisierungen & Szenen → Blaupausen**. Bestehende gleichnamige lokale Dateien bleiben erhalten. Es wird keine Automation automatisch aktiviert.
+
+1. Eine eigene Ansicht mit HDMI und Kamera-Widget speichern, beispielsweise **Türkamera**. Zum Test zunächst den lokalen Stream wählen und HDMI und Kamera nebeneinander anordnen.
+2. Im Editor **Ansicht in Automationen verwenden** öffnen und die **Ansichts-ID** übernehmen.
+3. Aus der Blaupause eine Automation erstellen, Auslöser/Zielzustand (beispielsweise Klingel `on`), Display, Ansicht und Dauer wählen. Ohne die Option **Aufwecken** bleibt ein ausgeschaltetes Display aus.
+
+`lg_rs232_ip.show_view` unterstützt zusätzlich `duration: 1–3600`. `0` bedeutet dauerhafte Auswahl. Beispiel:
+
+```yaml
+action: lg_rs232_ip.show_view
+target:
+  entity_id: media_player.lg_display_display
+data:
+  view: pip_view
+  transition: smooth
+  duration: 30
+```
+
+Nach Ablauf kehrt die Anzeige zur vorherigen Ansicht bzw. zum vorherigen HDMI-Eingang zurück. Weitere zeitliche Anzeigen ersetzen den Timer und behalten die ursprüngliche Rückkehransicht; sie werden nicht aufgestaut. Quellenwahl, Ausschalten, Leeren oder eine neue Präsentation beenden diese Rückkehr. Bei Verbindungsverlust, ausgeschaltetem Display oder anderer Präsentationshoheit wird keine verspätete Rückkehr erzwungen. HA-Neustart/Entladen beendet den Timer; die zuletzt gewählte Ansicht bleibt wie bei anderen Quellen gespeichert. Zeitliche Ansichten berücksichtigen die vorhandenen Ruhezeiten. Der Service selbst kann das Display wecken; die Blaupause prüft davor die Aufweckoption.
+
+Die Regeln bleiben in HA-Automationen. Eine zusätzliche globale Zuordnung von Ansichten im Studio ist dafür nicht nötig.

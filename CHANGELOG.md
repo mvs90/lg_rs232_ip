@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.17.0
+
+- Add one configurable camera widget per Studio view: local H.264/HLS test stream, HA HLS, automatic snapshot fallback, 1–30 s snapshot interval and contain/cover fit. Release app 1.14.2.
+- Respect the tested native plane ordering: video streams must sit beside HDMI; overlapping HA cameras in automatic mode use snapshots. Keep video surfaces transparent.
+- Keep the existing HDMI decoder; mute and release the additional video when hidden. Share only saved camera bindings through the paired route, block recursive LG preview cameras, and expose bounded camera readiness diagnostics.
+- Add short widget entrances alongside smooth HDMI transitions, respecting reduced motion and avoiding video texture animations.
+- Add bounded `show_view.duration` and an optional, automatically installed HA automation blueprint. Repeated events replace the timer; manual controls take over.
+- Document physical HDMI + MP4/HLS evidence and the remaining dual-HDMI, HDMI-stream-export and offline-cold-start limits.
+
 ## 2.16.0
 
 - Add a Direct/Animated dropdown beside Studio display actions and a `show_view` action for automations. Keep transition choice separate from saved designs and unsaved drafts.

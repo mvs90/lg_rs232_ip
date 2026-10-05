@@ -90,3 +90,9 @@ On the 75UH5F-HJ, direct `captureScreen` returned 1280×720 JPEGs in 573–605 m
 - Private content expires locally even while HA is unavailable and cannot reappear from a repeated stale response. Already loaded HDMI continues; the hosted cold-start limitation above still applies.
 
 On the physical 75UH5F-HJ, six consecutive connected layout/message requests were acknowledged after **38–87 ms** (median **42 ms**) in a short LAN test, including replacement of active 30-second messages. A burst of twelve requests left only the newest visible. These measurements exclude initial app startup and do not promise the same latency on other networks or devices. HDMI input changes include the OSD guard's settling period and are slower than layout changes. Process-wide RAM/CPU and multi-day stability were not measured; bounded DOM, request and capture lifetimes are verified by regression tests.
+
+### Camera widgets and event views (2.17)
+
+Studio can place one additional camera/test-stream widget beside its existing HDMI plane. Playback is demand-driven and muted; leaving the view releases the decoder. A paired route resolves only saved camera bindings, using HA's camera API and scoped HLS endpoint. It never exposes camera login credentials or a generic URL proxy. Automatic mode falls back to bounded snapshots when streaming fails. The bundled 640×360, 15 fps synthetic H.264/MPEG-TS clip demonstrates the hardware path without a real camera. See [Studio setup and automation instructions](DISPLAY-STUDIO.md#kamera-und-teststream-neben-hdmi).
+
+Timed `show_view` actions use one replaceable timer and explicit ownership checks, not a queue of old events. Native OSD suppression still wraps view changes and the return transition. The additional camera is excluded from CSS entrance animation. Ordinary widgets use a 280 ms entrance on smooth view changes; there is no permanent animation loop for this feature.

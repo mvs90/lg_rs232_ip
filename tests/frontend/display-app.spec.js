@@ -8,8 +8,10 @@ async function mount(page, state) {
   await page.route('http://display-app.test/**', async route => {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
+    if(name === 'camera.json')return route.fulfill({contentType:'application/json',body:JSON.stringify({stream:state.cameraStream || null})});
+    if(name === 'camera.jpg'){state.cameraFrames=(state.cameraFrames || 0)+1;return route.fulfill({contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});}
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.13.0', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.14.2', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -17,7 +19,7 @@ async function mount(page, state) {
       if (event.type === 'rendered' && state.content) state.content.rendered = true;
       return route.fulfill({contentType: 'application/json', body: '{"ok":true}'});
     }
-    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: fs.readFileSync(path.join(assets, name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src ext:; frame-ancestors 'none'"}});
+    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: fs.readFileSync(path.join(assets, name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src 'self' ext:; frame-ancestors 'none'"}});
   });
   await page.goto('http://display-app.test/index.html');
   return events;
@@ -695,4 +697,72 @@ test('reduced motion selects the exact HDMI target immediately',async({page})=>{
   const width=state.layout.config.scenes.pip_view.elements.find(e=>e.kind==='hdmi').width;
   await expect.poll(()=>events.some(e=>e.type==='input_applied'&&e.id==='reduced')).toBe(true);
   await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe(width+'%');
+});
+
+function cameraItem(layout, overrides={}) {
+  return {...layout.config.scenes.dashboard.elements[0],id:'door',kind:'camera',x:62,y:10,width:34,height:34,label:'Türkamera',show_label:true,entity_id:'camera.door',camera_source:'entity',camera_mode:'auto',camera_interval:1,camera_fit:'contain',...overrides};
+}
+
+test('camera auto falls back to decoded snapshots and stops all work when removed',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  const scene=state.layout.config.scenes.hdmi_full;
+  scene.elements[0].width=60;
+  scene.elements.push(cameraItem(state.layout));
+  await mount(page,state);
+  const image=page.locator('.lg-camera-picture img');
+  await expect(image).toBeVisible();
+  await expect.poll(()=>image.evaluate(i=>i.naturalWidth)).toBeGreaterThan(0);
+  await expect.poll(()=>state.cameraFrames).toBeGreaterThan(1);
+  await page.evaluate(()=>{window.originalHDMI=document.querySelector('#hdmi-slot video');});
+  scene.elements.pop();
+  await expect(page.locator('.lg-camera-picture')).toHaveCount(0);
+  const count=state.cameraFrames;await page.waitForTimeout(1300);
+  expect(state.cameraFrames).toBe(count);
+  expect(await page.evaluate(()=>originalHDMI===document.querySelector('#hdmi-slot video'))).toBe(true);
+});
+
+test('camera uses one muted extra decoder, keeps it on data polls, releases it on view changes',async({page})=>{
+  await page.addInitScript(()=>{
+    Object.defineProperty(HTMLMediaElement.prototype,'src',{get(){return this._src || '';},set(value){this._src=value;}});
+    HTMLMediaElement.prototype.play=function(){return Promise.resolve();};
+    HTMLMediaElement.prototype.pause=function(){this._paused=true;};
+    HTMLMediaElement.prototype.load=function(){this._loads=(this._loads || 0)+1;};
+  });
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  state.layout.config.scenes.hdmi_full.elements.push(cameraItem(state.layout,{camera_source:'test'}));
+  await mount(page,state);
+  await expect(page.locator('video')).toHaveCount(2);
+  await expect(page.locator('.lg-camera')).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
+  await expect(page.locator('.lg-camera-picture')).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
+  await page.evaluate(()=>{window.extraVideo=document.querySelector('.lg-camera video');window.hdmiVideo=document.querySelector('#hdmi-slot video');});
+  expect(await page.evaluate(()=>extraVideo.muted&&extraVideo.src==='test-stream.m3u8')).toBe(true);
+  await page.waitForTimeout(1100);
+  expect(await page.evaluate(()=>extraVideo===document.querySelector('.lg-camera video'))).toBe(true);
+  state.selected_view='dashboard';
+  await expect(page.locator('.lg-camera video')).toHaveCount(0);
+  expect(await page.evaluate(()=>extraVideo._paused&&extraVideo._loads===1&&hdmiVideo===document.querySelector('#hdmi-slot video'))).toBe(true);
+});
+
+test('smooth widget entrance runs once per view selection and respects reduced motion',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  await mount(page,state);
+  await page.evaluate(()=>{window.enters=0;document.addEventListener('animationstart',e=>{if(e.animationName==='lg-widget-enter')enters++;});});
+  state.selected_view='pip_view';state.input_request='widgets';state.input_transition='smooth';
+  await expect.poll(()=>page.evaluate(()=>enters)).toBeGreaterThan(0);
+  await page.waitForTimeout(500);const count=await page.evaluate(()=>enters);
+  await page.waitForTimeout(1100);expect(await page.evaluate(()=>enters)).toBe(count);
+  await page.emulateMedia({reducedMotion:'reduce'});
+  state.selected_view='dashboard';state.input_request='reduce-widgets';
+  await expect(page.locator('.lg-calendar')).toBeVisible();
+  await page.waitForTimeout(500);expect(await page.evaluate(()=>enters)).toBe(count);
+});
+
+test('camera overlapping HDMI uses snapshots without starting a hidden stream',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed(),cameraStream:'/api/hls/test/master_playlist.m3u8'};
+  state.layout.config.scenes.hdmi_full.elements.push(cameraItem(state.layout));
+  let streams=0;page.on('request',request=>{if(request.url().includes('camera.json')||request.url().includes('/api/hls/'))streams++;});
+  await mount(page,state);
+  await expect(page.locator('.lg-camera-picture img')).toBeVisible();
+  await expect.poll(()=>state.cameraFrames).toBeGreaterThan(1);
+  expect(streams).toBe(0);await expect(page.locator('video')).toHaveCount(1);
 });

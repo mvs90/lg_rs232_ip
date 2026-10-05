@@ -1702,3 +1702,119 @@ async def test_animated_view_timeout_rolls_back_and_clears_transition(app):
         assert app.state()["input_transition"] == "none"
     finally:
         await layouts.async_close()
+
+
+async def test_temporary_view_repeated_events_restore_original_not_intermediate_view(
+    app,
+):
+    layouts = await configure_dashboard(app)
+    controller = app.controller
+    controller._config_entry = app.entry
+    controller.power = True
+    try:
+        await acknowledge_selection(
+            app, controller.async_select_app_view("pip_view", duration=30)
+        )
+        first = controller._view_lease
+        assert first["previous"] == ("hdmi_full", 0x90)
+        await acknowledge_selection(
+            app, controller.async_select_app_view("dashboard", duration=40)
+        )
+        second = controller._view_lease
+        assert second is not first and second["previous"] == first["previous"]
+        await controller._async_return_view(app, first)
+        assert app.selected_view == "dashboard"
+        await acknowledge_selection(app, controller._async_return_view(app, second))
+        assert app.selected_view is None and app.selected_input == 0x90
+    finally:
+        controller._cancel_temporary_view()
+        await layouts.async_close()
+
+
+@pytest.mark.parametrize("takeover", ["manual", "off", "busy", "disconnected"])
+async def test_temporary_view_never_overrides_manual_power_or_other_owner(
+    app, takeover
+):
+    layouts = await configure_dashboard(app)
+    controller = app.controller
+    controller._config_entry = app.entry
+    controller.power = True
+    try:
+        await acknowledge_selection(
+            app, controller.async_select_app_view("pip_view", duration=10)
+        )
+        lease = controller._view_lease
+        if takeover == "manual":
+            await acknowledge_selection(app, controller.async_select_input(0x90))
+        elif takeover == "off":
+            controller.power = False
+        elif takeover == "busy":
+            controller.external_owner = "AV"
+        else:
+            app.last_seen = 0
+        await controller._async_return_view(app, lease)
+        assert app._input_request is None and controller._view_lease is None
+        assert app.selected_view == (None if takeover == "manual" else "pip_view")
+    finally:
+        controller._cancel_temporary_view()
+        await layouts.async_close()
+
+
+async def test_camera_routes_are_paired_and_saved_widget_scoped(app):
+    from custom_components.lg_rs232_ip.layout_config import element
+
+    layouts = await configure_dashboard(app)
+    item = element("camera", 60, 5, 35, 35)
+    item.update(camera_source="entity", entity_id="camera.door")
+    config = layouts.document()["config"]
+    config["scenes"]["hdmi_full"]["elements"].append(item)
+    await layouts.async_save(config, layouts.revision)
+    view = DisplayAppView(app.hass)
+    layouts.cameras.async_get = AsyncMock(return_value=b"jpeg")
+    try:
+        request = SimpleNamespace(query={"view": "hdmi_full", "id": "camera"})
+        response = await view.get(request, "test", app.token, "camera.jpg")
+        assert response.status == 200 and response.body == b"jpeg"
+        layouts.cameras.async_get.assert_awaited_once_with("camera.door", "image")
+        with pytest.raises(web.HTTPNotFound):
+            await view.get(request, "test", "wrong", "camera.jpg")
+        request.query["id"] = "camera.other"
+        with pytest.raises(web.HTTPNotFound):
+            await view.get(request, "test", app.token, "camera.jpg")
+        request.query["id"] = "camera"
+        config["scenes"]["hdmi_full"]["elements"].pop()
+        await layouts.async_save(config, layouts.revision)
+        with pytest.raises(web.HTTPNotFound):
+            await view.get(request, "test", app.token, "camera.jpg")
+    finally:
+        await layouts.async_close()
+
+
+async def test_rapid_event_replacement_keeps_original_return_target_during_ack(app):
+    layouts = await configure_dashboard(app)
+    controller = app.controller
+    controller._config_entry = app.entry
+    controller.power = True
+    try:
+        first = asyncio.create_task(
+            controller.async_select_app_view("pip_view", duration=30)
+        )
+        async with asyncio.timeout(1):
+            while not app._input_request:
+                await asyncio.sleep(0)
+        request = app._input_request
+        second = asyncio.create_task(
+            controller.async_select_app_view("dashboard", duration=30)
+        )
+        await asyncio.sleep(0)
+        app.event({"type": "input_applied", "id": request})
+        await first
+        async with asyncio.timeout(1):
+            while not app._input_request or app._input_request == request:
+                await asyncio.sleep(0)
+        app.event({"type": "input_applied", "id": app._input_request})
+        await second
+        assert controller._view_lease["previous"] == ("hdmi_full", 0x90)
+    finally:
+        controller._cancel_temporary_view()
+        await layouts.async_close()

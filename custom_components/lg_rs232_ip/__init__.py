@@ -27,6 +27,12 @@ async def async_setup(hass, config):
     from .frontend import async_register_card
 
     await async_register_card(hass)
+    from .blueprint import install_blueprint
+
+    try:
+        await hass.async_add_executor_job(install_blueprint, hass.config.config_dir)
+    except OSError:
+        _LOGGER.warning("Could not install the optional LG automation blueprint")
     from .display_app import DisplayAppView
 
     hass.http.register_view(DisplayAppView(hass))

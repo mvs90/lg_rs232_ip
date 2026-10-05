@@ -21,6 +21,7 @@ DOMAINS = {
     "vacuum",
     "weather",
     "calendar",
+    "camera",
 }
 
 
@@ -118,6 +119,7 @@ def room_suggestions(hass, entry_id, area_id=None):
                 or entity.disabled_by
                 or entity.hidden_by
                 or entity.entity_category
+                or (entity.domain == "camera" and entity.platform == "lg_rs232_ip")
                 or entity.config_entry_id == entry_id
                 or area(entity) != selected
             ):
@@ -129,6 +131,7 @@ def room_suggestions(hass, entry_id, area_id=None):
                 "media_player": "media",
                 "weather": "weather",
                 "calendar": "calendar",
+                "camera": "camera",
             }.get(entity.domain, "status")
             # Prefer room media, climate and meaningful sensors; unavailable devices remain selectable.
             score = {
