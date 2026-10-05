@@ -46,10 +46,74 @@
   function Renderer(root, hdmi, preview) {
     this.root = root; this.hdmi = hdmi; this.preview = !!preview; this.nodes = {}; this.scene = null; this.data = null; this.options = null;
   }
+  function edgeBackground(image) {
+    // One 32 x 32 sample per new cover, never per frame or progress update.
+    // The scoped HA artwork endpoint and editor blob URLs are same-origin.
+    var canvas=document.createElement("canvas"); canvas.width=32; canvas.height=32;
+    var context=canvas.getContext("2d"); context.drawImage(image,0,0,32,32);
+    var pixels=context.getImageData(0,0,32,32).data;
+    function edge(x1,y1,x2,y2) {
+      var r=0,g=0,b=0,n=0,x,y,i;
+      for(y=y1;y<y2;y++){for(x=x1;x<x2;x++){i=(y*32+x)*4;r+=pixels[i];g+=pixels[i+1];b+=pixels[i+2];n++;}}
+      return "rgb("+Math.round(r/n)+","+Math.round(g/n)+","+Math.round(b/n)+")";
+    }
+    var left=edge(0,0,4,32),right=edge(28,0,32,32),top=edge(0,0,32,4),bottom=edge(0,28,32,32);
+    // Free areas inherit the nearest cover edge, with a soft corner blend.
+    return "radial-gradient(ellipse at 0% 50%,"+left+",transparent 75%),radial-gradient(ellipse at 100% 50%,"+right+",transparent 75%),linear-gradient(180deg,"+top+","+bottom+")";
+  }
+  Renderer.prototype.clearCover = function () {
+    var cover=this.cover;if(!cover){return;}
+    cover.image.onload=cover.image.onerror=null;cover.image.removeAttribute("src");
+    this.root.removeChild(cover.node);this.cover=null;
+  };
+  Renderer.prototype.renderCover = function () {
+    var scene=this.scene,data=this.data[scene.media_background_entity],self=this;
+    if(!scene.media_background_enabled || !data || data.state!=="playing" || !data.artwork || !this.options.mediaUrl){this.clearCover();return;}
+    var key=scene.media_background_entity+"/"+data.artwork,cover=this.cover;
+    if(cover && cover.key!==key){this.clearCover();cover=null;}
+    if(!cover){
+      var node=child(this.root,"cover-background"),image=document.createElement("img");
+      image.alt="";node.appendChild(image);
+      cover={key:key,node:node,image:image,shade:child(node,"cover-shade"),url:"",retryAt:0,ready:false};this.cover=cover;
+    }
+    var fit=scene.media_background_fit || "contain";
+    cover.node.setAttribute("data-fit",fit);
+    style(cover.shade,"background","rgba(0,0,0,"+(scene.media_background_dim === undefined ? .35 : scene.media_background_dim)+")");
+    if(cover.ready){this.coverGeometry();return;}
+    if(cover.url || Date.now()<cover.retryAt){return;}
+    var url=this.options.mediaUrl(scene.media_background_entity,data.artwork);
+    if(!url){return;}cover.url=url;
+    cover.image.onload=function () {
+      if(self.cover!==cover){return;}
+      if(!cover.image.naturalWidth){cover.image.onerror();return;}
+      try {style(cover.node,"background",edgeBackground(cover.image));}
+      catch(_){style(cover.node,"background",self.scene.color);}
+      cover.ready=true;cover.node.classList.add("loaded");self.coverGeometry();
+    };
+    cover.image.onerror=function () {
+      if(self.cover!==cover){return;}
+      cover.url="";cover.retryAt=Date.now()+30000;
+      cover.image.removeAttribute("src");
+    };
+    cover.image.src=url;
+  };
+  Renderer.prototype.coverGeometry = function () {
+    var cover=this.cover;if(!cover || !cover.ready){return;}
+    var image=cover.image,fit=this.scene.media_background_fit || "contain";
+    if(fit === "center"){
+      // Design coordinates keep the Studio preview and a 1080p/4K panel alike.
+      // Preserve decoded cover size within the 1920 x 1080 design, never upscale.
+      var scale=Math.min(1,1920/image.naturalWidth,1080/image.naturalHeight);
+      style(image,"width",(image.naturalWidth*scale/1920*100)+"%");
+      style(image,"height",(image.naturalHeight*scale/1080*100)+"%");
+    } else {style(image,"width","100%");style(image,"height","100%");}
+    style(image,"objectFit",fit === "stretch" ? "fill" : "contain");
+  };
   Renderer.prototype.render = function (scene, data, options) {
     this.scene = scene; this.data = data || {}; this.options = options || {};
     var root=this.root, height=root.clientHeight || 720, wanted={}, found=false, self=this;
     root.classList.add("lg-scene"); style(root,"background",background(scene, this.options));
+    this.renderCover();
     scene.elements.forEach(function (item,index) {
       var node, hdmi=item.kind === "hdmi";
       if (hdmi) { if(self.options.hideHdmi){return;} node=self.hdmi; found=true; }
@@ -124,6 +188,7 @@
     var self=this; this.scene.elements.forEach(function (item) {if (item.kind === "clock" && self.nodes[item.id]) {self.fill(self.nodes[item.id],item);}if(item.kind === "media" && self.nodes[item.id] && window.LGCards){window.LGCards.tickMedia(self.nodes[item.id],item,self.data[item.entity_id],self.options);}});
   };
   Renderer.prototype.clear = function () {
+    this.clearCover();
     var self=this; Object.keys(this.nodes).forEach(function (key) {self.root.removeChild(self.nodes[key]);}); this.nodes={}; this.scene=null;
     this.root.classList.remove("lg-scene"); this.root.style.background=""; this.root._lgStyle={};
     if (this.hdmi) {this.hdmi.removeAttribute("style"); this.hdmi._lgStyle={};}

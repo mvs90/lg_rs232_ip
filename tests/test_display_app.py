@@ -1257,6 +1257,17 @@ async def test_paired_media_artwork_only_exposes_selected_saved_players(app):
             cfg["scenes"]["dashboard"]["elements"] = []
             await layouts.async_save(cfg, layouts.revision)
             assert (await client.get(url)).status == 404
+            # A background alone authorizes its player; disabling revokes it.
+            background = cfg["scenes"]["dashboard"]
+            background.update(
+                media_background_enabled=True,
+                media_background_entity="media_player.sonos",
+            )
+            await layouts.async_save(cfg, layouts.revision)
+            assert (await client.get(url)).status == 200
+            background["media_background_enabled"] = False
+            await layouts.async_save(cfg, layouts.revision)
+            assert (await client.get(url)).status == 404
     finally:
         await layouts.async_close()
 

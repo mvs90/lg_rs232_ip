@@ -296,3 +296,40 @@ test('themes change colours only, palette is editable and top buttons preserve d
   await page.getByRole('button',{name:'PiP anzeigen',exact:true}).click();
   expect(await page.evaluate(()=>calls.some(c=>c[0]==='media_player'&&c[2].source==='PiP'))).toBe(true);
 });
+
+test('a background player is independent of cards, previews live, survives save, themes, undo and duplicate',async({page})=>{
+  await mount(page);
+  const png=fs.readFileSync('tests/fixtures/media-cover.png').toString('base64');
+  await page.evaluate(png=>{
+    hass.states['media_player.sonos']={entity_id:'media_player.sonos',state:'playing',attributes:{friendly_name:'Sonos Wohnzimmer',entity_picture:'/private-art',media_title:'First'}};
+    window.coverRequests=0;
+    hass.fetchWithAuth=async()=>{window.coverRequests++;return new Response(Uint8Array.from(atob(png),c=>c.charCodeAt(0)),{headers:{'Content-Type':'image/png'}});};
+  },png);
+  await openView(page,'Dashboard');
+  const before=await page.evaluate(()=>JSON.stringify(studio.scene.elements));
+  await page.getByLabel('Hintergrund-Medienplayer').selectOption('media_player.sonos');
+  await page.getByLabel('Bei Wiedergabe anzeigen').check();
+  await expect(page.locator('.scene .lg-cover-background')).toHaveClass(/loaded/);
+  await page.getByLabel('Cover darstellen').selectOption('stretch');
+  await expect(page.locator('.scene .lg-cover-background img')).toHaveCSS('object-fit','fill');
+  await page.locator('.sidebar').getByRole('button',{name:/Aurora/}).click();
+  expect(await page.evaluate(()=>studio.scene.media_background_entity)).toBe('media_player.sonos');
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await expect(page.locator('.status')).toHaveText('Gespeichert');
+  expect(await page.evaluate(()=>saved.scenes.dashboard.media_background_fit)).toBe('stretch');
+  expect(await page.evaluate(()=>studio.scene.elements.map(i=>i.entity_id))).toEqual(JSON.parse(before).map(i=>i.entity_id));
+  await page.evaluate(()=>{hass.states['media_player.sonos'].state='paused';studio.hass={...hass};});
+  await expect(page.locator('.scene .lg-cover-background')).toHaveCount(0);
+  await page.evaluate(()=>{hass.states['media_player.sonos'].state='playing';hass.states['media_player.sonos'].attributes.media_title='Second';studio.hass={...hass};});
+  await expect(page.locator('.scene .lg-cover-background')).toHaveClass(/loaded/);
+  await page.getByLabel('Bei Wiedergabe anzeigen').uncheck();
+  await expect(page.locator('.scene .lg-cover-background')).toHaveCount(0);
+  await page.getByTitle('Rückgängig',{exact:true}).click();
+  await expect(page.getByLabel('Bei Wiedergabe anzeigen')).toBeChecked();
+  await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
+  await page.getByRole('button',{name:'Dashboard duplizieren',exact:true}).click();
+  await openView(page,'Dashboard · Kopie');
+  await expect(page.getByLabel('Hintergrund-Medienplayer')).toHaveValue('media_player.sonos');
+  await expect(page.getByLabel('Cover darstellen')).toHaveValue('stretch');
+  expect(await page.evaluate(()=>window.coverRequests)).toBeLessThanOrEqual(4);
+});

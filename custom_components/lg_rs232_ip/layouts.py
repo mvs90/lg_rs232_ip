@@ -18,7 +18,13 @@ from .const import DOMAIN
 from .layout_backgrounds import LayoutBackgrounds
 from .layout_media import LayoutMedia
 from .layout_cards import card_metadata
-from .layout_config import active_scenes, layout_entities, make_layout, validate_layout
+from .layout_config import (
+    active_scenes,
+    layout_entities,
+    make_layout,
+    media_background_entities,
+    validate_layout,
+)
 from .layout_library import from_config, sync_legacy, validate_library
 
 _LOGGER = logging.getLogger(__name__)
@@ -351,7 +357,7 @@ class DisplayLayouts:
             self.changed()
 
     def media_entities(self):
-        return {
+        return media_background_entities(self.config) | {
             item["entity_id"]
             for scene in active_scenes(self.config).values()
             for item in scene["elements"]

@@ -9,7 +9,7 @@ async function mount(page, state) {
     const name = new URL(route.request().url()).pathname.split('/').pop();
     if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.7.2', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: '1.8.0', revision: 1, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, input_request: state.input_request || null, idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -406,4 +406,67 @@ test('aspect ratio updates the existing HDMI plane in full-screen and PiP withou
   state.hdmi_fit = 'contain';
   await expect(video).toHaveCSS('object-fit','contain');
   expect(await video.evaluate(el => el === window.originalHdmiPlane && window.videoReloads === 0)).toBe(true);
+});
+
+test('playing cover background follows tracks, modes and playback without replacing HDMI or repeating analysis',async({page})=>{
+  await page.addInitScript(()=>{
+    window.edgeSamples=0;
+    const original=CanvasRenderingContext2D.prototype.getImageData;
+    CanvasRenderingContext2D.prototype.getImageData=function(...args){window.edgeSamples++;return original.apply(this,args);};
+  });
+  const state={content:null,idle_hdmi:'ext://hdmi:1',dashboard:true,layout:designed()};
+  const scene=state.layout.config.scenes.dashboard;
+  Object.assign(scene,{elements:[],background:'solid',color:'#172535',media_background_enabled:true,media_background_entity:'media_player.music',media_background_fit:'contain',media_background_dim:.35});
+  const media=state.layout.values['media_player.music']={state:'playing',artwork:'one'};
+  await mount(page,state);
+  const layer=page.locator('.lg-cover-background'),art=layer.locator('img');
+  await expect(layer).toHaveClass(/loaded/);
+  await expect(art).toHaveCSS('object-fit','contain');
+  expect(await layer.evaluate(n=>n.style.background)).toContain('radial-gradient');
+  await page.evaluate(()=>{window.coverNode=document.querySelector('.lg-cover-background img');window.hdmiNode=document.querySelector('video');});
+  await page.waitForTimeout(1100);
+  expect(await page.evaluate(()=>window.edgeSamples)).toBe(1);
+  expect(await page.evaluate(()=>window.coverNode===document.querySelector('.lg-cover-background img'))).toBe(true);
+  scene.media_background_fit='stretch';
+  await expect(art).toHaveCSS('object-fit','fill');
+  scene.media_background_fit='center';
+  await expect(layer).toHaveAttribute('data-fit','center');
+  expect(await art.evaluate(n=>parseFloat(n.style.width))).toBeLessThan(100);
+  scene.media_background_dim=.7;
+  await expect(layer.locator('.lg-cover-shade')).toHaveCSS('background-color','rgba(0, 0, 0, 0.7)');
+  expect(await page.evaluate(()=>window.edgeSamples)).toBe(1);
+  for(const playback of ['paused','idle','off','unavailable','unknown']){
+    media.state=playback;await expect(layer).toHaveCount(0);
+    media.state='playing';await expect(layer).toHaveClass(/loaded/);
+  }
+  media.artwork='two';await expect(art).toHaveAttribute('src',/v=two$/);
+  scene.media_background_enabled=false;await expect(layer).toHaveCount(0);
+  expect(await page.evaluate(()=>window.hdmiNode===document.querySelector('video'))).toBe(true);
+  scene.media_background_enabled=true;media.artwork='missing';
+  let requests=0;page.on('request',r=>{if(r.url().includes('cover.jpg'))requests++;});
+  await expect(layer).toHaveCount(1);await page.waitForTimeout(1200);
+  await expect(layer).not.toHaveClass(/loaded/);expect(requests).toBeLessThanOrEqual(1);
+  media.artwork=null;await expect(layer).toHaveCount(0);
+});
+
+test('cover edge colours come from the actual borders and slow old artwork never returns after pause',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',dashboard:true,layout:designed()};
+  const scene=state.layout.config.scenes.dashboard;
+  Object.assign(scene,{elements:[],media_background_enabled:true,media_background_entity:'media_player.music'});
+  state.layout.values['media_player.music']={state:'playing',artwork:'edges'};
+  await mount(page,state);
+  // Replace the fixture with a known red/blue-edged image; green center must not dominate.
+  const png=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=c.height=32;const x=c.getContext('2d');x.fillStyle='#00ff00';x.fillRect(0,0,32,32);x.fillStyle='#ff0000';x.fillRect(0,0,4,32);x.fillStyle='#0000ff';x.fillRect(28,0,4,32);return c.toDataURL().split(',')[1];});
+  await page.route('**/cover.jpg?**',r=>r.fulfill({contentType:'image/png',body:Buffer.from(png,'base64')}));
+  state.layout.values['media_player.music'].artwork='edge-colours';
+  const layer=page.locator('.lg-cover-background');
+  await expect.poll(()=>layer.evaluate(n=>n.style.background)).toContain('rgb(255, 0, 0)');
+  expect(await layer.evaluate(n=>n.style.background)).toContain('rgb(0, 0, 255)');
+  let finish;const pending=new Promise(resolve=>finish=resolve);
+  await page.route('**/cover.jpg?**',async r=>{await pending;await r.fulfill({contentType:'image/png',body:Buffer.from(png,'base64')}).catch(()=>{});});
+  state.layout.values['media_player.music'].artwork='slow';
+  await expect(layer.locator('img')).toHaveAttribute('src',/v=slow$/);
+  await expect(layer).not.toHaveClass(/loaded/);
+  state.layout.values['media_player.music'].state='paused';await expect(layer).toHaveCount(0);
+  finish();await page.waitForTimeout(500);await expect(layer).toHaveCount(0);
 });

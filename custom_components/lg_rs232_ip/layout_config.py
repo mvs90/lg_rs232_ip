@@ -81,6 +81,10 @@ def scene(background="aurora", elements=None, color="#101e30", accent="#6ee7d5")
         image_fit="cover",
         image_dim=0.25,
         gradient_angle=135,
+        media_background_enabled=False,
+        media_background_entity="",
+        media_background_fit="contain",
+        media_background_dim=0.35,
     )
 
 
@@ -319,6 +323,25 @@ def validate_layout(value):
             image_dim=_number(raw.get("image_dim", 0.25), 0, 0.9),
             gradient_angle=_number(raw.get("gradient_angle", 135), 0, 360),
         )
+        enabled = raw.get("media_background_enabled", False)
+        player = _text(raw.get("media_background_entity", ""), 255)
+        if type(enabled) is not bool:
+            raise ValueError("Invalid media background setting")
+        if player and not re.fullmatch(r"media_player\.[a-z0-9_]+", player):
+            raise ValueError("Select a media player for the background")
+        if enabled and not player:
+            raise ValueError("Select a media player for the background")
+        normalized.update(
+            media_background_enabled=enabled,
+            media_background_entity=player,
+            media_background_fit=_choice(
+                raw.get("media_background_fit", "contain"),
+                ("stretch", "contain", "center"),
+            ),
+            media_background_dim=_number(raw.get("media_background_dim", 0.35), 0, 0.9),
+        )
+        if enabled and key not in ("signal", "no_signal"):
+            entities.add(player)
         ids, hdmi, messages = set(), 0, 0
         for item in raw["elements"]:
             if not isinstance(item, dict):
@@ -420,9 +443,19 @@ def active_scenes(config):
 
 
 def layout_entities(config):
-    return {
+    return media_background_entities(config) | {
         item["entity_id"]
         for scene in active_scenes(config).values()
         for item in scene["elements"]
         if item["entity_id"]
+    }
+
+
+def media_background_entities(config):
+    """Only enabled bindings in assigned, active views may reach the display."""
+    return {
+        scene["media_background_entity"]
+        for scene in active_scenes(config).values()
+        if scene.get("media_background_enabled")
+        and scene.get("media_background_entity")
     }

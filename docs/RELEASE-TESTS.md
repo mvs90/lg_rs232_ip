@@ -1,5 +1,11 @@
 # Release acceptance
 
+## LG 2.11.0: media cover backgrounds — 2026-10-05
+
+**322 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 108 browser cases pass across Chromium and WebKit.** New coverage includes background-only entity subscriptions/scoped image access, strict options and the combined entity limit, playback/track transitions, all three fit modes, dimming, actual red/blue border sampling, one analysis per unchanged cover, slow obsolete responses, image-failure backoff, theme/save/undo/duplicate preservation and HDMI element identity.
+
+The existing **unifi-air-quality-ha-dev / HA 2026.9.4** container and physical **75UH5F-HJ / webOS 4.0.1-136** ran integration 2.11.0 with app **1.8.0**. A temporary media-player integration supplied synthetic artwork through HA's real media image API. Native LG captures visually verified proportional fitting, stretching, centered sizing, changed cover/edge colours, pause/off fallback and resumed playback. The SI launcher remained foreground. Studio preview and the real HA player selector were checked in the existing HA UI. No actual Sonos playback was started or interrupted. Original views/source were restored and the temporary fixture was removed after acceptance.
+
 ## LG 2.10.1: picture-control dependencies — 2026-10-05
 
 **320 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 102 browser cases pass across Chromium and WebKit.** Coverage includes the energy/schedule/panel dependency matrix, stale-value removal, exact acknowledgements/readback, mode-triggered rejection-cache invalidation, HA state-context serialization, visible diagnostics for disabled controls and aspect changes on the same video element.

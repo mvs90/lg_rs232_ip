@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.11.0
+
+- Add an optional per-view media-player cover background to Display Studio, independent of media cards. Show it only while the selected player is playing; restore the regular theme on pause, stop, unavailable/missing artwork or load errors.
+- Offer stretch, proportional fit and centered-size modes, adjustable dimming and a live gradient sampled from all four cover edges. Preserve these settings across colour themes, saved views, duplication and export/import.
+- Reuse scoped artwork caching and HA state subscriptions. Display app 1.8.0 samples only 32×32 pixels per new cover, reuses the background for unchanged data, rejects stale loads and retains the HDMI decoder.
+- Keep background-only players inside the existing 32-entity bound; disabled/unassigned/legacy views grant no new panel image access. Improve Studio preview request cleanup after track changes, saves and navigation.
+
 ## 2.10.1
 
 - Replace arbitrary aspect-ratio values with a named Full Screen/Original select; retain the legacy number with validated codes. Verify native acknowledgement/readback and mirror fitting to the resident HDMI plane without a decoder/input switch (app 1.7.2).

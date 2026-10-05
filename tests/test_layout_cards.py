@@ -4,7 +4,7 @@ import asyncio
 from io import BytesIO
 import json
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from PIL import Image
 import pytest
 from homeassistant.core import HomeAssistant
@@ -254,3 +254,83 @@ async def test_room_suggestions_follow_entity_overrides_and_skip_hidden_diagnost
         assert room_suggestions(hass, "display", "")["suggestions"] == []
         with pytest.raises(ValueError):
             room_suggestions(hass, "display", "unknown")
+
+
+def test_media_background_validation_and_entity_budget():
+    from custom_components.lg_rs232_ip.layout_config import layout_entities
+
+    cfg = make_layout()
+    scene = cfg["scenes"]["dashboard"]
+    # Older views stay disabled and retain the normal background.
+    for key in list(scene):
+        if key.startswith("media_background_"):
+            del scene[key]
+    assert not validate_layout(cfg)["scenes"]["dashboard"]["media_background_enabled"]
+    scene.update(
+        media_background_enabled=True, media_background_entity="media_player.sonos"
+    )
+    for mode in ("stretch", "contain", "center"):
+        scene["media_background_fit"] = mode
+        assert layout_entities(validate_layout(cfg)) == {"media_player.sonos"}
+    for key, value in (
+        ("media_background_enabled", 1),
+        ("media_background_entity", "sensor.private"),
+        ("media_background_entity", ""),
+        ("media_background_fit", "url(evil)"),
+        ("media_background_dim", 1),
+        ("media_background_dim", float("nan")),
+    ):
+        previous = scene.get(key)
+        scene[key] = value
+        with pytest.raises(ValueError):
+            validate_layout(cfg)
+        if previous is None:
+            del scene[key]
+        else:
+            scene[key] = previous
+    for key in ("dashboard", "pip_view"):
+        cfg["scenes"][key]["elements"] = [
+            {
+                **element("entity", 0, 0, 10, 10),
+                "id": f"e{i}",
+                "entity_id": f"sensor.{key}_{i}",
+            }
+            for i in range(16)
+        ]
+    with pytest.raises(ValueError, match="32 distinct"):
+        validate_layout(cfg)
+
+
+async def test_background_only_binding_subscribes_and_inactive_views_do_not_expose_artwork(
+    media,
+):
+    cache, _ = media
+    manager = DisplayLayouts(cache.hass, SimpleNamespace(entry_id="one", options={}))
+    try:
+        cfg = make_layout()
+        cfg["enabled"] = True
+        bg = cfg["scenes"]["dashboard"]
+        bg.update(
+            media_background_enabled=True, media_background_entity="media_player.sonos"
+        )
+        await manager.async_save(cfg, 0)
+        manager.changed = changed = __import__(
+            "unittest.mock", fromlist=["Mock"]
+        ).Mock()
+        assert manager.media_entities() == {"media_player.sonos"}
+        assert len(manager.values()["media_player.sonos"]["artwork"]) == 64
+        assert "PRIVATE" not in json.dumps(manager.payload())
+        state = cache.hass.states.get("media_player.sonos")
+        cache.hass.states.async_set(state.entity_id, "paused", dict(state.attributes))
+        await cache.hass.async_block_till_done()
+        await asyncio.sleep(0.35)
+        changed.assert_called()
+        assert manager.values()[state.entity_id]["state"] == "paused"
+        bg["media_background_enabled"] = False
+        cfg["scenes"]["signal"].update(
+            media_background_enabled=True, media_background_entity=state.entity_id
+        )
+        await manager.async_save(cfg, manager.revision)
+        assert manager.values() == {} and manager.media_entities() == set()
+    finally:
+        await manager.async_close()
