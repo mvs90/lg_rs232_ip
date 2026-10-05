@@ -1602,3 +1602,38 @@ async def test_custom_source_timeout_restores_previous_selection(app):
         )
     finally:
         await layouts.async_close()
+
+
+@pytest.mark.parametrize("input_id,index", [(0x90, 1), (0x91, 2), (0x92, 3)])
+async def test_studio_hdmi_target_retains_current_input_behind_app_views(
+    app, input_id, index
+):
+    from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
+
+    layouts = await configure_dashboard(app)
+    try:
+        app.entry.options[f"input_name_hdmi{index}"] = "Aktueller Zuspieler"
+        app.controller._config_entry = app.entry
+        entity = LGDisplayMediaPlayer(app.controller, app.entry)
+        # Hide it from the normal picker: the current input is still selectable.
+        app.entry.options[f"show_input_hdmi{index}"] = False
+        app.saved.update(
+            selected_input=input_id, selected_app=f"com.webos.app.hdmi{index}"
+        )
+        app.controller._current_input_id = 0x90
+        for source in ("Dashboard", "Mediaplayer", "Dashboard PiP"):
+            await acknowledge_selection(app, entity.async_select_source(source))
+            assert entity.extra_state_attributes["hdmi_source"] == "Aktueller Zuspieler"
+            await acknowledge_selection(
+                app, entity.async_select_source(entity.hdmi_source)
+            )
+            assert app.selected_input == input_id
+            assert app.selected_view is None
+            assert entity.source == "Aktueller Zuspieler"
+        app.saved["paused"] = True
+        app.controller._current_input_id = None
+        assert entity.hdmi_source is None
+        app.controller._current_input_id = 0x92
+        assert entity.hdmi_source == ("Aktueller Zuspieler" if index == 3 else "HDMI 3")
+    finally:
+        await layouts.async_close()

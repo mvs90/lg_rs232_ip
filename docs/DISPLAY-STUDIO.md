@@ -1,6 +1,6 @@
 # LG Display Studio
 
-Ab **LG Professional Display 2.15.0 / App 1.12.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
+Ab **LG Professional Display 2.15.1 / App 1.12.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
 
 Die App bleibt optional. Für dauerhafte Quellen müssen **Display-App**, **SI-App**, **SI-Dauerbetrieb mit automatischem Start** und **Eigenes Layout verwenden** aktiv sein. Das Öffnen und Bearbeiten installiert keine SI-App und weckt das Display nicht. **Anzeigen** ist eine ausdrückliche Quellenwahl und kann das mit Strom versorgte Display wecken.
 
@@ -37,6 +37,8 @@ Für Wetter, Kalender und weitere Informationen passende HA-Entitäten wählen o
 **Eigenes Layout verwenden** und Sonnenentität sind gemeinsame Einstellungen des Displays. Eine Änderung daran gilt für alle Ansichten. **Exportieren/Importieren** im Editor überträgt die gesamte Bibliothek und ihre Einstellungen, maximal 1 MiB. Eigene Bilddateien zusätzlich übertragen. Importieren ändert zunächst nur den Entwurf; ältere Layout-Exporte werden als sechs Ansichten übernommen.
 
 ## Ansichten als Quellen
+
+**Anzeigen** auf der Karte **Nur HDMI** und **Nur HDMI anzeigen** im Editor zeigen den aktuell gewählten HDMI-Eingang in dieser gespeicherten Ansicht. Das funktioniert auch, während Dashboard, Dashboard PiP, Mediaplayer oder eine eigene Ansicht läuft. Der Eingang wird beim Klick frisch von Home Assistant abgefragt; umbenannte und in der Quellenliste ausgeblendete Eingänge werden berücksichtigt. Ist noch kein Eingang bekannt, fordert das Studio zur Auswahl in der Fernbedienung auf. Ungespeicherte Layoutänderungen bleiben im Entwurf.
 
 **HDMI 1/2/3** zeigt das gewählte Videosignal in der gespeicherten Ansicht **Nur HDMI**, auch ohne Signal. Standardmäßig füllt das Video die Fläche aus. **Dashboard**, **Dashboard PiP**, **Mediaplayer** und alle eigenen Ansichten laden ihre jeweilige gespeicherte Gestaltung. HDMI-Elemente verwenden den zuletzt gewählten Eingang. Fehlt ein HDMI-Element, bleibt die Videoebene auch während einer Mitteilung verborgen. Nach einer Mitteilung kehrt die App zur gewählten Quelle zurück. Quellen bleiben über HA-Neustart und normalen Standby erhalten. Auch die Auswahl desselben HDMI-Eingangs kehrt zu **Nur HDMI** zurück. Alle Wechsel verwenden die vorhandene OSD-Unterdrückung mit Wiederherstellung des vorherigen Zustands.
 

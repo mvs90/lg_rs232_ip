@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.15.1
+
+- Add an Anzeigen action for Nur HDMI in the Studio overview and editor. Return from Dashboard, PiP, Mediaplayer or custom views to the currently selected HDMI input, including renamed or hidden inputs.
+- Read the current HDMI target from Home Assistant on each click. If the input is unknown, show a helpful message instead of guessing an input. Preserve unsaved drafts and the existing OSD restoration.
+
 ## 2.15.0
 
 - Move the three notification views into a separate section below fixed and custom views.

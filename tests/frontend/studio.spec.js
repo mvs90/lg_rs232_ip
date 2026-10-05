@@ -21,6 +21,7 @@ async function mount(page,width=1500) {
     },callApi:async(method,url,data)=>{
       window.calls.push([method,url,data]);
       if(url==='lg_rs232_ip/layouts')return catalog;
+      if(url==='states/media_player.display')return {attributes:{hdmi_source:window.currentHdmi}};
       if(url.startsWith('lg_rs232_ip/layout_suggestions/'))return {areas:[{area_id:'living',name:'Wohnzimmer'}],area_id:'living',suggestions:[{entity_id:'media_player.sonos',kind:'media',name:'Sonos Wohnzimmer',state:'idle'},{entity_id:'sensor.temperature',kind:'status',name:'Raumtemperatur',state:'22.5',unit:'°C'}]};
       if(method==='POST'){
         if(window.failSave)throw {status_code:409};
@@ -462,4 +463,32 @@ test('HDMI is the first editable resettable view; notifications have a separate 
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   expect(await page.evaluate(()=>saved.scenes.hdmi_full.elements[0].width)).toBe(100);
   expect(await page.evaluate(()=>JSON.stringify(saved.views.slice(1)))).toBe(others);
+});
+
+
+test('Nur HDMI display buttons use the latest renamed input and preserve drafts',async({page})=>{
+  await mount(page);await openView(page,'Nur HDMI');
+  await page.getByLabel('Eigenes Layout verwenden').check();await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await page.evaluate(()=>{calls.length=0;window.currentHdmi='Konsole';hass.states['media_player.display'].attributes.hdmi_source='HDMI 1';});
+  await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
+  await page.locator('.view-card').filter({has:page.getByRole('heading',{name:'Nur HDMI',exact:true})}).getByRole('button',{name:'Anzeigen',exact:true}).click();
+  expect(await page.evaluate(()=>calls.filter(c=>c[0]==='media_player').at(-1)[2].source)).toBe('Konsole');
+  await openView(page,'Nur HDMI');
+  await page.getByLabel('Hintergrund',{exact:true}).selectOption('ocean');
+  await page.evaluate(()=>window.currentHdmi='HDMI 3');
+  await page.getByRole('button',{name:'Nur HDMI anzeigen',exact:true}).click();
+  expect(await page.evaluate(()=>calls.filter(c=>c[0]==='media_player').at(-1)[2].source)).toBe('HDMI 3');
+  expect(await page.evaluate(()=>calls.filter(c=>c[0]==='POST').length)).toBe(0);
+  await expect(page.getByLabel('Hintergrund',{exact:true})).toHaveValue('ocean');
+  await expect(page.locator('.status')).toHaveText('Ungespeichert');
+  expect(await page.evaluate(()=>saved.scenes.hdmi_full.background)).toBe('midnight');
+});
+
+test('Nur HDMI never guesses an input when the backend has no current HDMI',async({page})=>{
+  await mount(page);await openView(page,'Nur HDMI');
+  await page.getByLabel('Eigenes Layout verwenden').check();await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await page.evaluate(()=>{calls.length=0;window.currentHdmi=null;});
+  await page.getByRole('button',{name:'Nur HDMI anzeigen',exact:true}).click();
+  await expect(page.locator('.flash')).toContainText('HDMI-Eingang ist noch nicht bekannt');
+  expect(await page.evaluate(()=>calls.some(c=>c[0]==='media_player'||c[0]==='POST'))).toBe(false);
 });

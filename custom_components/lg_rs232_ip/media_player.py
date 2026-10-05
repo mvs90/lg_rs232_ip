@@ -200,6 +200,20 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
         )
 
     @property
+    def hdmi_source(self):
+        """Physical input retained behind any persistent Studio view."""
+        app = self.display_app
+        input_id = app.logical_input if app else None
+        if input_id is None:
+            input_id = self.controller._current_input_id
+        for index in range(1, 4):
+            if input_id == INPUT_SOURCES[f"HDMI {index}"]:
+                return self.entry.options.get(
+                    f"input_name_hdmi{index}", f"HDMI {index}"
+                )
+        return None
+
+    @property
     def dashboard_source(self):
         return self._app_source_name("Dashboard")
 
@@ -297,6 +311,7 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
             "presentation_error": self.controller._presentation_error,
             "osd_restore_error": self.controller._lg_display.osd_restore_error,
             "signal_present": self.controller.signal,
+            "hdmi_source": self.hdmi_source,
             "view_sources": self.app_view_sources
             if self.display_app and self.display_app.dashboard_available
             else {},

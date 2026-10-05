@@ -1,5 +1,11 @@
 # Release acceptance
 
+## LG 2.15.1: show the current HDMI input from Studio — 2026-10-05
+
+**340 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 138 browser cases pass across Chromium and WebKit.** Coverage verifies both display buttons, a fresh backend input despite stale frontend state, renamed/hidden HDMI inputs, all three HDMI targets behind persistent app views, unknown-input handling and preservation of unsaved drafts.
+
+Installed **LG 2.15.1 / app 1.12.0** in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container. The overview's Nur HDMI button returned the physical **75UH5F-HJ** from Dashboard PiP to HDMI 1. With HDMI 2 selected behind Mediaplayer, the editor button correctly returned to HDMI 2. Both actions were acknowledged as `hdmi_full`, with the resident app connected and no app error. The saved library was unchanged, the original HDMI 1 / Dashboard PiP selection was restored, and installed component bytes match the repository. AV Companion remains at 1.4.0.
+
 ## LG 2.15.0: editable HDMI and grouped notifications — 2026-10-05
 
 **337 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 134 browser cases pass across Chromium and WebKit.** Coverage adds the version-2 to version-3 library conversion, protected HDMI identity, scoped HDMI-widget data and persistence, notification-section placement, custom copies remaining in the primary section, HDMI editing/reset/undo, and one video element through HDMI input changes and notification return.
