@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.25.0
+
+- Add an edit pencil beside each widget title and a focused live-content editor. Move/resize individual parts, change fonts and text, hide/restore parts, undo changes or reset the internal layout while retaining the entity and outer widget geometry.
+- Support separate clock/date visibility and formats; media artwork/metadata/progress components; weather forecast parts, calendar/message rows, status, entity, text and camera contents. Keep text literal and validate bounded declarative overrides in HA and offline startup storage.
+- Preserve live updates, cover buffering, theme inheritance, 4K scaling and HDMI identity. Stop cover requests or the camera decoder when their respective part is removed; reuse existing rendering/timers. Release display app 1.20.0.
+
 ## 2.24.0
 
 - Replace the starting-template gallery with saved, editable visual themes: four resettable defaults and up to 20 custom themes, including images, solar backgrounds and Sonos/other media artwork settings.

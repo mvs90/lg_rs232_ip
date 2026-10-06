@@ -36,3 +36,6 @@
 
 /* A pending replacement keeps the current cover; no placeholder flash. */
 .lg-media-art.loaded .lg-media-placeholder,.lg-media-art.loading .lg-media-placeholder{display:none}
+
+/* Per-widget overrides retain the same nodes and decoder. */
+.lg-part-hidden{display:none!important}.lg-part-positioned{flex:none!important;overflow:hidden}.lg-part-positioned.lg-media-art{padding-bottom:0}.lg-part-positioned.lg-list,.lg-part-positioned.lg-row,.lg-part-positioned.lg-forecast-period,.lg-part-positioned.lg-media-progress{overflow:visible}

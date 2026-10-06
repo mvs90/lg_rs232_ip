@@ -1,6 +1,6 @@
 # LG Display Studio
 
-Ab **LG Professional Display 2.24.0 / App 1.19.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
+Ab **LG Professional Display 2.25.0 / App 1.20.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
 
 Die App bleibt optional. Für dauerhafte Quellen müssen **Display-App**, **SI-App**, **SI-Dauerbetrieb mit automatischem Start** und **Eigenes Layout verwenden** aktiv sein. Das Öffnen und Bearbeiten installiert keine SI-App und weckt das Display nicht. **Anzeigen** ist eine ausdrückliche Quellenwahl und kann das mit Strom versorgte Display wecken.
 
@@ -68,6 +68,27 @@ Elemente anklicken, ziehen und über die Ecke vergrößern. Position und Größe
 Für Wetter, Kalender und weitere Informationen passende HA-Entitäten wählen oder **Karten aus deinem Raum** verwenden. Vorlagen wählen keine privaten Entitäten automatisch. Zusätzliche Widgets über **+** ergänzen. Die Vorschau nutzt denselben Renderer und aktuelle HA-Zustände; HDMI erscheint als Platzhalter ohne zusätzlichen Screenshot-Stream. Wetterprognosen und Kalenderabfragen werden nur für gespeicherte Ansichten vorbereitet. Aktuelle Zustände lassen sich bereits im Entwurf sehen. Ungespeicherte Änderungen bleiben bei HA-Updates und beim Wechsel zwischen Ansichten erhalten.
 
 **Eigenes Layout verwenden** und Sonnenentität sind gemeinsame Einstellungen des Displays. Eine Änderung daran gilt für alle Ansichten. **Exportieren/Importieren** im Editor überträgt die gesamte Bibliothek und ihre Einstellungen, maximal 1 MiB. Eigene Bilddateien zusätzlich übertragen. Importieren ändert zunächst nur den Entwurf; ältere Layout-Exporte werden als sechs Ansichten übernommen.
+
+## Inhalte eines Widgets bearbeiten
+
+Das **Stiftsymbol rechts neben dem Widget-Titel** öffnet einen eigenen Inhaltseditor. Es steht in der Elementliste, am ausgewählten Widget in der Vorschau und neben der Überschrift der Widget-Einstellungen. Die vergrößerte Vorschau verwendet dieselben Live-Daten und denselben Renderer wie das Display. Ein sichtbares Teil direkt anklicken oder über **Inhaltselement** auswählen; auch derzeit leere und entfernte Teile bleiben in dieser Liste verfügbar.
+
+| Widget | Einzeln gestaltbare Bestandteile |
+|---|---|
+| Uhr & Datum | Beschriftung, Uhrzeit, Datum; nur Uhrzeit, nur Datum oder beides; 12-/24-Stundenformat und vier Datumsformate |
+| Mediaplayer | Beschriftung, Cover, Cover-Abdunklung, Titel, Interpret, Album, Lautstärke; Zeitleiste mit Balken, abgelaufener Zeit, Gesamtdauer und Play-/Pause-Symbol |
+| Wetter | Beschriftung, Temperatur, Wetter/Luftfeuchte, Wettersymbol; Prognosegruppe und bis zu acht Zeiträume mit Tag/Stunde, Symbol, Temperatur, Tiefstwert und Regenwahrscheinlichkeit |
+| Kalender / Mitteilung | Beschriftung, Leerzustand/Titel, Hinweis/Nachricht; Liste und bis zu sechs Zeilen mit Bezeichnung und Wert bzw. Terminzeit und Termintext |
+| Status / Entität | Beschriftung, Zustand und Details; beim Status zusätzlich Symbol und Statuspunkt |
+| Text / Kamera | Beschriftung und Text bzw. Kamerabild und Hinweis |
+
+**Position & Größe** lässt sich durch Ziehen, den Griff rechts unten oder Prozentfelder ändern. Die Werte beziehen sich auf das Widget oder die angegebene Gruppe: beispielsweise liegen Fortschrittsbalken und Zeiten innerhalb der Zeitleiste. Die Schriftgröße wird als Prozent der Höhe dieser Bezugsfläche gespeichert und skaliert damit bis 4K. Schriftfamilie, Schriftschnitt, Ausrichtung und Textfarbe sind getrennt wählbar. Deckkraft, Ebene und Rundung gelten pro Bestandteil; Cover und Kamerabild bieten zusätzlich Einpassen, Ausfüllen und Strecken. HDMI bleibt ein einzelnes Videoelement; sein Rechteck wird im Ansichts-Editor geändert.
+
+Textteile verwenden standardmäßig **Original / Live-Inhalt**. **Eigener Text** ersetzt nur diesen Teil durch wörtlichen Text; andere Daten bleiben live. **Inhalt entfernen** blendet einen Bestandteil aus. Er lässt sich über **Element anzeigen** wiederherstellen. Bei Gruppen gilt die Sichtbarkeit auch für deren untergeordnete Teile. Das ausgeblendete Cover löst keine neuen Coverabrufe aus; ein ausgeblendetes Kamerabild beendet dessen zusätzlichen Decoder.
+
+**Element zurücksetzen** entfernt die Anpassungen des ausgewählten Teils. **Inhalt-Layout zurücksetzen** stellt den Innenaufbau des gewählten Widget-Stils einschließlich der Sichtbarkeit und Uhrformate wieder her. Entität, Beschriftung, Widget-Stil sowie äußere Position und Größe bleiben erhalten. **Rückgängig/Wiederholen** ist auch im Inhaltseditor verfügbar. **Fertig** schließt nur den Editor; erst **Speichern** im Studio überträgt den Entwurf auf das Display.
+
+Eine eigene Textfarbe markiert die Ansicht als Theme-Abweichung. **Theme-Standard wiederherstellen** entfernt auch individuelle Teilfarben, behält jedoch deren Positionen, Größen, Schriften und Sichtbarkeit. Unbearbeitete Widgets behalten ihren bisherigen Aufbau. Die Startanzeige übernimmt angepasste Uhr-/Textteile in ihren Offline-Speicher; ihre bestehenden Beschränkungen auf lokale Inhalte bleiben erhalten. Die Darstellung verwendet die vorhandenen Aktualisierungen und erzeugt keine zusätzliche Animations- oder Abfrageschleife auf dem LG.
 
 ## Startanzeige ohne Live-Daten
 

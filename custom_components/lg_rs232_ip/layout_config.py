@@ -6,6 +6,8 @@ import ipaddress
 from urllib.parse import urlsplit
 import re
 
+from .widget_parts import validate_parts
+
 SCENES = (
     "signal",
     "no_signal",
@@ -533,6 +535,12 @@ def validate_layout(value):
                 if key not in ("signal", "no_signal"):
                     entities.add(entity_id)
             obj["entity_id"] = entity_id
+            if "parts" in item:
+                obj["parts"] = validate_parts(item["parts"], kind)
+            if kind == "clock":
+                for field, choices in (("clock_time_format", ("24h", "12h")), ("clock_date_format", ("long", "short", "weekday", "iso"))):
+                    if field in item:
+                        obj[field] = _choice(item[field], choices)
             normalized["elements"].append(obj)
         if cameras > 1:
             raise ValueError(

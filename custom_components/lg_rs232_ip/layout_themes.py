@@ -110,6 +110,8 @@ def apply_theme(scene, theme, *, startup=False):
         result["media_background_entity"] = ""
     for item in result["elements"]:
         if item["kind"] != "hdmi":
+            for part in item.get("parts", {}).values():
+                part.pop("color", None)
             item.update(
                 color=style["ink"],
                 background=style["surface"],

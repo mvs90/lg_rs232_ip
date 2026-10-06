@@ -13,7 +13,7 @@
     if(s.background==="image" && s.image_id && !value.image){return false;}
     return s.elements.every(function (item) {
       if(!item || !/^[a-zA-Z0-9_-]{1,40}$/.test(item.id) || ids[item.id] || ["clock","text"].indexOf(item.kind)<0 || item.entity_id){return false;}ids[item.id]=true;
-      return ["color","background"].every(function(k){return hex.test(item[k]);}) && ["label","text"].every(function(k){return typeof item[k]==="string" && item[k].length<=(k==="text"?2000:100);}) && typeof item.show_label==="boolean" && ["sans","serif","mono"].indexOf(item.font)>=0 && ["left","center","right"].indexOf(item.align)>=0 && number(item.x,0,100) && number(item.y,0,100) && number(item.width,2,100) && number(item.height,2,100) && item.x+item.width<=100.01 && item.y+item.height<=100.01 && number(item.font_size,1,18) && number(item.opacity,0,1) && number(item.radius,0,80);
+      return window.LGWidgetParts.valid(item) && ["color","background"].every(function(k){return hex.test(item[k]);}) && ["label","text"].every(function(k){return typeof item[k]==="string" && item[k].length<=(k==="text"?2000:100);}) && typeof item.show_label==="boolean" && ["sans","serif","mono"].indexOf(item.font)>=0 && ["left","center","right"].indexOf(item.align)>=0 && number(item.x,0,100) && number(item.y,0,100) && number(item.width,2,100) && number(item.height,2,100) && item.x+item.width<=100.01 && item.y+item.height<=100.01 && number(item.font_size,1,18) && number(item.opacity,0,1) && number(item.radius,0,80);
     });
   }
   try {var saved=window.localStorage.getItem(key);if(saved && saved.length<=MAX){var parsed=JSON.parse(saved);if(valid(parsed)){bundle=parsed;cached=true;}}} catch (_) {}

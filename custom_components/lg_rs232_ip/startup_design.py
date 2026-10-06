@@ -13,6 +13,7 @@ MAX_IMAGE_BYTES = 768 * 1024
 ELEMENT_FIELDS = (
     "id", "kind", "x", "y", "width", "height", "label", "text", "font_size",
     "color", "background", "opacity", "radius", "align", "font", "show_label",
+    "parts", "clock_time_format", "clock_date_format",
 )
 SCENE_FIELDS = (
     "background", "color", "accent", "image_id", "image_fit", "image_dim",
@@ -44,7 +45,7 @@ class StartupDesign:
         source = self.layouts.config["scenes"]["startup"]
         scene = {key: deepcopy(source[key]) for key in SCENE_FIELDS}
         scene["elements"] = [
-            {key: deepcopy(item[key]) for key in ELEMENT_FIELDS}
+            {key: deepcopy(item[key]) for key in ELEMENT_FIELDS if key in item}
             for item in source["elements"]
         ]
         return {

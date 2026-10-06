@@ -24,7 +24,7 @@ async function mount(page, state) {
     }
     if (name === 'state') {
       if (state.delayState) await new Promise(resolve => setTimeout(resolve,state.delayState));
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.19.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.20.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -1262,4 +1262,78 @@ test('a downloaded cover is kept off screen until image decoding finishes',async
   expect(await page.locator('.lg-cover-background').evaluate(n=>n.style.background)).toBe(oldBackground);
   await page.evaluate(()=>decodedCovers.forEach(done=>done()));
   for(const selector of ['.lg-media-art img','.lg-cover-background img'])await expect(page.locator(selector)).toHaveAttribute('src',/v=decoding&/);
+});
+
+test('widget clock parts remain live, scale at 4K and restore native layout without recreating HDMI',async({page})=>{
+  const layout=designed(),scene=layout.config.scenes.pip_view,clock=scene.elements.find(e=>e.kind==='clock');
+  clock.clock_date_format='iso';clock.parts={time:{visible:false},date:{x:10,y:20,width:80,height:40,font:'mono',font_size:25,color:'#123456'}};
+  const state={content:null,idle_hdmi:'ext://hdmi:1',pip:true,layout};await mount(page,state);
+  await expect(page.locator('.lg-clock .lg-value')).toBeHidden();await expect(page.locator('.lg-clock .lg-detail')).toHaveText(/\d{4}-\d{2}-\d{2}/);
+  await page.evaluate(()=>{window.keptWidget=document.querySelector('.lg-clock');window.keptHDMI=document.querySelector('#hdmi-slot video');window.partMutations=0;new MutationObserver(c=>window.partMutations+=c.length).observe(window.keptWidget,{attributes:true,subtree:true,childList:true,characterData:true});});
+  await page.waitForTimeout(400);expect(await page.evaluate(()=>window.partMutations)).toBe(0);
+  await page.setViewportSize({width:3840,height:2160});
+  const size=await page.locator('.lg-clock .lg-detail').evaluate(n=>parseFloat(getComputedStyle(n).fontSize));
+  expect(size).toBeCloseTo(2160*clock.height/100*.25,0);
+  clock.parts={time:{visible:true},date:{visible:false}};
+  await expect(page.locator('.lg-clock .lg-detail')).toBeHidden();await expect(page.locator('.lg-clock .lg-value')).toBeVisible();
+  clock.parts={};await expect(page.locator('.lg-clock .lg-detail')).toBeVisible();
+  await expect(page.locator('.lg-clock .lg-detail')).toHaveCSS('position','static');
+  expect(await page.evaluate(()=>document.querySelector('.lg-clock')===window.keptWidget&&document.querySelector('#hdmi-slot video')===window.keptHDMI)).toBe(true);
+});
+
+test('media part overrides retain covers through live updates and hide cover fetching when removed',async({page})=>{
+  const {state,scene,card,media}=await bufferedMedia(page);
+  Object.assign(media,{media_artist:'Artist',media_duration:180,media_position:20,media_position_updated_at:new Date().toISOString()});
+  card.parts={cover:{x:3,y:6,width:38,height:80,fit:'contain'},title:{x:50,y:20,width:48,height:20,font_size:12},artist:{visible:false},elapsed:{font:'mono',font_size:38}};
+  await expect(page.locator('.lg-media>.lg-detail')).toBeHidden();await expect(page.locator('.lg-media>.lg-value')).toHaveCSS('left',/.+/);
+  await page.evaluate(()=>{window.oldCover=document.querySelector('.lg-media-art img');});
+  media.media_title='New title';await expect(page.locator('.lg-media>.lg-value')).toHaveText('New title');
+  expect(await page.evaluate(()=>window.oldCover===document.querySelector('.lg-media-art img'))).toBe(true);
+  const elapsed=page.locator('.lg-media-elapsed');await expect(elapsed).toHaveCSS('font-family','monospace');await expect(elapsed).toContainText(':');
+  let requests=0;await page.route('**/cover.jpg*',async route=>{requests++;return route.fulfill({status:204,body:''});});
+  scene.media_background_enabled=false;card.parts.cover.visible=false;
+  await expect(page.locator('.lg-media-art')).toBeHidden();const before=requests;media.artwork='removed-cover';
+  await page.waitForTimeout(350);expect(requests).toBe(before);
+  card.parts={};await expect(page.locator('.lg-media>.lg-detail')).toBeVisible();
+  expect(state.layout.config.scenes.media_view.elements[0].entity_id).toBe('media_player.music');
+});
+
+test('forecast and calendar subparts remain styled when live rows are updated or rebuilt',async({page})=>{
+  const layout=designed(),scene=layout.config.scenes.dashboard;
+  const weather=scene.elements.find(i=>i.kind==='weather'),calendar=scene.elements.find(i=>i.kind==='calendar');weather.entity_id='weather.home';weather.forecast_type='daily';calendar.entity_id='calendar.home';
+  weather.parts={forecast_1_rain:{visible:false},forecast_1_high:{font:'mono',color:'#aabbcc'}};
+  calendar.parts={row_1_label:{visible:false},row_1_value:{text:'Mein Termin',font:'serif'}};
+  layout.values['weather.home']={state:'sunny',temperature:20,temperature_unit:'°C',forecasts:{daily:[{datetime:'2026-10-06T10:00:00Z',condition:'sunny',temperature:20,templow:10,precipitation_probability:30}]}};
+  layout.values['calendar.home']={state:'off',events:[{start:'2026-10-06T10:00:00Z',summary:'Original'}]};
+  const state={content:null,idle_hdmi:'ext://hdmi:1',dashboard:true,layout};await mount(page,state);
+  await expect(page.locator('.lg-period-rain')).toBeHidden();await expect(page.locator('.lg-calendar .lg-row small')).toBeHidden();await expect(page.locator('.lg-calendar .lg-row span')).toHaveText('Mein Termin');
+  layout.values['weather.home'].forecasts.daily=[];layout.values['calendar.home'].events=[];
+  await expect(page.locator('.lg-forecast-period')).toHaveCount(0);await expect(page.locator('.lg-calendar .lg-row')).toHaveCount(0);
+  layout.values['weather.home'].forecasts.daily=[{datetime:'2026-10-07T10:00:00Z',condition:'rainy',temperature:17,precipitation_probability:90}];layout.values['calendar.home'].events=[{start:'2026-10-07T10:00:00Z',summary:'Second'}];
+  await expect(page.locator('.lg-period-rain')).toBeHidden();await expect(page.locator('.lg-period-temp')).toHaveCSS('font-family','monospace');await expect(page.locator('.lg-calendar .lg-row span')).toHaveText('Mein Termin');
+});
+
+test('custom clock composition survives offline startup and malformed local overrides are rejected',async({page})=>{
+  const design=offlineDesign(),clock=design.scene.elements.find(i=>i.kind==='clock');clock.parts={time:{visible:false},date:{x:5,y:10,width:90,height:70,font:'mono',font_size:20}};clock.clock_date_format='iso';
+  const state={content:null,idle_hdmi:'ext://hdmi:1',startupDesign:design,startup:{id:'widget-start',view:'media_view',remaining:90}};
+  await mount(page,state);await expect(page.locator('#startup-canvas .lg-clock .lg-value')).toBeHidden();await expect(page.locator('#startup-canvas .lg-clock .lg-detail')).toHaveText(/\d{4}-\d{2}-\d{2}/);
+  state.offline=true;await page.reload();await page.evaluate(()=>LGStartup.apply({id:'offline-parts',view:'media_view',remaining:90},null));
+  await expect(page.locator('#startup-canvas .lg-clock .lg-detail')).toHaveCSS('font-family','monospace');
+  expect(await page.evaluate(()=>LGStartupDesign.status().cached)).toBe(true);
+  expect(await page.evaluate(()=>LGWidgetParts.valid({kind:'clock',parts:{time:{x:101,y:0,width:20,height:20}}}))).toBe(false);
+  expect(await page.evaluate(()=>LGWidgetParts.valid({kind:'clock',parts:{date:{onclick:'bad'}}}))).toBe(false);
+  expect(await page.evaluate(()=>LGWidgetParts.valid({kind:'clock',clock_date_format:'remote',parts:{}}))).toBe(false);
+  await page.evaluate(()=>{const key='lg-display-startup-v1:'+location.pathname,data=JSON.parse(localStorage.getItem(key));data.scene.elements.find(i=>i.kind==='clock').parts={time:{text:'x',font_size:10000}};localStorage.setItem(key,JSON.stringify(data));});await page.reload();
+  expect(await page.evaluate(()=>LGStartupDesign.status().cached)).toBe(false);
+});
+
+test('message and status parts are independently editable without replacing live content containers',async({page})=>{
+  const layout=designed(),scene=layout.config.scenes.fullscreen,message=scene.elements.find(i=>i.kind==='message');
+  message.parts={title:{text:'Eigener Titel',font:'serif'},body:{x:5,y:20,width:90,height:50,font_size:12},row_1_label:{visible:false}};
+  const state={content:content(),layout};await mount(page,state);
+  await expect(page.locator('.lg-message>.lg-value')).toHaveText('Eigener Titel');await expect(page.locator('.lg-message .lg-row small')).toBeHidden();await expect(page.locator('.lg-message>.lg-detail')).toHaveText('Your home');
+  state.content.message='Live geändert';await expect(page.locator('.lg-message>.lg-detail')).toHaveText('Live geändert');
+  expect(await page.evaluate(()=>LGWidgetParts.catalog({kind:'status'}).map(p=>p.id))).toEqual(['label','value','detail','icon','badge']);
+  expect(await page.evaluate(()=>LGWidgetParts.catalog({kind:'camera'}).map(p=>p.id))).toEqual(['label','picture','detail']);
+  expect(await page.evaluate(()=>LGWidgetParts.catalog({kind:'text'}).map(p=>p.id))).toEqual(['label','text']);
 });

@@ -749,3 +749,86 @@ test('theme palette remains editable without any dashboard widgets and undo rest
   expect(await page.evaluate(()=>studio.config.themes[0].style.ink)).not.toBe('#112233');
   expect(await page.evaluate(()=>studio.config.scenes.dashboard.elements)).toEqual([]);
 });
+
+async function widgetEditor(page,label) {
+  await page.getByRole('button',{name:label+' Inhalt bearbeiten',exact:true}).click();
+  return page.getByRole('dialog',{name:'Widget bearbeiten',exact:true});
+}
+
+test('clock pencil opens independent date/time composition with content, fonts, geometry and reset',async({page})=>{
+  await mount(page);await openView(page,'Dashboard');
+  const original=await page.evaluate(()=>JSON.parse(JSON.stringify(studio.scene.elements.find(i=>i.kind==='clock'))));
+  const editor=await widgetEditor(page,'GUTEN MORGEN');
+  await editor.getByLabel('Uhr-Anzeige').selectOption('date');
+  await expect(editor.locator('.lg-value')).toBeHidden();await expect(editor.locator('.lg-detail')).toBeVisible();
+  await editor.getByLabel('Inhaltselement',{exact:true}).selectOption('date');
+  await editor.getByLabel('Inhalt links (%)').fill('15');await editor.getByLabel('Inhalt links (%)').press('Tab');
+  await editor.getByLabel('Inhalt Schriftgröße (%)').fill('18');await editor.getByLabel('Inhalt Schriftgröße (%)').press('Tab');
+  await editor.getByLabel('Inhalt Schrift',{exact:true}).selectOption('serif');
+  await editor.getByLabel('Datumsformat').selectOption('iso');
+  await expect(editor.locator('.lg-detail')).toHaveText(/\d{4}-\d{2}-\d{2}/);
+  await expect(editor.locator('.lg-detail')).toHaveCSS('font-family',/Georgia/);
+  await editor.getByRole('button',{name:'Fertig',exact:true}).click();
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  const savedClock=await page.evaluate(()=>saved.scenes.dashboard.elements.find(i=>i.kind==='clock'));
+  expect(savedClock.parts.time.visible).toBe(false);expect(savedClock.parts.date.font_size).toBe(18);expect(savedClock.x).toBe(original.x);expect(savedClock.width).toBe(original.width);
+  expect(await page.evaluate(()=>studio.view.theme_override)).toBe(false);
+  await widgetEditor(page,'GUTEN MORGEN');
+  await editor.getByRole('button',{name:'Inhalt-Layout zurücksetzen'}).click();
+  await expect(editor.locator('.lg-value')).toBeVisible();
+  expect(await page.evaluate(()=>studio.item.parts)).toBeUndefined();
+  await editor.getByTitle('Widget-Änderung rückgängig').click();
+  await expect(editor.getByLabel('Uhr-Anzeige')).toHaveValue('date');
+  await editor.getByRole('button',{name:'Fertig',exact:true}).click();
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await page.evaluate(()=>{studio.remove();document.body.append(studio);});await openView(page,'Dashboard');await widgetEditor(page,'GUTEN MORGEN');
+  await expect(editor.getByLabel('Uhr-Anzeige')).toHaveValue('date');
+});
+
+test('media widget parts drag and resize independently, can be removed and restored without losing entity or cover',async({page})=>{
+  await mount(page);await openView(page,'Mediaplayer');
+  await page.locator('.layer .name').filter({hasText:'JETZT LÄUFT'}).click();
+  await page.getByLabel('Home-Assistant-Entität').fill('media_player.sonos');await page.getByLabel('Home-Assistant-Entität').press('Tab');
+  const editor=await widgetEditor(page,'JETZT LÄUFT');
+  await editor.getByLabel('Inhaltselement',{exact:true}).selectOption('title');
+  const before=await editor.locator('.lg-media-art').boundingBox();
+  let box=await editor.locator('.part-outline').boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2-20,box.y+box.height/2+12);await page.mouse.up();
+  expect(await page.evaluate(()=>studio.item.parts.title.x)).toBeLessThan(53);
+  const after=await editor.locator('.lg-media-art').boundingBox();for(const key of ['x','y','width','height'])expect(after[key]).toBeCloseTo(before[key],1);
+  box=await editor.locator('.part-resize').boundingBox();await page.mouse.move(box.x+6,box.y+6);await page.mouse.down();await page.mouse.move(box.x-30,box.y+15);await page.mouse.up();
+  const changed=await page.evaluate(()=>studio.item.parts.title);
+  expect(changed.width+changed.x).toBeLessThanOrEqual(100.01);
+  await editor.getByLabel('Textquelle').selectOption('custom');
+  await editor.getByLabel('Eigener Inhalt').fill('<img src=x onerror=window.hacked=true>');await editor.getByLabel('Eigener Inhalt').press('Tab');
+  await expect(editor.locator('.lg-value')).toHaveText('<img src=x onerror=window.hacked=true>');
+  expect(await page.evaluate(()=>window.hacked)).toBeUndefined();
+  await editor.getByLabel('Inhaltselement',{exact:true}).selectOption('cover');
+  await editor.getByRole('button',{name:'Inhalt entfernen',exact:true}).click();await expect(editor.locator('.lg-media-art')).toBeHidden();
+  await editor.getByLabel('Element anzeigen').check();await expect(editor.locator('.lg-media-art')).toBeVisible();
+  await editor.getByRole('button',{name:'Inhalt-Layout zurücksetzen'}).click();
+  expect(await page.evaluate(()=>studio.item.entity_id)).toBe('media_player.sonos');expect(await page.evaluate(()=>studio.item.media_style)).toBe('stage');
+  await expect(editor.locator('.lg-value')).not.toHaveText('<img src=x onerror=window.hacked=true>');
+  await editor.getByRole('button',{name:'Fertig',exact:true}).click();
+  expect(await page.evaluate(()=>calls.filter(c=>['media_player','lg_rs232_ip'].includes(c[0])))).toEqual([]);
+});
+
+test('widget editor remains usable on a phone, updates live and exposes all weather and calendar parts',async({page})=>{
+  await mount(page,390);await openView(page,'Dashboard');
+  await page.locator('.layer .name').filter({hasText:'Dein Wetter'}).click();await page.getByLabel('Home-Assistant-Entität').fill('weather.home');await page.getByLabel('Home-Assistant-Entität').press('Tab');
+  const editor=await widgetEditor(page,'Dein Wetter');
+  await editor.getByLabel('Inhaltselement',{exact:true}).selectOption('temperature');
+  await expect(editor.locator('.lg-value')).toHaveText('23 °C');
+  await page.evaluate(()=>{hass.states['weather.home'].attributes.temperature=24;studio.hass={...hass};});
+  await expect(editor.locator('.lg-value')).toHaveText('24 °C');
+  await editor.getByLabel('Inhaltselement',{exact:true}).selectOption('forecast_4_rain');
+  await editor.getByRole('button',{name:'Inhalt entfernen',exact:true}).click();
+  expect(await page.evaluate(()=>studio.item.parts.forecast_4_rain.visible)).toBe(false);
+  expect(await editor.evaluate(n=>n.scrollWidth<=n.clientWidth)).toBe(true);
+  await editor.getByRole('button',{name:'Fertig',exact:true}).click();
+  await widgetEditor(page,'DEIN TAG');
+  await editor.getByLabel('Inhaltselement',{exact:true}).selectOption('row_6_value');
+  await editor.getByLabel('Textquelle').selectOption('custom');await editor.getByLabel('Eigener Inhalt').fill('Kalendertext');await editor.getByLabel('Eigener Inhalt').press('Tab');
+  expect(await page.evaluate(()=>studio.item.parts.row_6_value.text)).toBe('Kalendertext');
+  await editor.getByRole('button',{name:'Fertig',exact:true}).click();
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();await expect(page.locator('.status')).toHaveText('Gespeichert');
+});

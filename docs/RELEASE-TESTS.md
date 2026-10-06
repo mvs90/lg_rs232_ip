@@ -1,5 +1,13 @@
 # Release acceptance
 
+## LG 2.25.0: edit individual widget contents — 2026-10-06
+
+**461 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 256 browser cases pass across Chromium/WebKit.** Coverage includes bounded part schemas, text-only overrides, clock formats/visibility, geometry/font scaling at 4K, drag/resize with stable siblings, reset/undo/persistence, theme-colour inheritance, live media updates with cover reuse and hidden-cover cancellation, forecast/calendar row rebuilding, message content, phone layout and offline startup validation. Unchanged parts generate no extra DOM mutations in the clock regression; HDMI decoder identity and prior cover-buffering tests remain green.
+
+Installed **LG 2.25.0 / app 1.20.0** in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container. The physical **75UH5F-HJ** acknowledged temporary widget layout revision 120. A native capture confirms an independently positioned Sonos title and cover area, hidden extra media information, and an ISO date without the clock. Sonos Wohnzimmer was playing its TV input without artwork, so the capture correctly contains the existing placeholder; cover loading and buffering are verified separately with controlled browser fixtures. The SI launcher remained foreground. All original saved views and HDMI 1 source were restored exactly at revision 121.
+
+The actual Studio browser was checked for the title pencils, media content selector, individual clock/date controls and reset. The UI draft was discarded after inspection; the saved user library remains unchanged. No extra rendering timer or decoder was introduced. Private backups, credentials and captures remain outside Git.
+
 ## LG 2.24.0: shared Studio themes — 2026-10-06
 
 **436 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 240 browser cases pass across Chromium/WebKit.** Coverage includes theme inheritance across fixed/custom/notification views, offline-safe startup projection, preserving content and geometry, manual override/reset, custom-theme creation/rename/delete/undo, media background settings, empty-dashboard palette editing, phone layout, persistence, stale-editor rejection, pre-wake theme validation and successful/failed/timed view actions. Theme images are validated even while inactive and protected from cleanup. Existing cover-buffering, 4K and HDMI identity cases remain green.
