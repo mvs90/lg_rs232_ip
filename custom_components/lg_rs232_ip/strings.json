@@ -173,6 +173,21 @@
           "ready": "Ready"
         }
       }
+    },
+    "select": {
+      "ism_method": {
+        "name": "ISM image-retention protection",
+        "state": {
+          "off": "Off — normal picture",
+          "white_wash": "White wash — full white screen",
+          "user_image": "User image — imported ISM images",
+          "user_video": "User video — imported ISM video",
+          "orbiter": "Orbiter — shift picture by 4 pixels",
+          "inversion": "Inversion — inverted picture colours",
+          "color_wash": "Colour wash — white/colour patterns",
+          "washing_bar": "Washing bar — moving bar"
+        }
+      }
     }
   }
 }

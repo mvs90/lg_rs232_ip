@@ -39,6 +39,39 @@ SIGNAGE_PICTURE_MODES = {
     "HOSPITAL": 0x12,
 }
 
+# LG webOS 4.0 guide, pp. 22–23/85; older Signage installation guides
+# additionally document inversion, color wash and washing bar. Codes are hex.
+ISM_METHODS = {
+    "off": 0x08,
+    "white_wash": 0x04,
+    "user_image": 0x90,
+    "user_video": 0x91,
+    "orbiter": 0x02,
+    "inversion": 0x01,
+    "color_wash": 0x20,
+    "washing_bar": 0x80,
+}
+ISM_DESCRIPTIONS = {
+    "off": "Normal picture; ISM image-retention treatment is disabled.",
+    "white_wash": "Displays a full white pattern instead of the programme picture.",
+    "user_image": "Displays images previously imported in the LG ISM menu from USB.",
+    "user_video": "Plays a video previously imported in the LG ISM menu from USB.",
+    "orbiter": "Periodically shifts the picture by four pixels; requires a signal and model support.",
+    "inversion": "Inverts picture colours; requires a signal and model support.",
+    "color_wash": "Alternates white and colour patterns instead of the programme picture.",
+    "washing_bar": "Moves a bar across the picture; available on selected older models.",
+}
+
+
+def ism_methods(model: str | None) -> dict[str, int]:
+    """UH5F is indoor: do not offer the webOS 4 outdoor-only Orbiter mode."""
+    if is_uh5f(model):
+        return {
+            key: ISM_METHODS[key]
+            for key in ("off", "white_wash", "user_image", "user_video")
+        }
+    return dict(ISM_METHODS)
+
 
 def ok_payload(response: str | None) -> str | None:
     """Extract the entire payload, including ASCII, only from a complete OK frame."""

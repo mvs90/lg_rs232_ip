@@ -173,6 +173,21 @@
           "ready": "Bereit"
         }
       }
+    },
+    "select": {
+      "ism_method": {
+        "name": "ISM-Modus (Nachbildschutz)",
+        "state": {
+          "off": "Aus – normale Bildanzeige",
+          "white_wash": "Weißbild – bildschirmfüllendes Weiß",
+          "user_image": "Benutzerbild – importierte ISM-Bilder",
+          "user_video": "Benutzervideo – importiertes ISM-Video",
+          "orbiter": "Orbiter – Bild um 4 Pixel verschieben",
+          "inversion": "Invertierung – umgekehrte Bildfarben",
+          "color_wash": "Farbwäsche – Weiß- und Farbmuster",
+          "washing_bar": "Reinigungsbalken – bewegter Balken"
+        }
+      }
     }
   }
 }

@@ -54,3 +54,22 @@ The [official LG webOS 4.0 guide](https://gscs-b2c.lge.com/open/downloadFile?fil
 Physical acceptance used the existing HA 2026.9.4 container. OFF/MINIMUM/MEDIUM accepted 75 → 70 → 75 and the independent LG picture database confirmed 70. MAXIMUM/AUTO were correctly unavailable, and switching back recovered immediately. The APS preset and return were checked without changing its stored backlight. Both aspect codes were acknowledged/read back; captures showed contain/fill geometry on a deliberately narrow PiP rectangle while the SI app remained active. The HDMI image was black during those captures, so this verifies the video plane's geometry rather than active programme detail or HDCP behaviour. The original library, source, aspect, picture mode, backlight, energy saving, DPM and PM mode were preserved/restored.
 
 Brightness-scheduling and panel-off blocking have automated coverage and were cross-checked against LG documentation; their activation was not forced on this installation. Native captures, firmware frontend copies, addresses and credentials remain private under ignored local storage.
+
+## ISM: image-retention protection
+
+**ISM-Modus (Nachbildschutz)** is a named, translated select. It controls LG's image-retention treatment, not input selection, backlight, DPM or the display app. For the identified indoor 75/86/98-inch UH5F-H family it offers:
+
+| HA option | LG command data (hex) | Effect |
+|---|---|---|
+| Off / Aus – normale Bildanzeige | `08` | Normal picture without ISM treatment. **Off is not `00`.** |
+| White wash / Weißbild | `04` | A full white pattern replaces the programme picture. |
+| User image / Benutzerbild | `90` | Uses images imported through the LG ISM menu. |
+| User video / Benutzervideo | `91` | Uses a video imported through the LG ISM menu. |
+
+Import ISM media on the LG under **General → Safety Mode → ISM Method** from the USB `ISM` folder. This is separate from HA display-app media and the boot logo. Repeat, standby time and duration remain LG settings; selecting a method does not configure a schedule or upload media. A confirmed method value does not prove a scheduled wash is currently visible.
+
+The [LG webOS 4.0 guide](https://gscs-b2c.lge.com/open/downloadFile?fileId=c1dJJrQEObZ7aWsYE0hHA), pages 22–23 and 85, also documents Orbiter (`02`, four-pixel shifts), but limits it to outdoor models and requires a signal. It is therefore **not offered for the known indoor UH5F-H profile**. The guide also excludes Orbiter while User Video is active.
+
+For other model families, the generic selection additionally includes Inversion (`01`), Orbiter (`02`), Colour Wash (`20`) and Washing Bar (`80`), as documented in [LG's older Signage installation guide](https://gscs-b2c.lge.com/open/downloadFile?fileId=wzyRhbm7yskyYDcjkjrg), page 22. These are model-dependent, not a claim of support on every LG. Inversion reverses colours; colour wash alternates white/colour patterns; washing bar moves a bar over the image. Older generations may require the ISM timer to be set to Immediately.
+
+A write requires an exact acknowledgement and a fresh matching `jp ff` readback. Rejected/unknown readings never become a made-up mode. The old, disabled-by-default **ISM Method Code** number is retained for existing automations but only accepts the same documented profile values; arbitrary bytes, including `255` (a read request), cannot be written as modes. For normal use, choose the named select.

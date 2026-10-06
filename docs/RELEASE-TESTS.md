@@ -1,5 +1,13 @@
 # Release acceptance
 
+## LG 2.19.0: named ISM modes and explicit app inputs — 2026-10-06
+
+**390 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14.** New coverage verifies documented model-specific ISM codes, invalid-byte rejection, exact acknowledgement plus uncached readback, unknown/offline state, legacy-number validation, app/native routing, paused-app resumption, no native fallback on failure/timeout, superseded requests, Studio-source rename/removal and name collisions.
+
+Installed in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container and checked the German ISM dropdown and expanded Input list in its actual browser UI. The indoor **75UH5F-HJ** reported ISM `08` (Off); reselecting that unchanged mode confirmed both write and readback. White Wash, User Image and User Video were checked against LG documentation and protocol tests, **not activated on the physical panel**. Orbiter is omitted from this indoor profile because the webOS 4 guide restricts it to outdoor models.
+
+Physical source tests through HA confirmed App-Dashboard, App-Dashboard PiP, App-Mediaplayer, App-HDMI 1, native HDMI 1 and resumption into App-HDMI 1. The saved custom view App-Ohne HDMI was also selected and returned. Switching from the media player immediately updated the Input entity. The native foreground query confirmed the resident SI app; all saved Studio views were retained. Only HDMI 1 has an active source; HDMI 2/3 routing is covered by automated tests, not a second physical signal. A fresh OSD query after the switches confirmed its original enabled state (the UI can briefly retain the temporary suppressed state until refreshed). The original display standby was restored. Private device credentials, captures and test records remain excluded from Git.
+
 ## LG 2.18.1: brief offline startup notice — 2026-10-06
 
 Release app **1.15.1**. Targeted local checks: **94 Python app/backend tests** and **86 display-app browser cases across Chromium/WebKit** pass, including six new cases for the first failed request, a silent five-second timeout, five-second expiry, early recovery, no repetition, hidden-page cleanup and unchanged HDMI decoder identity. Ruff and diff checks pass.

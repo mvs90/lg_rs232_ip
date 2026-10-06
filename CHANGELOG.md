@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.19.0
+
+- Replace arbitrary ISM byte entry in normal use with a German/English named select: Off, White Wash, User Image and User Video for indoor UH5F-H. Explain effects and media prerequisites; retain documented legacy modes only in the generic profile. Validate codes, exact ACK and fresh readback in both named and legacy controls.
+- Extend Input with explicit App-HDMI sources, Dashboard, Dashboard PiP, Mediaplayer and saved Studio views. Native HDMI explicitly pauses the resident app; App-HDMI resumes it and requires app confirmation, retaining the OSD guard.
+- Keep Input state aligned with app/remote changes; dynamically update custom view options and disambiguate names. Media-player and AV source routing stays compatible.
+
 ## 2.18.1
 
 - Show a local five-second startup notice when the first HA state request fails or times out. Dismiss it immediately on recovery and never repeat it during later connection outages in the same app session.

@@ -263,20 +263,50 @@ class DisplayController(TemporaryView, NativeControls):
                     app, previous, view, duration, transition, generation
                 )
 
-    async def async_select_input(self, input_id):
+    async def async_select_input(self, input_id, *, via_app=None):
+        """Auto-route media players; explicit select options choose app or native HDMI."""
+        if input_id not in INPUT_SOURCES.values():
+            raise HomeAssistantError("Unknown LG input")
+        app = (
+            self.hass.data.get(DOMAIN, {})
+            .get(self._config_entry.entry_id, {})
+            .get("display_app")
+        )
+        if via_app is True:
+            if not app or not app.resident:
+                raise HomeAssistantError("Enable resident SI mode in LG options first")
+            if self.external_owner:
+                raise HomeAssistantError("An external presentation owns the display")
         await self.async_clear_content()
+        if via_app is True:
+            generation = self._view_generation
+            async with self._control_lock:
+                await self.async_ensure_on("app HDMI selection")
+            if not app.resident_connected:
+                await app.async_resume()
+                try:
+                    async with asyncio.timeout(30):
+                        while not app.resident_connected:
+                            await asyncio.sleep(0.2)
+                except TimeoutError:
+                    raise HomeAssistantError(
+                        "Display app did not connect for HDMI selection"
+                    ) from None
         async with self._control_lock:
-            app = (
-                self.hass.data.get(DOMAIN, {})
-                .get(self._config_entry.entry_id, {})
-                .get("display_app")
-            )
+            if via_app is True and generation != self._view_generation:
+                return
+            if via_app is True and self.external_owner:
+                raise HomeAssistantError("An external presentation owns the display")
             if app:
-                if await app.async_select_hdmi(input_id):
+                if via_app is not False and await app.async_select_hdmi(input_id):
                     self._current_input_id = input_id
                     self._source = self._resolve_source_name(input_id)
                     self.async_write_ha_state()
                     return
+                if via_app is True:
+                    raise HomeAssistantError(
+                        "Display app disconnected during HDMI selection"
+                    )
                 app.saved.pop("dashboard", None)
                 app.saved.pop("pip", None)
                 app.saved.pop("media_view", None)

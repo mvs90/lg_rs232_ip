@@ -129,3 +129,15 @@ data:
 Rows/columns are 1–15, tile ID is 1–rows×columns, and natural mode compensates for bezels. Unspecified settings are preserved. The action reads the complete original settings, checks the requested geometry, applies it and verifies readback. On failure it attempts to restore and verify the original settings. It shares the normal control lock and OSD-suppression option; initially disabled OSD stays disabled. A device/network failure can prevent verified restoration and is reported as an error. Save the prior geometry before deliberate changes. Disabling tile mode does not imply resetting its row/column settings.
 
 On the tested panel, 2×2 tile 1 was applied and captured, then the exact prior disabled geometry was restored. This configures **one display's crop**; it does not provide frame synchronization or discover/link multiple panels. No arbitrary native-service passthrough is exposed.
+
+## Input select: direct HDMI and explicit app sources (2.19)
+
+The display's **Input** select now exposes both routes:
+
+- **HDMI 1 / HDMI 2 / HDMI 3**: select the native LG input and pause the resident app. This explicitly leaves the app, with the existing OSD-preserving switch guard.
+- **App-HDMI 1 / App-HDMI 2 / App-HDMI 3**: show that HDMI input full-screen inside the resident SI app. If necessary, wake the display and resume the configured app. A failed app connection reports an error instead of silently changing to native HDMI.
+- **App-Dashboard / App-Dashboard PiP / App-Mediaplayer** and **App-&lt;saved view name&gt;**: select the corresponding Studio view. Custom views appear, rename and disappear with the Studio library. Name collisions receive an `(App)` suffix so no HDMI option is overwritten.
+
+App HDMI options require resident SI mode; Studio view options also require enabled custom layouts. They remain selectable while the app is paused so that selecting one can resume it. Notifications are temporary content and do not become permanent input sources. The current option follows the acknowledged app view or embedded HDMI, even when LG's native `xb` response still refers to the underlying HDMI input. Controller/app events update the entity immediately without adding TCP requests.
+
+The media player, remote card and AV Companion keep their existing automatic routing: choosing HDMI there uses the connected resident app when available. Explicit native/app routing is provided by the **Input** select; existing media-player source names and the AV API remain unchanged.

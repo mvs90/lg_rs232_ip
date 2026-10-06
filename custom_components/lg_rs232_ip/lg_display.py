@@ -6,7 +6,13 @@ import logging
 import re
 import time
 
-from .device_profile import ASPECT_RATIOS, decode_model, decode_software, ok_payload
+from .device_profile import (
+    ASPECT_RATIOS,
+    decode_model,
+    decode_software,
+    ism_methods,
+    ok_payload,
+)
 from typing import Optional
 
 _LOGGER = logging.getLogger(__name__)
@@ -852,14 +858,21 @@ class LGDisplay:
                 await asyncio.sleep(2)
                 await self._async_restore_owned_osd()
 
-    async def async_get_ism_method(self) -> Optional[int]:
+    async def async_get_ism_method(self, *, use_cache=True) -> Optional[int]:
         """Get ISM method value."""
-        return await self.async_send_command("j", "p", READ_STATUS)
+        return await self.async_send_command("j", "p", READ_STATUS, use_cache=use_cache)
 
     async def async_set_ism_method(self, value: int) -> bool:
         """Set ISM method value."""
+        if type(value) is not int or value not in ism_methods(self.model_name).values():
+            return False
+        if await self.async_get_power_status() is not True:
+            return False
         result = await self.async_send_command("j", "p", value)
-        return result is not None
+        return (
+            result == value
+            and await self.async_get_ism_method(use_cache=False) == value
+        )
 
     async def async_get_aspect_ratio(self, *, use_cache=True) -> Optional[int]:
         value = await self.async_send_command(

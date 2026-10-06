@@ -1,9 +1,8 @@
 """Select platform for LG Display RS232/IP integration."""
 
 import logging
-import time
 from datetime import timedelta
-from typing import Dict, Optional
+from typing import Optional
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
@@ -14,14 +13,21 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import (
     DOMAIN,
     ENERGY_SAVING_MODES,
-    INPUT_DETECTION_CANDIDATES,
     INPUT_SOURCES,
     OSD_LANGUAGES,
     PICTURE_MODES,
     SOUND_MODES,
 )
 from .lg_display import LGDisplay
-from .device_profile import ASPECT_RATIOS, DPM_DELAYS, SIGNAGE_PICTURE_MODES, is_uh5f
+from .layout_library import source_names
+from .device_profile import (
+    ASPECT_RATIOS,
+    DPM_DELAYS,
+    SIGNAGE_PICTURE_MODES,
+    ISM_DESCRIPTIONS,
+    ism_methods,
+    is_uh5f,
+)
 from homeassistant.exceptions import HomeAssistantError
 
 _LOGGER = logging.getLogger(__name__)
@@ -80,163 +86,171 @@ async def async_setup_entry(
     entities.append(
         LGDisplayDpmDelaySelect(lg_display, data["name"], config_entry.entry_id)
     )
+    entities.append(
+        LGDisplayIsmMethodSelect(lg_display, data["name"], config_entry.entry_id)
+    )
     async_add_entities(entities)
 
 
 class LGDisplayInputSelect(LGDisplayBaseSelect):
-    """Input selection for LG Display."""
+    """Explicit native and resident-app sources, including saved Studio views."""
 
     _attr_entity_registry_enabled_default = True
+    _attr_icon = "mdi:input-hdmi"
+    _attr_name = "Input"
 
-    def __init__(
-        self,
-        lg_display: LGDisplay,
-        name: str,
-        unique_id: str,
-    ) -> None:
-        """Initialize the select entity."""
+    def __init__(self, lg_display: LGDisplay, name: str, unique_id: str) -> None:
         self._lg_display = lg_display
-        self._name = name
-        self._unique_id = unique_id
-        self._supported_inputs: Dict[str, int] = {
-            label: value for label, value in INPUT_SOURCES.items()
-        }
-        self._current_input: Optional[str] = None
-        self._pending_input: Optional[str] = None
-        self._pending_until: float = 0.0
-        self._detection_done = False
+        self._entry_id = unique_id
+        self._attr_unique_id = f"{unique_id}_input"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, unique_id)})
+        self._input_id = None
 
     @property
-    def unique_id(self) -> str:
-        """Return unique ID."""
-        return f"{self._unique_id}_input"
+    def _data(self):
+        return (
+            self.hass.data.get(DOMAIN, {}).get(self._entry_id, {})
+            if getattr(self, "hass", None)
+            else {}
+        )
 
     @property
-    def name(self) -> str:
-        """Return the name."""
-        return "Input"
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        """Return device info for the LG display."""
-        return {
-            "identifiers": {(DOMAIN, self._unique_id)},
-            "name": self._name,
-            "manufacturer": "LG",
-        }
-
-    @property
-    def current_option(self) -> Optional[str]:
-        """Return the current selected option."""
-        if self._current_input is None:
-            return "unknown"
-        return self._current_input
+    def _sources(self):
+        sources = {label: ("native", code) for label, code in INPUT_SOURCES.items()}
+        app = self._data.get("display_app")
+        if app and app.resident:
+            sources.update(
+                {
+                    f"App-{label}": ("hdmi", code)
+                    for label, code in INPUT_SOURCES.items()
+                }
+            )
+            if app.dashboard_available:
+                sources.update(
+                    {
+                        f"App-{name}": ("view", key)
+                        for key, name in source_names(
+                            app.view_sources, INPUT_SOURCES
+                        ).items()
+                    }
+                )
+        return sources
 
     @property
     def options(self) -> list[str]:
-        """Return available options."""
-        return list(self._supported_inputs.keys())
+        return list(self._sources)
+
+    @property
+    def current_option(self) -> Optional[str]:
+        app = self._data.get("display_app")
+        if app and app.resident_connected:
+            target = (
+                ("view", app.selected_view)
+                if app.selected_view
+                else ("hdmi", app.selected_input)
+            )
+        else:
+            target = ("native", self._input_id)
+        return next(
+            (name for name, value in self._sources.items() if value == target), None
+        )
 
     @property
     def available(self) -> bool:
-        """Return True if device is available."""
         return self._lg_display.is_available
 
-    @property
-    def scan_interval(self) -> int:
-        """Return the scan interval in seconds."""
-        return 5  # Update every 5 seconds for faster status changes
-
-    @property
-    def icon(self) -> str:
-        """Return icon."""
-        return "mdi:input-hdmi"
-
     async def async_added_to_hass(self) -> None:
-        """Run setup when entity is added."""
+        if controller := self._data.get("controller"):
+            self.async_on_remove(controller.subscribe(self._controller_changed))
         await self.async_update()
 
+    def _controller_changed(self):
+        controller = self._data.get("controller")
+        if controller and controller.power is True:
+            self._input_id = controller._current_input_id
+        # App acknowledgements and Studio edits update this state without extra TCP I/O.
+        self.async_write_ha_state()
+
     async def async_update(self) -> None:
-        """Update current input from the display."""
-        power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
-            _LOGGER.debug("Display is off; keeping input state unchanged")
-            return
-
-        input_id = await self._lg_display.async_get_input()
-        now = time.monotonic()
-        if input_id is None:
-            if self._pending_input and now < self._pending_until:
-                _LOGGER.debug(
-                    "Keeping pending input %s until display confirms it",
-                    self._pending_input,
-                )
-                self._current_input = self._pending_input
-                return
-            _LOGGER.debug(
-                "LG Display input query returned no value; keeping last known input"
-            )
-            self._pending_input = None
-            if self._current_input is None:
-                self._current_input = "unknown"
-            return
-
-        actual_label = None
-        for label, candidate in self._supported_inputs.items():
-            if candidate == input_id:
-                actual_label = label
-                break
-
-        if self._pending_input and now < self._pending_until:
-            if actual_label == self._pending_input:
-                self._pending_input = None
-                self._pending_until = 0.0
-                self._current_input = actual_label
-                return
-
-            _LOGGER.debug(
-                "Keeping pending input %s until display confirms it",
-                self._pending_input,
-            )
-            self._current_input = self._pending_input
-            return
-
-        if actual_label:
-            self._pending_input = None
-            self._pending_until = 0.0
-            self._current_input = actual_label
-            return
-
-        # If we get an input code we don't know yet, try to detect it
-        _LOGGER.debug(
-            "LG Display input returned unknown value 0x%02x, attempting detection",
-            input_id,
-        )
-
-        # Try to match this unknown code with known inputs by testing each one
-        for label in self._supported_inputs.keys():
-            candidates = INPUT_DETECTION_CANDIDATES.get(
-                label, [self._supported_inputs.get(label)]
-            )
-            if input_id in candidates:
-                # Found a match! Update the mapping
-                self._supported_inputs[label] = input_id
-                self._current_input = label
-                _LOGGER.info("Detected input %s uses code 0x%02x", label, input_id)
-                return
-
-        # Still unknown, display as hex value
-        self._pending_input = None
-        self._current_input = f"0x{input_id:02x}"
-        _LOGGER.debug("LG Display input 0x%02x could not be identified", input_id)
+        if await self._lg_display.async_get_power_status() is True:
+            self._input_id = await self._lg_display.async_get_input()
 
     async def async_select_option(self, option: str) -> None:
-        input_id = self._supported_inputs.get(option)
-        if input_id is None:
+        source = self._sources.get(option)
+        if source is None:
             raise HomeAssistantError("Unknown LG input")
-        controller = self.hass.data[DOMAIN][self._unique_id]["controller"]
-        await controller.async_select_input(input_id)
-        self._current_input = option
+        controller = self._data["controller"]
+        kind, value = source
+        if kind == "view":
+            await controller.async_select_app_view(value)
+        else:
+            await controller.async_select_input(value, via_app=kind == "hdmi")
+            self._input_id = controller._current_input_id
+        self.async_write_ha_state()
+
+
+class LGDisplayIsmMethodSelect(LGDisplayBaseSelect):
+    """Named image-retention treatments instead of arbitrary protocol bytes."""
+
+    _attr_entity_registry_enabled_default = True
+    _attr_translation_key = "ism_method"
+    _attr_icon = "mdi:monitor-shimmer"
+
+    def __init__(self, display, name, unique_id):
+        self._lg_display = display
+        self._attr_unique_id = f"{unique_id}_ism_method"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, unique_id)})
+        self._value = None
+
+    @property
+    def options(self):
+        return list(ism_methods(self._lg_display.model_name))
+
+    @property
+    def current_option(self):
+        return next(
+            (
+                key
+                for key, code in ism_methods(self._lg_display.model_name).items()
+                if code == self._value
+            ),
+            None,
+        )
+
+    @property
+    def available(self):
+        return self._lg_display.is_available and self.current_option is not None
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "mode_description": ISM_DESCRIPTIONS.get(self.current_option),
+            "protocol_code": f"0x{self._value:02x}"
+            if self._value is not None
+            else None,
+            "model_profile": "UH5F-H"
+            if is_uh5f(self._lg_display.model_name)
+            else "Generic Signage (model-dependent)",
+        }
+
+    async def async_update(self):
+        self._value = None
+        if await self._lg_display.async_get_power_status() is True:
+            self._value = await self._lg_display.async_get_ism_method()
+
+    async def async_select_option(self, option):
+        modes = ism_methods(self._lg_display.model_name)
+        if option not in modes:
+            raise HomeAssistantError("Unsupported ISM method for this display profile")
+        if await self._lg_display.async_get_power_status() is not True:
+            raise HomeAssistantError("Display must be on to change ISM method")
+        if not await self._lg_display.async_set_ism_method(modes[option]):
+            await self.async_update()
+            self.async_write_ha_state()
+            raise HomeAssistantError(
+                "Display did not confirm ISM method; check model support, ISM schedule and imported media on the LG"
+            )
+        self._value = modes[option]
         self.async_write_ha_state()
 
 

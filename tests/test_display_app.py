@@ -1843,3 +1843,125 @@ async def test_offline_manifest_is_opt_in_scoped_and_contains_only_app_assets(ap
         assert (await client.get(base.replace(app.token, 'wrong') + '/offline.appcache')).status == 404
         app.entry.options['display_app_offline'] = False
         assert (await client.get(base + '/offline.appcache')).status == 404
+
+
+async def test_input_select_routes_app_hdmi_and_all_views_without_native_switch(app):
+    from custom_components.lg_rs232_ip.select import LGDisplayInputSelect
+    from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
+
+    layouts = await configure_dashboard(app)
+    entity = LGDisplayInputSelect(app.controller._lg_display, "LG", "test")
+    entity.hass = app.hass
+    entity.async_write_ha_state = Mock()
+    try:
+        assert entity.options == ["HDMI 1", "HDMI 2", "HDMI 3", "App-HDMI 1", "App-HDMI 2", "App-HDMI 3", "App-Dashboard", "App-Dashboard PiP", "App-Mediaplayer"]
+        await entity.async_update()
+        assert entity.current_option == "App-HDMI 1"
+        for label in ("App-Mediaplayer", "App-Dashboard", "App-Dashboard PiP", "App-HDMI 2", "App-HDMI 1"):
+            await acknowledge_selection(app, entity.async_select_option(label))
+            assert entity.current_option == label
+            # Native xb can still report HDMI 1 while the app displays a view/HDMI 2.
+            await entity.async_update()
+            assert entity.current_option == label
+        app.controller._lg_display.async_set_input.assert_not_awaited()
+        # A source picked on the media player immediately appears in the select too.
+        player = LGDisplayMediaPlayer(app.controller, app.entry)
+        await acknowledge_selection(app, player.async_select_source("Dashboard"))
+        assert entity.current_option == "App-Dashboard"
+        # Direct HDMI explicitly leaves/pause the resident app.
+        await entity.async_select_option("HDMI 1")
+        app.controller._lg_display.async_set_input.assert_awaited_once_with(0x90)
+        assert app.saved["paused"] and entity.current_option == "HDMI 1"
+        assert "App-Dashboard" in entity.options  # Can resume a paused app.
+    finally:
+        await layouts.async_close()
+
+
+async def test_input_select_custom_view_collision_rename_delete_and_disabled_app(app):
+    from copy import deepcopy
+    from custom_components.lg_rs232_ip.select import LGDisplayInputSelect
+
+    layouts = await configure_dashboard(app)
+    entity = LGDisplayInputSelect(app.controller._lg_display, "LG", "test")
+    entity.hass = app.hass
+    entity.async_write_ha_state = Mock()
+    try:
+        custom = deepcopy(layouts.library["views"][1])
+        custom.update(id="view_test", name="HDMI 1")
+        layouts.library["views"].append(custom)
+        assert "App-HDMI 1 (App)" in entity.options
+        await acknowledge_selection(app, entity.async_select_option("App-HDMI 1 (App)"))
+        assert app.selected_view == "view_test" and entity.current_option == "App-HDMI 1 (App)"
+        custom["name"] = "Morning"
+        assert "App-Morning" in entity.options and entity.current_option == "App-Morning"
+        layouts.library["views"].remove(custom)
+        app._layouts_changed()
+        assert "App-Morning" not in entity.options and entity.current_option == "App-Dashboard"
+        with pytest.raises(HomeAssistantError, match="Unknown"):
+            await entity.async_select_option("App-Morning")
+        layouts.config["enabled"] = False
+        assert entity.options == ["HDMI 1", "HDMI 2", "HDMI 3", "App-HDMI 1", "App-HDMI 2", "App-HDMI 3"]
+        app.resident = False
+        assert entity.options == ["HDMI 1", "HDMI 2", "HDMI 3"]
+    finally:
+        await layouts.async_close()
+
+
+async def test_explicit_app_input_resumes_but_never_falls_back_to_native(app):
+    await resident_app(app)
+    app.controller.hass = app.hass
+    app.controller.async_ensure_on = AsyncMock()
+    app.saved["paused"] = True
+
+    async def resume():
+        app.saved.pop("paused")
+        app._resident_foreground = SI_APP_ID
+        app.event({"type": "hello", "version": APP_VERSION, "visible": True})
+
+    app.async_resume = AsyncMock(side_effect=resume)
+    await acknowledge_selection(app, app.controller.async_select_input(0x91, via_app=True))
+    app.async_resume.assert_awaited_once()
+    assert app.logical_input == 0x91
+    app.async_select_hdmi = AsyncMock(return_value=False)
+    with pytest.raises(HomeAssistantError, match="disconnected"):
+        await app.controller.async_select_input(0x90, via_app=True)
+    app.controller._lg_display.async_set_input.assert_not_awaited()
+    app.resident = False
+    with pytest.raises(HomeAssistantError, match="resident SI"):
+        await app.controller.async_select_input(0x90, via_app=True)
+
+
+async def test_explicit_app_input_timeout_never_sends_native_hdmi(app):
+    await resident_app(app)
+    app.controller.hass = app.hass
+    app.saved["paused"] = True
+    app.async_resume = AsyncMock()  # The app never connects.
+    with patch("custom_components.lg_rs232_ip.controller.asyncio.sleep", side_effect=TimeoutError):
+        with pytest.raises(HomeAssistantError, match="did not connect"):
+            await app.controller.async_select_input(0x91, via_app=True)
+    app.controller._lg_display.async_set_input.assert_not_awaited()
+    assert app.selected_input == 0x90
+
+
+async def test_superseded_app_input_does_not_overwrite_confirmed_input(app):
+    from custom_components.lg_rs232_ip.select import LGDisplayInputSelect
+
+    await resident_app(app)
+    app.controller.hass = app.hass
+    app.hass.data["lg_rs232_ip"]["test"]["controller"] = app.controller
+    entity = LGDisplayInputSelect(app.controller._lg_display, "LG", "test")
+    entity.hass = app.hass
+    entity.async_write_ha_state = Mock()
+    app.saved["paused"] = True
+
+    async def newer_selection(_reason):
+        app.controller._view_generation += 1  # Another request wins during wake.
+        app.saved.pop("paused")
+
+    app.controller.async_ensure_on = AsyncMock(side_effect=newer_selection)
+    await entity.async_select_option("App-HDMI 2")
+    assert app.selected_input == 0x90
+    # Losing connection later must not expose an unconfirmed HDMI 2.
+    app.saved["paused"] = True
+    assert entity.current_option == "HDMI 1"
+    app.controller._lg_display.async_set_input.assert_not_awaited()

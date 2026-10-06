@@ -12,7 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, READ_STATUS, ENERGY_SAVING_MODES
 from .lg_display import LGDisplay
-from .device_profile import ASPECT_RATIOS, PM_STATES, is_uh5f
+from .device_profile import ASPECT_RATIOS, PM_STATES, ism_methods, is_uh5f
 from homeassistant.exceptions import HomeAssistantError
 
 _LOGGER = logging.getLogger(__name__)
@@ -541,7 +541,7 @@ class LGDisplayColorTemperatureNumber(LGDisplayBaseNumber):
 
 
 class LGDisplayIsmMethodNumber(LGDisplayBaseNumber):
-    """ISM method raw value control for LG Display."""
+    """Legacy code control; use the named ISM select for normal operation."""
 
     def __init__(self, lg_display: LGDisplay, name: str, unique_id: str) -> None:
         self._lg_display = lg_display
@@ -558,11 +558,11 @@ class LGDisplayIsmMethodNumber(LGDisplayBaseNumber):
 
     @property
     def name(self) -> str:
-        return "ISM Method"
+        return "ISM Method Code"
 
     @property
     def available(self) -> bool:
-        return self._lg_display.is_available
+        return self._lg_display.is_available and self._attr_native_value is not None
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -573,23 +573,24 @@ class LGDisplayIsmMethodNumber(LGDisplayBaseNumber):
         }
 
     async def async_set_native_value(self, value: float) -> None:
-        power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
-            return
-
-        ism_value = int(value)
-        if await self._lg_display.async_set_ism_method(ism_value):
-            self._attr_native_value = ism_value
+        if (
+            isinstance(value, bool)
+            or value not in ism_methods(self._lg_display.model_name).values()
+        ):
+            raise HomeAssistantError("Unsupported ISM code; use the named ISM select")
+        if not await self._lg_display.async_set_ism_method(int(value)):
+            await self.async_update()
             self.async_write_ha_state()
+            raise HomeAssistantError("Display did not confirm ISM method")
+        self._attr_native_value = int(value)
+        self.async_write_ha_state()
 
     async def async_update(self) -> None:
-        power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
-            return
-
-        result = await self._lg_display.async_get_ism_method()
-        if result is not None:
-            self._attr_native_value = int(result)
+        self._attr_native_value = None
+        if await self._lg_display.async_get_power_status() is True:
+            value = await self._lg_display.async_get_ism_method()
+            if value in ism_methods(self._lg_display.model_name).values():
+                self._attr_native_value = value
 
 
 class LGDisplayAspectRatioNumber(LGDisplayBaseNumber):
