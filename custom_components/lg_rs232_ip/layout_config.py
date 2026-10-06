@@ -122,6 +122,7 @@ def scene(
         media_background_enabled=False,
         media_background_entity="",
         media_background_fit=media_background_fit,
+        media_background_color_source="edges",
         media_background_dim=0.35,
     )
 
@@ -418,6 +419,10 @@ def validate_layout(value):
             media_background_fit=_choice(
                 raw.get("media_background_fit", "contain"),
                 ("stretch", "contain", "center", "colors"),
+            ),
+            media_background_color_source=_choice(
+                raw.get("media_background_color_source", "edges"),
+                ("edges", "cover"),
             ),
             media_background_dim=_number(raw.get("media_background_dim", 0.35), 0, 0.9),
         )

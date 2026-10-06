@@ -1,6 +1,6 @@
 # LG Display Studio
 
-Ab **LG Professional Display 2.21.0 / App 1.17.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
+Ab **LG Professional Display 2.22.0 / App 1.18.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
 
 Die App bleibt optional. Für dauerhafte Quellen müssen **Display-App**, **SI-App**, **SI-Dauerbetrieb mit automatischem Start** und **Eigenes Layout verwenden** aktiv sein. Das Öffnen und Bearbeiten installiert keine SI-App und weckt das Display nicht. **Anzeigen** ist eine ausdrückliche Quellenwahl und kann das mit Strom versorgte Display wecken.
 
@@ -136,16 +136,18 @@ Ab **2.11.0** kann jede gespeicherte Ansicht den Hintergrund während der Wieder
 
 | Darstellung | Verhalten |
 | --- | --- |
-| **Nur Coverfarben · ohne Bild** | Ab 2.13: Zeigt ausschließlich den aus den Coverrändern gebildeten Farbverlauf. Das Cover der Medienkarte bleibt einmal sichtbar. Voreinstellung für neue Mediaplayer-Vollbildansichten. |
+| **Nur Coverfarben · ohne Bild** | Ab 2.13: Zeigt ausschließlich den aus der gewählten Farbauswertung gebildeten Farbverlauf. Das Cover der Medienkarte bleibt einmal sichtbar. Voreinstellung für neue Mediaplayer-Vollbildansichten. |
 | **Gestreckt · ganze Fläche** | Füllt den Bildschirm vollständig; das Cover darf dabei verzerrt werden. |
-| **Skaliert · vollständig einpassen** | Vergrößert oder verkleinert proportional, ohne das Cover abzuschneiden. Freie Flächen zeigen den Randverlauf. |
+| **Skaliert · vollständig einpassen** | Vergrößert oder verkleinert proportional, ohne das Cover abzuschneiden. Freie Flächen zeigen den gewählten Farbverlauf. |
 | **Mittig · ohne Vergrößern** | Zentriert das von HA bereitgestellte Cover in seiner Größe innerhalb der 1920×1080-Entwurfsfläche. Vorschau und Display behalten dieselben Proportionen; die auf höchstens 640×640 begrenzte Coverdatei wird nicht weiter vergrößert. |
 
-**Cover und Randverlauf abdunkeln** verbessert die Lesbarkeit darüberliegender Karten (0–90 %, Standard 35 %). Der Verlauf entsteht aus den tatsächlichen linken, rechten, oberen und unteren Coverrändern und ändert sich bei einem neuen Titel/Cover ohne Neuladen. Widgets und HDMI/PiP bleiben darüber. Die feste HDMI-Vollbildquelle wird dadurch nicht in eine andere Ansicht umgeschaltet.
+**Farben für den Hintergrund** bietet ab 2.22 zwei Möglichkeiten: **Coverränder** verwendet wie bisher nur die linken, rechten, oberen und unteren Randstreifen. **Gesamtes Cover** berücksichtigt die gesamte Bildfläche einschließlich der Mitte. Dazu werden die Farbmittel der linken/rechten und oberen/unteren Bildhälften zu einem weichen Verlauf verbunden. Die Auswahl gilt unabhängig davon, ob das Cover selbst eingeblendet ist. Vorhandene Ansichten bleiben bei **Coverränder**. Die Vorschau reagiert sofort; **Speichern** übernimmt die Auswahl auf dem Display. Themes und duplizierte Ansichten behalten sie bei.
+
+**Cover und Farbverlauf abdunkeln** verbessert die Lesbarkeit darüberliegender Karten (0–90 %, Standard 35 %). Der Verlauf ändert sich bei einem neuen Titel/Cover ohne Neuladen. Widgets und HDMI/PiP bleiben darüber. Die feste HDMI-Vollbildquelle wird dadurch nicht in eine andere Ansicht umgeschaltet.
 
 Die Einblendung gilt ausschließlich für den HA-Zustand **`playing`** mit verfügbarem Cover. Bei Pause, Stopp/Leerlauf, Aus/Standby, nicht verfügbarem Player, fehlendem Cover oder Ladefehler bleibt der normale Hintergrund der Ansicht sichtbar: Farbtheme, Sonnenstand, Verlauf oder eigenes Bild. Bei erneutem Start kommt das aktuelle Cover zurück. Ein Themewechsel erhält Player, Aktivierung, Darstellungsmodus und Abdunklung; Duplizieren, Export/Import und Rückgängig umfassen diese Einstellungen. Standardmäßig ist die Funktion ausgeschaltet.
 
-Es gibt keine neue Abfragefrequenz: HA-Zustandsereignisse melden Wiedergabe-/Titelwechsel, der vorhandene Covercache teilt Bildabrufe zwischen Karte, Hintergrund und Studio. Die App analysiert ein neues Cover einmal anhand einer **32×32-Pixel-Probe**. Unveränderte Cover und reine Größen-/Abdunklungsänderungen benötigen keine erneute Farbanalyse. Der Modus **Nur Coverfarben** decodiert hierfür nur die Variante mit höchstens 640 Pixeln, auch auf einem 4K-Bildschirm; die sichtbare Coverkarte darf unabhängig eine größere Variante nutzen. Keine dauernden Canvas-/Blur-Effekte, kein HDMI-Neuladen und keine Bildschirmaufnahmen. Verspätete Antworten eines vorherigen Titels oder einer inzwischen geschlossenen Ansicht können kein altes Cover zurückbringen. Bei Bildfehlern gilt eine Wiederholungspause von mindestens 30 Sekunden.
+Es gibt keine neue Abfragefrequenz: HA-Zustandsereignisse melden Wiedergabe-/Titelwechsel, der vorhandene Covercache teilt Bildabrufe zwischen Karte, Hintergrund und Studio. Die App analysiert ein neues Cover einmal anhand einer **32×32-Pixel-Probe** und berechnet daraus beide Farbvarianten. Unveränderte Cover, der Wechsel zwischen **Coverränder** und **Gesamtes Cover** sowie reine Größen-/Abdunklungsänderungen benötigen keine erneute Pixelanalyse. Die Farbauswahl lädt das Cover nicht erneut und behält die vorhandenen Bild- und HDMI-Elemente bei. Der Modus **Nur Coverfarben** decodiert hierfür nur die Variante mit höchstens 640 Pixeln, auch auf einem 4K-Bildschirm; die sichtbare Coverkarte darf unabhängig eine größere Variante nutzen. Keine dauernden Canvas-/Blur-Effekte, kein HDMI-Neuladen und keine Bildschirmaufnahmen. Verspätete Antworten eines vorherigen Titels oder einer inzwischen geschlossenen Ansicht können kein altes Cover zurückbringen. Bei Bildfehlern gilt eine Wiederholungspause von mindestens 30 Sekunden.
 
 ## Wetter
 

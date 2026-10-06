@@ -1,5 +1,13 @@
 # Release acceptance
 
+## LG 2.22.0: choose edge or whole-cover background colours — 2026-10-06
+
+**422 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 202 browser cases pass across Chromium/WebKit.** Coverage verifies the backwards-compatible edge default, rejected invalid values, per-view persistence/export/restart, theme and duplicate preservation, immediate preview changes and late image responses. A synthetic cover with distinct border and centre colours verifies the actual gradient values. Switching between both methods reuses the same decoded image, sampled pixels and HDMI element without another image request.
+
+Installed **LG 2.22.0 / app 1.18.0** in the existing HA 2026.9.4 Docker instance. The actual Studio editor shows **Farben für den Hintergrund → Coverränder / Gesamtes Cover**, independently of cover placement.
+
+On the physical **75UH5F-HJ**, saved both modes through the real library API while **Sonos Wohnzimmer** was playing the same cover. The resident app acknowledged each saved revision. Native screenshots visibly confirm different background gradients, with the cover appearing only once in the media card. The original edge selection, all ten saved views, Mediaplayer source and OSD state were restored or preserved; Sonos playback was not changed. Private captures and backups remain excluded from Git.
+
 ## LG 2.21.0: fixed offline startup design — 2026-10-06
 
 **421 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 200 browser cases pass across Chromium/WebKit.** The final Studio geometry/status changes were additionally checked with its full 56-case suite. Coverage includes protected/resettable startup editing, restricted widget/background selectors, import and both save APIs rejecting live content, preservation of existing designs, paired bounded image bundles, content-version reuse, local clock updates, offline JPEG decoding, invalid cache rejection, storage quota failure, superseded downloads, pairing isolation, unchanged HDMI exemption and cache-status confirmation. Visual inspection exposed a WebKit preview with collapsed scene height despite existing DOM text assertions; the corrected positioning is covered by actual stage/scene geometry assertions and screenshots.

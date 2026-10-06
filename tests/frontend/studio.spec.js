@@ -322,6 +322,8 @@ test('a background player is independent of cards, previews live, survives save,
   await page.getByLabel('Hintergrund-Medienplayer').selectOption('media_player.sonos');
   await page.getByLabel('Bei Wiedergabe anzeigen').check();
   await expect(page.locator('.scene .lg-cover-background')).toHaveClass(/loaded/);
+  await expect(page.getByLabel('Farben für den Hintergrund')).toHaveValue('edges');
+  await page.getByLabel('Farben für den Hintergrund').selectOption('cover');
   await page.getByLabel('Cover darstellen').selectOption('stretch');
   await expect(page.locator('.scene .lg-cover-background img')).toHaveCSS('object-fit','fill');
   await page.locator('.sidebar').getByRole('button',{name:/Aurora/}).click();
@@ -329,6 +331,7 @@ test('a background player is independent of cards, previews live, survives save,
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   await expect(page.locator('.status')).toHaveText('Gespeichert');
   expect(await page.evaluate(()=>saved.scenes.dashboard.media_background_fit)).toBe('stretch');
+  expect(await page.evaluate(()=>saved.scenes.dashboard.media_background_color_source)).toBe('cover');
   expect(await page.evaluate(()=>studio.scene.elements.map(i=>i.entity_id))).toEqual(JSON.parse(before).map(i=>i.entity_id));
   await page.evaluate(()=>{hass.states['media_player.sonos'].state='paused';studio.hass={...hass};});
   await expect(page.locator('.scene .lg-cover-background')).toHaveCount(0);
@@ -343,6 +346,10 @@ test('a background player is independent of cards, previews live, survives save,
   await openView(page,'Dashboard · Kopie');
   await expect(page.getByLabel('Hintergrund-Medienplayer')).toHaveValue('media_player.sonos');
   await expect(page.getByLabel('Cover darstellen')).toHaveValue('stretch');
+  await expect(page.getByLabel('Farben für den Hintergrund')).toHaveValue('cover');
+  await page.getByLabel('Farben für den Hintergrund').selectOption('edges');
+  await page.getByTitle('Rückgängig',{exact:true}).click();
+  await expect(page.getByLabel('Farben für den Hintergrund')).toHaveValue('cover');
   expect(await page.evaluate(()=>window.coverRequests)).toBeLessThanOrEqual(4);
 });
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.22.0
+
+- Add **Coverränder / Gesamtes Cover** under the background media player in Display Studio. Choose whether background gradients use only the cover borders or the entire image, including its center. Existing views keep border colors.
+- Save the choice per view and preserve it through themes, duplication, export/import and restarts. Apply changes live without downloading the artwork again or rebuilding HDMI. Compute both palettes from one cached 32×32 sample per cover. Release app 1.18.0.
+
 ## 2.21.0
 
 - Fix the Studio preview collapsing in WebKit: keep its scene absolutely positioned inside the 16:9 stage so Safari can paint backgrounds and widgets.

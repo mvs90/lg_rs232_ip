@@ -94,20 +94,26 @@
     motion.timer=window.setTimeout(finish,1000);
   };
   function artworkSize(pixels) {return pixels>1280 ? 2160 : pixels>640 ? 1280 : 640;}
-  function edgeBackground(image) {
+  function coverBackgrounds(image) {
     // One 32 x 32 sample per new cover, never per frame or progress update.
     // The scoped HA artwork endpoint and editor blob URLs are same-origin.
     var canvas=document.createElement("canvas"); canvas.width=32; canvas.height=32;
     var context=canvas.getContext("2d"); context.drawImage(image,0,0,32,32);
     var pixels=context.getImageData(0,0,32,32).data;
-    function edge(x1,y1,x2,y2) {
+    function average(x1,y1,x2,y2) {
       var r=0,g=0,b=0,n=0,x,y,i;
       for(y=y1;y<y2;y++){for(x=x1;x<x2;x++){i=(y*32+x)*4;r+=pixels[i];g+=pixels[i+1];b+=pixels[i+2];n++;}}
       return "rgb("+Math.round(r/n)+","+Math.round(g/n)+","+Math.round(b/n)+")";
     }
-    var left=edge(0,0,4,32),right=edge(28,0,32,32),top=edge(0,0,32,4),bottom=edge(0,28,32,32);
-    // Free areas inherit the nearest cover edge, with a soft corner blend.
-    return "radial-gradient(ellipse at 0% 50%,"+left+",transparent 75%),radial-gradient(ellipse at 100% 50%,"+right+",transparent 75%),linear-gradient(180deg,"+top+","+bottom+")";
+    function gradient(left,right,top,bottom) {
+      return "radial-gradient(ellipse at 0% 50%,"+left+",transparent 75%),radial-gradient(ellipse at 100% 50%,"+right+",transparent 75%),linear-gradient(180deg,"+top+","+bottom+")";
+    }
+    // Prepare both from one small sample. Whole-cover halves include every
+    // pixel, including the center, while retaining the image's colour direction.
+    return {
+      edges:gradient(average(0,0,4,32),average(28,0,32,32),average(0,0,32,4),average(0,28,32,32)),
+      cover:gradient(average(0,0,16,32),average(16,0,32,32),average(0,0,32,16),average(0,16,32,32))
+    };
   }
   Renderer.prototype.clearCover = function () {
     var cover=this.cover;if(!cover){return;}
@@ -137,10 +143,10 @@
       if(!cover.image.naturalWidth){cover.image.onerror();return;}
       try {
         var artworkKey=scene.media_background_entity+"/"+data.artwork;
-        if(self.edgeKey!==artworkKey){self.edgeColor=edgeBackground(cover.image);self.edgeKey=artworkKey;}
-        style(cover.node,"background",self.edgeColor);
+        if(self.paletteKey!==artworkKey){self.coverPalettes=coverBackgrounds(cover.image);self.paletteKey=artworkKey;}
+        cover.palettes=self.coverPalettes;
       }
-      catch(_){style(cover.node,"background",self.scene.color);}
+      catch(_){cover.palettes=null;}
       cover.ready=true;cover.node.classList.add("loaded");self.coverGeometry();
     };
     cover.image.onerror=function () {
@@ -152,6 +158,8 @@
   };
   Renderer.prototype.coverGeometry = function () {
     var cover=this.cover;if(!cover || !cover.ready){return;}
+    var mode=this.scene.media_background_color_source === "cover" ? "cover" : "edges";
+    style(cover.node,"background",cover.palettes ? cover.palettes[mode] : this.scene.color);
     var image=cover.image,fit=this.scene.media_background_fit || "contain";
     if(fit === "colors"){return;}
     if(fit === "center"){

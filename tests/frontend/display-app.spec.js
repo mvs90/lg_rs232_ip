@@ -24,7 +24,7 @@ async function mount(page, state) {
     }
     if (name === 'state') {
       if (state.delayState) await new Promise(resolve => setTimeout(resolve,state.delayState));
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.17.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.18.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -1065,4 +1065,38 @@ test('startup background is decoded from its bounded bundle after an offline rel
   expect(await page.evaluate(()=>new Promise(resolve=>{const img=new Image();img.onload=()=>resolve([img.naturalWidth,img.naturalHeight]);img.onerror=()=>resolve(null);img.src=JSON.parse(localStorage.getItem('lg-display-startup-v1:/index.html')).image;}))).toEqual([32,18]);
   expect(state.designRequests).toBe(1);
   await expect(page.locator('#startup-fallback')).toBeHidden();
+});
+
+
+test('whole-cover colours include the centre and switch live without new downloads or pixel reads',async({page})=>{
+  await page.addInitScript(()=>{
+    window.paletteReads=0;const read=CanvasRenderingContext2D.prototype.getImageData;
+    CanvasRenderingContext2D.prototype.getImageData=function(...args){window.paletteReads++;return read.apply(this,args);};
+  });
+  const state={content:null,idle_hdmi:'ext://hdmi:1',dashboard:true,layout:designed()};
+  const scene=state.layout.config.scenes.dashboard;
+  Object.assign(scene,{elements:[],media_background_enabled:true,media_background_entity:'media_player.music',media_background_fit:'colors'});
+  const media=state.layout.values['media_player.music']={state:'playing',artwork:'original'};
+  await mount(page,state);
+  const png=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=c.height=32;const x=c.getContext('2d');x.fillStyle='#00ff00';x.fillRect(0,0,32,32);x.fillStyle='#ff0000';x.fillRect(0,0,4,32);x.fillStyle='#0000ff';x.fillRect(28,0,4,32);return c.toDataURL().split(',')[1];});
+  let downloads=0,release;const pending=new Promise(resolve=>release=resolve);
+  await page.route('**/cover.jpg?**',async r=>{downloads++;if(r.request().url().includes('v=slow'))await pending;await r.fulfill({contentType:'image/png',body:Buffer.from(png,'base64')}).catch(()=>{});});
+  media.artwork='known';
+  const layer=page.locator('.lg-cover-background'),art=layer.locator('img');
+  await expect.poll(()=>layer.evaluate(n=>n.style.background)).toContain('rgb(255, 0, 0)');
+  const reads=await page.evaluate(()=>window.paletteReads),fetched=downloads;
+  await page.evaluate(()=>{window.originalArt=document.querySelector('.lg-cover-background img');window.originalVideo=document.querySelector('video');});
+  for(const mode of ['cover','edges','cover']){
+    scene.media_background_color_source=mode;
+    await expect.poll(()=>layer.evaluate(n=>n.style.background)).toContain(mode==='cover'?'rgb(64, 191, 0)':'rgb(255, 0, 0)');
+    if(mode==='cover')expect(await layer.evaluate(n=>n.style.background)).toContain('rgb(0, 191, 64)');
+  }
+  await expect(art).toBeHidden();
+  expect(await page.evaluate(()=>window.paletteReads)).toBe(reads);expect(downloads).toBe(fetched);
+  expect(await page.evaluate(()=>originalArt===document.querySelector('.lg-cover-background img') && originalVideo===document.querySelector('video'))).toBe(true);
+  media.artwork='slow';await expect(art).toHaveAttribute('src',/v=slow/);
+  scene.media_background_color_source='edges';
+  await page.waitForTimeout(300);release();
+  await expect.poll(()=>layer.evaluate(n=>n.style.background)).toContain('rgb(255, 0, 0)');
+  expect(await page.evaluate(()=>window.paletteReads)).toBe(reads+1);
 });

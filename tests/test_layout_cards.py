@@ -16,6 +16,7 @@ from custom_components.lg_rs232_ip.layout_config import (
 )
 from custom_components.lg_rs232_ip.layout_media import LayoutMedia, prepare_cover
 from custom_components.lg_rs232_ip.layouts import DisplayLayouts
+from tests.test_layouts import layouts
 
 
 def cover(color="navy"):
@@ -288,6 +289,7 @@ def test_media_background_validation_and_entity_budget():
         if key.startswith("media_background_"):
             del scene[key]
     assert not validate_layout(cfg)["scenes"]["dashboard"]["media_background_enabled"]
+    assert validate_layout(cfg)["scenes"]["dashboard"]["media_background_color_source"] == "edges"
     scene.update(
         media_background_enabled=True, media_background_entity="media_player.sonos"
     )
@@ -299,6 +301,8 @@ def test_media_background_validation_and_entity_budget():
         ("media_background_entity", "sensor.private"),
         ("media_background_entity", ""),
         ("media_background_fit", "url(evil)"),
+        ("media_background_color_source", "unknown"),
+        ("media_background_color_source", None),
         ("media_background_dim", 1),
         ("media_background_dim", float("nan")),
     ):
@@ -398,3 +402,24 @@ async def test_artwork_larger_than_cache_is_returned_without_refetch_loop(media)
         )
     player.async_get_media_image.assert_awaited_once()
     assert not cache._cache
+
+
+async def test_background_colour_source_persists_in_library_and_export(layouts):
+    from custom_components.lg_rs232_ip.layouts import DisplayLayouts
+
+    document = layouts.editor_document()
+    view = next(view for view in document['config']['views'] if view['id'] == 'media_view')
+    view['scene']['media_background_color_source'] = 'cover'
+    from custom_components.lg_rs232_ip.layout_library import validate_library
+
+    runtime, library = validate_library(document['config'], document['config'])
+    await layouts.async_save(runtime, document['revision'], library=library)
+    second = DisplayLayouts(layouts.hass, layouts.entry)
+    try:
+        await second.async_start()
+        exported = second.editor_document()['config']
+        assert exported['scenes']['media_view']['media_background_color_source'] == 'cover'
+        assert next(view for view in exported['views'] if view['id'] == 'media_view')['scene']['media_background_color_source'] == 'cover'
+        assert exported['scenes']['dashboard']['media_background_color_source'] == 'edges'
+    finally:
+        await second.async_close()

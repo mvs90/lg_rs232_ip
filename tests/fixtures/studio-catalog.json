@@ -68,7 +68,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "no_signal": {
             "background": "midnight",
@@ -258,7 +259,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "dashboard": {
             "background": "midnight",
@@ -448,7 +450,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "overlay": {
             "background": "midnight",
@@ -533,7 +536,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "pip": {
             "background": "midnight",
@@ -653,7 +657,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "fullscreen": {
             "background": "midnight",
@@ -738,7 +743,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "pip_view": {
             "background": "midnight",
@@ -963,7 +969,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "media_view": {
             "background": "midnight",
@@ -1048,7 +1055,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "colors",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "hdmi_full": {
             "background": "midnight",
@@ -1098,7 +1106,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "startup": {
             "background": "midnight",
@@ -1218,7 +1227,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           }
         }
       }
@@ -1457,7 +1467,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "no_signal": {
             "background": "aurora",
@@ -1647,7 +1658,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "dashboard": {
             "background": "aurora",
@@ -1837,7 +1849,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "overlay": {
             "background": "aurora",
@@ -1922,7 +1935,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "pip": {
             "background": "aurora",
@@ -2042,7 +2056,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "fullscreen": {
             "background": "aurora",
@@ -2127,7 +2142,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "pip_view": {
             "background": "aurora",
@@ -2352,7 +2368,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "media_view": {
             "background": "aurora",
@@ -2437,7 +2454,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "colors",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "hdmi_full": {
             "background": "aurora",
@@ -2487,7 +2505,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "startup": {
             "background": "aurora",
@@ -2607,7 +2626,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           }
         }
       }
@@ -2846,7 +2866,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "no_signal": {
             "background": "solar",
@@ -3036,7 +3057,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "dashboard": {
             "background": "solar",
@@ -3226,7 +3248,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "overlay": {
             "background": "solar",
@@ -3311,7 +3334,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "pip": {
             "background": "solar",
@@ -3431,7 +3455,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "fullscreen": {
             "background": "solar",
@@ -3516,7 +3541,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "pip_view": {
             "background": "solar",
@@ -3741,7 +3767,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "media_view": {
             "background": "solar",
@@ -3826,7 +3853,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "colors",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "hdmi_full": {
             "background": "solar",
@@ -3876,7 +3904,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "startup": {
             "background": "dawn",
@@ -3996,7 +4025,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           }
         }
       }
@@ -4235,7 +4265,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "no_signal": {
             "background": "sand",
@@ -4425,7 +4456,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "dashboard": {
             "background": "sand",
@@ -4615,7 +4647,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "overlay": {
             "background": "sand",
@@ -4700,7 +4733,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "pip": {
             "background": "sand",
@@ -4820,7 +4854,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "fullscreen": {
             "background": "sand",
@@ -4905,7 +4940,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "pip_view": {
             "background": "sand",
@@ -5130,7 +5166,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "media_view": {
             "background": "sand",
@@ -5215,7 +5252,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "colors",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "hdmi_full": {
             "background": "sand",
@@ -5265,7 +5303,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           },
           "startup": {
             "background": "sand",
@@ -5385,7 +5424,8 @@
             "media_background_enabled": false,
             "media_background_entity": "",
             "media_background_fit": "contain",
-            "media_background_dim": 0.35
+            "media_background_dim": 0.35,
+            "media_background_color_source": "edges"
           }
         }
       }
