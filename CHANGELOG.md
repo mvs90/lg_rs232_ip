@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.20.0
+
+- Shorten explicit app startup recovery: retry web readiness after five seconds instead of thirty, with a four-second limit on the read-only readiness probe. Retain normal outage backoff, the overall startup deadline and OSD-preserving source changes.
+- Add a lightweight start screen for requested Dashboard, PiP, Mediaplayer and custom views. Fetch the current request before the full app loads; clear the screen on rendered view, cancellation, failure or timeout. No extra decoder, animation loop or persisted startup request. Release app 1.16.0.
+- Keep full-screen HDMI transparent throughout app loading, including when the previously saved app view was a Mediaplayer or Dashboard. Discard late startup replies so they cannot cover a newer HDMI request.
+
 ## 2.19.1
 
 - Fix selecting an app view or App-HDMI directly from standby: wait for LG web/SI startup with active, bounded recovery instead of abandoning the requested source after a passive 30-second wait. An existing SI app is not relaunched while its heartbeat starts.

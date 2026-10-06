@@ -1,7 +1,7 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.15.1", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.16.0", video = null, sourceNode = null, videoSource = null;
   var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
   var hdmiFit = "contain";
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
@@ -207,17 +207,21 @@
         hdmiFit = data.hdmi_fit === "fill" ? "fill" : "contain";
         if(window.LGOffline){window.LGOffline.remember(idleHdmi,hdmiFit);}
         design = data.layout || null; selectedView = data.selected_view || null; dashboardSelected = data.dashboard === true; pipSelected = data.pip === true; mediaSelected = data.media_view === true;
+        // A previous dashboard must not cover HDMI while a new HDMI start waits
+        // for its acknowledgement. The saved scene changes only on the server.
+        if (data.startup && data.startup.view === "hdmi_full") { selectedView = null; dashboardSelected = pipSelected = mediaSelected = false; }
         if (design && design.now) { serverOffset = new Date(design.now).getTime() - Date.now(); }
         try {
           render(data.content);
+          if (window.LGStartup) { window.LGStartup.apply(data.startup, sceneKey); }
           animateHdmi = false;
           if (inputRequest) { window.requestAnimationFrame(acknowledgeInput); }
-        } catch (_) { event({type:"error", id:active}); clear("Anzeige fehlgeschlagen"); }
+        } catch (_) { if (window.LGStartup) { window.LGStartup.hide(); } event({type:"error", id:active}); clear("Anzeige fehlgeschlagen"); }
         if (first) { heartbeat(); }
         if(data.diagnostics && window.LGPlatform){var diagnosticId=data.diagnostics.id;(data.diagnostics.operation==="video_wall" ? window.LGVideoWall : window.LGPlatform.sample)(data.diagnostics,function(result){event({type:"diagnostics",id:diagnosticId,result:result});});}
         // Paint commands first; a frame is collected only for an outstanding HA ticket.
         if (data.capture) { window.setTimeout(function () { capture(data.capture); }, 50); }
-      } else { text("connection", "Verbindung unterbrochen"); }
+      } else { if (window.LGStartup) { window.LGStartup.hide(); } text("connection", "Verbindung unterbrochen"); }
       pollTimer = window.setTimeout(poll, data ? 0 : 2000);
     }, startupChecked ? 30000 : 5000);
   }
@@ -236,6 +240,7 @@
   var heartbeatTimer = window.setInterval(heartbeat, 5000);
   function stop() {
     hideStartupNotice();
+    if (window.LGStartup) { window.LGStartup.hide(); }
     if(window.LGPlatform){window.LGPlatform.close();}
     if (designer) { designer.cancelHdmiAnimation(); designer.stopCameras(); }
     stopped = true; clearTimeout(pollTimer); clearInterval(tickTimer); clearInterval(heartbeatTimer);

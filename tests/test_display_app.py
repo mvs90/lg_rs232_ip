@@ -2066,6 +2066,7 @@ async def test_new_action_cancels_pending_startup_without_late_view(app, takeove
             resume_wait.set()
             await task
         assert not app.media_view_selected and app._input_request is None
+        assert app.startup is None and app._startup is None
         assert app.async_maintain_resident.await_count == retries_after_takeover
     finally:
         await layouts.async_close()
@@ -2090,5 +2091,82 @@ async def test_missing_app_has_bounded_startup_deadline_and_no_delayed_selection
         connect_app(app)
         assert not app.media_view_selected  # Expired intent must never replay later.
         app.controller._lg_display.async_set_input.assert_not_awaited()
+    finally:
+        await layouts.async_close()
+
+
+@pytest.mark.parametrize("view", ["media_view", "dashboard", "pip_view", "hdmi_full"])
+async def test_startup_intent_is_early_scoped_and_never_persisted(app, view):
+    layouts = await configure_dashboard(app)
+    app.last_seen = 0
+    before = dict(app.saved)
+    generation = app.controller._view_generation
+    try:
+        with app.starting(view, generation):
+            state = app.state()["startup"]
+            assert state["view"] == view and 0 < state["remaining"] <= 150
+            assert app.saved == before
+            # Selecting another source invalidates the old hint immediately.
+            app.controller._cancel_temporary_view()
+            assert app.state()["startup"] is None
+            with app.starting("dashboard", app.controller._view_generation):
+                new = app.startup["id"]
+                assert new != state["id"]
+            assert app.startup is None
+        assert app._startup is None and app.saved == before
+        connect_app(app)
+        with app.starting("media_view", app.controller._view_generation):
+            assert app.startup is None  # No splash on ordinary warm layout changes.
+    finally:
+        await layouts.async_close()
+
+
+async def test_startup_route_is_paired_uncached_and_expires(app):
+    layouts = await configure_dashboard(app)
+    app.last_seen = 0
+    view = DisplayAppView(app.hass)
+    http = web.Application()
+    view.register(app.hass, http, http.router)
+    base = f'/api/lg_rs232_ip/display_app/test/{app.token}'
+    try:
+        async with TestClient(TestServer(http)) as client:
+            assert (await client.get(base.replace(app.token, 'wrong') + '/startup')).status == 404
+            with app.starting('media_view', app.controller._view_generation):
+                response = await client.get(base + '/startup')
+                assert response.headers['Cache-Control'] == 'no-store'
+                assert (await response.json())['startup']['view'] == 'media_view'
+                html = await (await client.get(base + '/index.html')).text()
+                assert app.startup['id'] not in html
+                app._startup['deadline'] = 0
+                assert (await (await client.get(base + '/startup')).json())['startup'] is None
+            assert (await client.get(base + '/startup.js')).status == 200
+    finally:
+        await layouts.async_close()
+
+
+@pytest.mark.parametrize("failure", [LGWebError('booting'), TimeoutError()])
+async def test_explicit_start_uses_short_read_retry_then_normal_backoff(app, failure):
+    layouts = await configure_dashboard(app)
+    app.last_seen = 0
+    app.web.reset_mock()
+    app.web.async_foreground_app.side_effect = failure
+    clock = [100.0]
+    try:
+        with patch('custom_components.lg_rs232_ip.resident_app.time.monotonic', side_effect=lambda: clock[0]):
+            with app.starting('media_view', app.controller._view_generation):
+                await app.async_maintain_resident(power=True)
+                assert app._resident_retry == 105
+                attempts = app.web.async_foreground_app.await_count
+                clock[0] = 104
+                await app.async_maintain_resident(power=True)
+                assert app.web.async_foreground_app.await_count == attempts
+                clock[0] = 105
+                await app.async_maintain_resident(power=True)
+                assert app.web.async_foreground_app.await_count == attempts + 1
+            clock[0] = 111
+            await app.async_maintain_resident(power=True)
+            assert app._resident_retry == 141
+        app.web.async_launch_app.assert_not_awaited()
+        assert app.startup is None
     finally:
         await layouts.async_close()

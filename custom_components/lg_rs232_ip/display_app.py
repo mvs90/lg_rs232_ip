@@ -25,7 +25,7 @@ from .resident_app import ResidentApp, SI_APP_ID
 from .platform_diagnostics import PlatformDiagnostics
 from .web_manager import LGWebError
 
-APP_VERSION = "1.15.1"
+APP_VERSION = "1.16.0"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -138,6 +138,7 @@ class DisplayAppManager(ResidentApp):
                         "grain.png",
                         "camera.js",
                         "offline.js",
+                        "startup.js",
                         "platform.js",
                         "wall.js",
                         "test-stream.m3u8",
@@ -492,6 +493,7 @@ class DisplayAppManager(ResidentApp):
             "pip": self.pip_selected,
             "media_view": self.media_view_selected,
             "selected_view": self.selected_view,
+            "startup": self.startup,
             "capture": self._capture,
             "diagnostics": self.platform.ticket,
             "offline_enabled": self.resident and self.entry.options.get("display_app_offline", False),
@@ -711,6 +713,8 @@ class DisplayAppView(HomeAssistantView):
                 content_type="text/cache-manifest",
                 headers={**headers, "Cache-Control": "no-cache"},
             )
+        if resource == "startup":
+            return web.json_response({"startup": manager.startup}, headers=headers)
         if resource == "state":
             return web.json_response(
                 await manager.async_state(request.query.get("since")), headers=headers
@@ -801,6 +805,7 @@ class DisplayAppView(HomeAssistantView):
             "grain.png": "image/png",
             "camera.js": "application/javascript",
             "offline.js": "application/javascript",
+            "startup.js": "application/javascript",
             "platform.js": "application/javascript",
             "wall.js": "application/javascript",
             "test-stream.m3u8": "application/vnd.apple.mpegurl",

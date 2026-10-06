@@ -7,11 +7,18 @@ async function mount(page, state) {
   const events = [];
   await page.route('http://display-app.test/**', async route => {
     const name = new URL(route.request().url()).pathname.split('/').pop();
-    if (state.offline && ['state','event'].includes(name)) return route.fulfill({status:503,body:''});
+    if (state.offline && ['state','event','startup'].includes(name)) return route.fulfill({status:503,body:''});
     if(name === 'camera.json')return route.fulfill({contentType:'application/json',body:JSON.stringify({stream:state.cameraStream || null})});
     if(name === 'camera.jpg'){state.cameraFrames=(state.cameraFrames || 0)+1;return route.fulfill({contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});}
+    if (name === 'startup') {
+      const body = JSON.stringify({startup:state.startup || null});
+      if (state.onStartupRead) state.onStartupRead();
+      if (state.delayStartup) await new Promise(resolve => setTimeout(resolve,state.delayStartup));
+      return route.fulfill({contentType:'application/json',body});
+    }
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.15.1', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
+      if (state.delayState) await new Promise(resolve => setTimeout(resolve,state.delayState));
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.16.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -919,4 +926,56 @@ test('online startup never flashes a notice; a silent first request times out af
   await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
   await expect(page.locator('#startup-notice')).toBeHidden();
   await page.clock.fastForward(10000);await expect(page.locator('#startup-notice')).toBeHidden();
+});
+
+for (const view of ['dashboard','pip_view','media_view']) {
+  test(`startup shows fresh ${view} intent and clears when its layout is rendered`, async ({page}, testInfo) => {
+    if (view==='media_view') await page.setViewportSize({width:3840,height:2160});
+    const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed(),startup:{id:'boot',view,label:'Meine Ansicht',remaining:60}};
+    await mount(page,state);
+    await expect(page.locator('#startup-screen')).toBeVisible();
+    await expect(page.locator('#startup-target')).toHaveText('Meine Ansicht wird gestartet …');
+    await expect(page.locator('#hdmi-slot')).toHaveCSS('visibility','hidden');
+    if (view==='media_view') await page.screenshot({path:testInfo.outputPath('startup-4k.png')});
+    await page.evaluate(()=>{window.bootHDMI=document.querySelector('video');});
+    state.selected_view=view;state.input_request='ready';
+    await expect(page.locator('#startup-screen')).toBeHidden();
+    expect(await page.evaluate(()=>window.bootHDMI===document.querySelector('video'))).toBe(true);
+    state.startup=null;
+    await expect(page.locator('body')).not.toHaveAttribute('data-starting');
+  });
+}
+
+test('HDMI boot never displays splash or previous media view, including delayed bootstrap', async ({page}) => {
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed(),media_view:true,selected_view:'media_view',delayStartup:700,startup:{id:'old',view:'media_view',label:'Alt',remaining:60}};
+  // Capture a stale early answer, then let the regular state describe the newer HDMI request.
+  state.onStartupRead=()=>{state.startup={id:'new',view:'hdmi_full',label:'HDMI',remaining:60};};
+  await mount(page,state);
+  await expect(page.locator('#startup-screen')).toBeHidden();
+  await expect(page.locator('#hdmi-slot')).toBeVisible();
+  await expect(page.locator('.lg-media')).toHaveCount(0);
+  await page.waitForTimeout(900);
+  await expect(page.locator('#startup-screen')).toBeHidden();
+  await expect(page.locator('#hdmi-slot')).toHaveCSS('visibility','visible');
+});
+
+test('early startup indicator appears before the main state and has a bounded lifetime', async ({page}) => {
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed(),delayState:1500,startup:{id:'boot',view:'media_view',label:'Mediaplayer',remaining:60}};
+  await page.clock.install();
+  await mount(page,state);
+  await expect(page.locator('#startup-screen')).toBeVisible({timeout:1000});
+  await page.clock.fastForward(61000);
+  await expect(page.locator('#startup-screen')).toBeHidden();
+});
+
+test('withdrawn startup and offline recovery never leave a stale splash over HDMI', async ({page}) => {
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed(),startup:{id:'boot',view:'media_view',label:'Mediaplayer',remaining:60}};
+  await mount(page,state);
+  await expect(page.locator('#startup-screen')).toBeVisible();
+  state.startup=null;
+  await expect(page.locator('#startup-screen')).toBeHidden();
+  await expect(page.locator('#hdmi-slot')).toBeVisible();
+  state.offline=true;
+  await page.waitForTimeout(300);
+  await expect(page.locator('#startup-screen')).toBeHidden();
 });

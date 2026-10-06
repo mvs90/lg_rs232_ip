@@ -1,6 +1,7 @@
 """Optional SI lifecycle; an idle HDMI app never owns a presentation lease."""
 
 import asyncio
+from contextlib import contextmanager
 import secrets
 import time
 
@@ -26,6 +27,50 @@ class ResidentApp:
         self._input_request = None
         self._input_transition = "none"
         self._input_applied = asyncio.Event()
+        self._startup = None
+
+    @property
+    def startup(self):
+        """Current, bounded intent only; never persist a splash in the offline cache."""
+        value = self._startup
+        if (
+            value is None
+            or self.closed
+            or self.controller._ha_stopping
+            or value["generation"] != self.controller._view_generation
+            or time.monotonic() >= value["deadline"]
+        ):
+            return None
+        return {
+            "id": value["id"],
+            "view": value["view"],
+            "label": value["label"],
+            "remaining": max(0, value["deadline"] - time.monotonic()),
+        }
+
+    def cancel_startup(self):
+        if self._startup is not None:
+            self._startup = None
+            self.changed()
+
+    @contextmanager
+    def starting(self, view, generation):
+        intent = None
+        if not self.resident_connected:
+            wake_timeout = self.entry.options.get("display_wake_timeout", 60)
+            intent = self._startup = {
+                "id": secrets.token_hex(8),
+                "generation": generation,
+                "view": view,
+                "label": self.view_sources.get(view, "HDMI"),
+                "deadline": time.monotonic() + wake_timeout + max(90, wake_timeout),
+            }
+            self.changed()
+        try:
+            yield
+        finally:
+            if intent is not None and self._startup is intent:
+                self.cancel_startup()
 
     @property
     def resident_connected(self):
@@ -278,7 +323,10 @@ class ResidentApp:
             return
         async with controller._control_lock:
             try:
-                foreground = await self.web.async_foreground_app()
+                # A powering-up web service can accept TCP before answering HTTP.
+                # Bound only this read, never an input/settings mutation.
+                async with asyncio.timeout(4 if self.startup else None):
+                    foreground = await self.web.async_foreground_app()
                 if self.saved.get("resident"):
                     if not await self.async_owns_si():
                         self._resident_foreground = None
@@ -323,9 +371,9 @@ class ResidentApp:
                     await self.web.async_launch_app(SI_APP_ID)
                 self._resident_foreground = SI_APP_ID
                 self.last_error = None
-            except (LGWebError, HomeAssistantError):
+            except (LGWebError, HomeAssistantError, TimeoutError):
                 self.last_error = "resident_start_failed"
-                self._resident_retry = time.monotonic() + 30
+                self._resident_retry = time.monotonic() + (5 if self.startup else 30)
             finally:
                 self._notify()
 

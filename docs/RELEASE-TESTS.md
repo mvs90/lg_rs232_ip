@@ -1,5 +1,19 @@
 # Release acceptance
 
+## LG 2.20.0: view-specific startup screen and bounded fast recovery — 2026-10-06
+
+**404 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 98 display-app browser cases pass in Chromium/WebKit.** Additional 4K rendering checks cover the Mediaplayer start screen. Tests verify non-persistent, paired and uncached startup intents, cancellation by input/off/shutdown, five-second startup versus thirty-second normal backoff, stale bootstrap replies, target-render dismissal, local expiry and HDMI with a previously selected media view.
+
+Installed LG 2.20.0 / app 1.16.0 in the existing HA 2026.9.4 container and tested the physical 75UH5F-HJ:
+
+- Confirmed standby plus ten seconds, then only App-Mediaplayer: **51.8 seconds** to completed service/confirmed view. A second measured run took **53.8 seconds**. The previous 2.19.1 run took 53.2 seconds: these samples do **not** establish a substantial improvement in total startup time.
+- Starting App-HDMI 1 with Mediaplayer previously selected completed in **50.8 seconds**. The client confirmed `hdmi_full`, and the final native capture showed the actual Apple TV HDMI picture without the loading screen. Browser tests additionally cover the entire pending-HDMI phase and late bootstrap responses.
+- Timing-only probes showed the app requesting its startup hint and first state about **19–20 seconds** after power-on; native web-login connections still failed during the following phase and foreground/settings verification succeeded around 50 seconds. No launch loop or fallback to another input was introduced.
+- A screenshot delivered through the real app-backed HA camera during the pending Mediaplayer request visibly shows **“Mediaplayer wird gestartet …”**. Later frames show the requested media layout. This verifies the loader on the physical panel, beyond mocked browser rendering. It does not establish an image during the earlier firmware phase.
+- Fresh OSD readback and schema-normalized saved libraries match the original values after each cycle. The final source is App-Mediaplayer, with the app connected. Power modes, boot logo, saved views, Sonos, Apple TV and socket settings were not changed.
+
+Temporary timing wrappers were removed and the source-tree production component was redeployed. Private captures, credentials, pairing URLs and test timing records remain outside Git. Standby-cycle results do not imply AC-loss or other-model boot-time guarantees.
+
 ## LG 2.19.1: select an app source directly from standby — 2026-10-06
 
 **397 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14.** Regression tests hold the app unavailable for a simulated 65 seconds, then verify the originally requested Mediaplayer view/App-HDMI is applied without a background HA poll. Further cases cover native web backoff, no relaunch of an already foreground SI app, takeover by another input/power-off/shutdown, bounded timeout and no replay of expired requests.

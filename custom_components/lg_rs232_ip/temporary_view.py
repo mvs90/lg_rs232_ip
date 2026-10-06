@@ -2,6 +2,8 @@
 
 import asyncio
 
+from .const import DOMAIN
+
 
 class TemporaryView:
     def _init_temporary_view(self):
@@ -12,6 +14,13 @@ class TemporaryView:
 
     def _cancel_temporary_view(self):
         self._view_generation += 1
+        app = (
+            self.hass.data.get(DOMAIN, {})
+            .get(self._config_entry.entry_id, {})
+            .get("display_app")
+        )
+        if app:
+            app.cancel_startup()
         self._view_lease = None
         self._view_pending_previous = None
         if self._view_timer:

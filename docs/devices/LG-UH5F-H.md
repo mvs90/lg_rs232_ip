@@ -315,3 +315,10 @@ Offline support: `applicationCache` exists on Chromium 53. The page is not a sec
 Multicast acceptance used a bounded H.264/yuv420p MPEG-TS sender with TTL 1 and an explicit LAN interface. Two captures three seconds apart confirmed changing test-video content alongside HDMI. The production Studio view, timed return and decoder teardown were exercised, then the original view library was restored. Network routing/IGMP settings were not changed. Continue testing other codec/resolution combinations individually.
 
 Still requiring additional equipment or interfaces: two active HDMI inputs, synchronized video across multiple panels, compatible external sensors, and native continuous HDMI encoding/export. HA entity widgets already provide an independent path for room/environment data without relying on unsupported LG sensors.
+
+
+## Startup timing and display indication (2.20, 2026-10-06)
+
+On the tested 75UH5F-HJ, a confirmed standby followed by an explicit app-source selection gives a power ACK quickly, then starts the cached SI app's requests after roughly 19–20 seconds. The native LG web login can still fail with connection errors until approximately 50 seconds. Thus browser readiness and native web-control readiness are separate phases; shortening reconnect backoff alone does not guarantee a faster overall start. Measured Mediaplayer completion was 51.8/53.8 seconds and App-HDMI 1 was 50.8 seconds.
+
+The static start screen is confirmed in a capture returned by the physical app during the Mediaplayer wait. It uses a fresh HA request rather than a remembered boot target. Full-screen HDMI bypasses it; a pending HDMI start also ignores a previously saved non-HDMI scene until normal acknowledgement. The web API's earlier unavailability is not evidence that the app cannot render local HTML. Conversely, the app cannot draw before the LG SI browser runs. The existing USB boot-logo workflow and power modes remain independent.
