@@ -248,7 +248,7 @@ class DisplayController(TemporaryView, NativeControls):
             ) from None
         return False
 
-    async def async_select_app_view(self, view, *, transition="none", duration=0):
+    async def async_select_app_view(self, view, *, transition="none", duration=0, theme=None):
         view = "pip_view" if view == "pip" else view
         if type(duration) is not int or not 0 <= duration <= 3600:
             raise HomeAssistantError("Use a view duration between 0 and 3600 seconds")
@@ -269,6 +269,11 @@ class DisplayController(TemporaryView, NativeControls):
             )
         if self.external_owner:
             raise HomeAssistantError("An external presentation owns the display")
+        if theme is not None:
+            try:
+                app.layouts.validate_theme(theme)
+            except ValueError as err:
+                raise HomeAssistantError(str(err)) from err
         previous = (
             self._view_lease["previous"]
             if duration and self._view_lease
@@ -299,6 +304,11 @@ class DisplayController(TemporaryView, NativeControls):
                 else:
                     await app.async_select_view(view, transition=transition)
                     self._source = self.app_view_sources[view]
+                if theme is not None:
+                    try:
+                        await app.layouts.async_set_theme(theme)
+                    except ValueError as err:
+                        raise HomeAssistantError(str(err)) from err
                 self.async_write_ha_state()
                 if duration:
                     self._schedule_view_return(

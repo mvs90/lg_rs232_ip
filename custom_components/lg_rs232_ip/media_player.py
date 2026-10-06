@@ -43,6 +43,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
                 vol.Optional("duration", default=0): vol.All(
                     cv.positive_int, vol.Range(min=0, max=3600)
                 ),
+                vol.Optional("theme"): vol.All(cv.string, vol.Length(max=80)),
             },
             "async_show_view",
         ),
@@ -420,10 +421,10 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
 
             raise asyncio.CancelledError
 
-    async def async_show_view(self, view, transition="none", duration=0):
+    async def async_show_view(self, view, transition="none", duration=0, theme=None):
         """Display a saved Studio view, optionally animating its HDMI geometry."""
         await self.controller.async_select_app_view(
-            view, transition=transition, duration=duration
+            view, transition=transition, duration=duration, **({"theme": theme} if theme else {})
         )
 
     async def async_select_source(self, source):

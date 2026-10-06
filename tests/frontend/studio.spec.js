@@ -662,3 +662,90 @@ test('Studio cancels pending cover fetches when disconnected',async({page})=>{
   await page.evaluate(()=>studio.remove());
   expect(await page.evaluate(()=>signals.every(signal=>signal.aborted))).toBe(true);
 });
+
+const viewContent=page=>page.evaluate(()=>studio.config.views.map(v=>({id:v.id,elements:v.scene.elements.map(({color,background,accent_color,...item})=>item)})));
+
+test('global themes preserve layout and content, manual appearance overrides can return to inheritance',async({page})=>{
+  await mount(page);
+  const before=await viewContent(page);
+  await expect(page.getByRole('heading',{name:'Themes & Hintergründe'})).toBeVisible();
+  await expect(page.locator('.theme-card')).toHaveCount(4);
+  await page.getByRole('button',{name:'Aurora als Standard-Theme',exact:true}).click();
+  expect(await viewContent(page)).toEqual(before);
+  expect(await page.evaluate(()=>studio.config.views.every(v=>v.scene.background==='aurora'&&!v.theme_override))).toBe(true);
+  await openView(page,'Dashboard');
+  await page.locator('.layer .name').filter({hasText:'Text'}).click();
+  await page.getByLabel('Text',{exact:true}).fill('Bleibt erhalten');await page.getByLabel('Text',{exact:true}).press('Tab');
+  expect(await page.evaluate(()=>studio.view.theme_override)).toBe(false);
+  await page.getByLabel('Hintergrund',{exact:true}).selectOption('ocean');
+  expect(await page.evaluate(()=>studio.view.theme_override)).toBe(true);
+  await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
+  await page.getByRole('button',{name:'Sonnenstand als Standard-Theme',exact:true}).click();
+  expect(await page.evaluate(()=>studio.config.scenes.dashboard.background)).toBe('ocean');
+  expect(await page.evaluate(()=>studio.config.scenes.pip_view.background)).toBe('solar');
+  expect(await page.evaluate(()=>studio.config.scenes.startup.background)).toBe('dawn');
+  await openView(page,'Dashboard');
+  await page.locator('[data-action=theme-follow]').click();
+  expect(await page.evaluate(()=>studio.view.theme_override)).toBe(false);
+  expect(await page.evaluate(()=>studio.scene.background)).toBe('solar');
+  expect(await page.evaluate(()=>studio.scene.elements.find(i=>i.kind==='text').text)).toBe('Bleibt erhalten');
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await page.evaluate(()=>{studio.remove();document.body.append(studio);});
+  await expect(page.locator('.theme-manager-status')).toContainText('Standard: Sonnenstand');
+  expect(await page.evaluate(()=>saved.active_theme)).toBe('morning');
+});
+
+test('saved custom theme manages Sonos backgrounds and palette, supports reset delete and undo on mobile',async({page})=>{
+  await mount(page,390);
+  await page.evaluate(()=>{hass.states['media_player.sonos']={entity_id:'media_player.sonos',state:'idle',attributes:{friendly_name:'Sonos Wohnzimmer'}};studio.hass={...hass};});
+  await page.getByRole('button',{name:'＋ Neues Theme',exact:true}).click();
+  await expect(page.locator('.inspector')).toBeHidden();
+  await expect(page.locator('.context-tabs')).toBeHidden();
+  await page.getByLabel('Name des Themes').fill('Wohnzimmer');await page.getByLabel('Name des Themes').press('Tab');
+  await page.locator('#background').selectOption('solar');
+  await page.locator('#media-background-enabled').check();
+  await page.locator('#media-background-entity').selectOption('media_player.sonos');
+  await page.locator('#media-background-fit').selectOption('colors');
+  await page.locator('#media-background-color-source').selectOption('cover');
+  await page.locator('#theme-ink').fill('#fedcba');
+  await page.locator('[data-action=theme-use]').click();
+  const id=await page.locator('#theme-id').inputValue();
+  const settings=await page.evaluate(()=>({theme:studio.theme,views:studio.config.views}));
+  expect(settings.theme.style.media_background_entity).toBe('media_player.sonos');
+  for(const v of settings.views){
+    expect(v.scene.media_background_enabled).toBe(v.id!=='startup');
+    expect(v.scene.media_background_color_source).toBe('cover');
+    if(v.id==='startup')expect(v.scene.media_background_entity).toBe('');
+    for(const item of v.scene.elements)if(item.kind!=='hdmi')expect(item.color).toBe('#fedcba');
+  }
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
+  await page.getByRole('button',{name:'Wohnzimmer Theme löschen',exact:true}).click();
+  expect(await page.evaluate(()=>studio.config.active_theme)).toBe('cinema');
+  await page.getByTitle('Rückgängig',{exact:true}).click();
+  expect(await page.evaluate(()=>studio.config.active_theme)).toBe(id);
+  await page.getByRole('button',{name:'＋ Neue Ansicht',exact:true}).click();
+  await page.getByLabel('Name',{exact:true}).fill('Neue Quelle');
+  await page.getByRole('button',{name:'Ansicht anlegen',exact:true}).click();
+  expect(await page.evaluate(()=>studio.scene.media_background_entity)).toBe('media_player.sonos');
+  expect(await page.evaluate(()=>studio.view.theme_override)).toBe(false);
+});
+
+test('theme palette remains editable without any dashboard widgets and undo restores theme draft',async({page})=>{
+  await mount(page);
+  await page.evaluate(()=>{studio.config.views.find(v=>v.id==='dashboard').scene.elements=[];studio.compileViews();studio.renderOverview();});
+  await page.getByRole('button',{name:'Cinema Theme bearbeiten',exact:true}).click();
+  await page.locator('#theme-ink').fill('#112233');
+  expect(await page.evaluate(()=>studio.theme.style.ink)).toBe('#112233');
+  await page.getByTitle('Rückgängig',{exact:true}).click();
+  expect(await page.evaluate(()=>studio.theme.style.ink)).not.toBe('#112233');
+  await page.getByTitle('Wiederholen',{exact:true}).click();
+  await expect(page.locator('#theme-ink')).toHaveValue('#112233');
+  await page.locator('[data-action=theme-use]').click();
+  expect(await page.evaluate(()=>studio.config.scenes.overlay.elements.find(i=>i.kind!=='hdmi').color)).toBe('#112233');
+  await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
+  await page.locator('[data-reset-theme=cinema]').click();
+  expect(await page.evaluate(()=>studio.config.themes[0].style.ink)).not.toBe('#112233');
+  expect(await page.evaluate(()=>studio.config.scenes.dashboard.elements)).toEqual([]);
+});

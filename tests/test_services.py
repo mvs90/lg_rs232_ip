@@ -70,6 +70,17 @@ async def test_real_entity_services_target_registered_display(tmp_path):
         player.controller.async_select_app_view.assert_awaited_once_with(
             "hdmi_full", transition="smooth", duration=0
         )
+        for theme in ("morning", ""):
+            player.controller.async_select_app_view.reset_mock()
+            await hass.services.async_call(
+                "lg_rs232_ip", "show_view",
+                {"entity_id": player.entity_id, "view": "dashboard", "theme": theme},
+                blocking=True,
+            )
+            player.controller.async_select_app_view.assert_awaited_once_with(
+                "dashboard", transition="none", duration=0,
+                **({"theme": theme} if theme else {}),
+            )
         with pytest.raises(vol.Invalid):
             await hass.services.async_call(
                 "lg_rs232_ip",

@@ -110,7 +110,20 @@ class DisplayLayouts:
     def all_scenes(self):
         return list(self.config["scenes"].values()) + [
             view["scene"] for view in self.library["views"]
-        ]
+        ] + [theme["style"] for theme in self.library.get("themes", [])]
+
+    def validate_theme(self, theme):
+        if not isinstance(theme, str) or not any(row["id"] == theme for row in self.library.get("themes", [])):
+            raise ValueError("Unknown Studio theme ID")
+        validate_library({**self.library, "active_theme": theme}, self.config)
+
+    async def async_set_theme(self, theme):
+        self.validate_theme(theme)
+        if self.library.get("active_theme") == theme:
+            return
+        library = deepcopy(self.library)
+        library["active_theme"] = theme
+        await self.async_save(self.config, self.revision, library)
 
     async def async_save(self, config, expected_revision, library=None):
         config = validate_layout(config)
@@ -123,7 +136,7 @@ class DisplayLayouts:
             config, library = validate_library(library, config)
             images = {
                 scene["image_id"]
-                for scene in [v["scene"] for v in library["views"]]
+                for scene in [v["scene"] for v in library["views"]] + [t["style"] for t in library["themes"]]
                 if scene["image_id"]
             }
             if images and not images.issubset(set(await self.backgrounds.async_list())):

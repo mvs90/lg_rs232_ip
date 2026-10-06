@@ -2193,3 +2193,31 @@ async def test_startup_design_route_is_paired_static_and_not_embedded_in_every_s
             assert app.attributes['startup_design'] == {'version':design['version'],'cached':True,'image_cached':False}
     finally:
         await layouts.async_close()
+
+
+async def test_view_theme_is_validated_before_wake_and_persists_after_temporary_return(app):
+    layouts = await configure_dashboard(app)
+    controller = app.controller
+    controller._config_entry = app.entry
+    controller.power = True
+    original = layouts.revision
+    try:
+        with patch.object(controller, 'async_ensure_on', new_callable=AsyncMock) as wake:
+            with pytest.raises(HomeAssistantError, match='Unknown Studio theme'):
+                await controller.async_select_app_view('dashboard', theme='missing')
+            wake.assert_not_awaited()
+        assert layouts.revision == original
+        with patch.object(app, 'async_select_view', new_callable=AsyncMock, side_effect=HomeAssistantError('failed')):
+            with pytest.raises(HomeAssistantError, match='failed'):
+                await controller.async_select_app_view('dashboard', theme='aurora')
+        assert layouts.revision == original
+        await acknowledge_selection(app, controller.async_select_app_view('dashboard', theme='morning', duration=30))
+        assert layouts.library['active_theme'] == 'morning'
+        assert layouts.config['scenes']['dashboard']['background'] == 'solar'
+        assert layouts.config['scenes']['startup']['background'] == 'dawn'
+        await acknowledge_selection(app, controller._async_return_view(app, controller._view_lease))
+        assert app.selected_view is None
+        assert layouts.library['active_theme'] == 'morning'
+    finally:
+        controller._cancel_temporary_view()
+        await layouts.async_close()

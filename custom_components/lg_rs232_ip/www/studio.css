@@ -10,3 +10,11 @@ header{position:sticky;top:0;z-index:300}
 .primary-views h2,.notification-views h2{font-size:18px;margin:0 0 18px}.notification-views{margin-top:36px;padding-top:26px;border-top:1px solid var(--line)}.notification-views>p{font-size:13px;color:var(--muted);margin:-6px 0 22px;line-height:1.6}
 
 .display-control{display:inline-flex;max-width:100%;align-items:stretch}.display-control .small{border-radius:9px 0 0 9px}.display-transition{font-size:11px;padding:6px;max-width:112px;cursor:pointer}.display-control .display-transition{border-radius:0 9px 9px 0;border-left:0}.output-controls>.display-transition{font-size:12px;padding:10px 8px}
+
+/* Shared theme editor uses the same appearance controls without layout editing. */
+.workspace.theme-editing{grid-template-columns:240px minmax(0,1fr)}
+.theme-card .mini{margin:12px;border-radius:10px}.theme-card code{overflow-wrap:anywhere}
+.theme-manager-status{color:var(--muted);font-size:13px}.template-options{margin-top:18px}
+@media(max-width:650px){.workspace.theme-editing{display:flex}.theme-id-field{min-width:100%}}
+
+.theme-card{overflow:hidden;border:1px solid var(--line);border-radius:16px;background:var(--surface)}

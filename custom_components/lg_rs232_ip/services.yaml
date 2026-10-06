@@ -45,6 +45,11 @@ show_view:
       domain: media_player
       integration: lg_rs232_ip
   fields:
+    theme:
+      name: Studio theme ID
+      description: Optional saved theme ID (cinema, aurora, morning, sand, or theme_...). After the view is shown successfully, selects this as the persistent global theme. Manual view overrides remain; duration returns only the view, not the global theme.
+      selector:
+        text: {}
     view:
       name: View ID
       description: hdmi_full, dashboard, pip_view, media_view, or a saved custom view ID.

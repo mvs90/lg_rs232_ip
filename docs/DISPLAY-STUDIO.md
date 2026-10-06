@@ -1,6 +1,6 @@
 # LG Display Studio
 
-Ab **LG Professional Display 2.23.0 / App 1.19.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
+Ab **LG Professional Display 2.24.0 / App 1.19.0** beginnt das Studio mit **Nur HDMI**, den weiteren festen Ansichten und eigenen Ansichten. Die drei Mitteilungen stehen in einer eigenen Sektion darunter. Nach dem Update Home Assistant neu starten und die Browserseite neu laden. Das Studio erscheint automatisch in der Seitenleiste; kein weiteres HACS-Paket ist nötig.
 
 Die App bleibt optional. Für dauerhafte Quellen müssen **Display-App**, **SI-App**, **SI-Dauerbetrieb mit automatischem Start** und **Eigenes Layout verwenden** aktiv sein. Das Öffnen und Bearbeiten installiert keine SI-App und weckt das Display nicht. **Anzeigen** ist eine ausdrückliche Quellenwahl und kann das mit Strom versorgte Display wecken.
 
@@ -17,15 +17,47 @@ Die App bleibt optional. Für dauerhafte Quellen müssen **Display-App**, **SI-A
 | Mitteilung PiP | Zeitlich begrenzte Mitteilung mit HDMI-Fenster |
 | Mitteilung Vollbild | Zeitlich begrenzte Vollbildmitteilung |
 
-Diese acht Ansichten lassen sich gestalten und duplizieren. Namen und Vorhandensein sind fest: Umbenennen und Löschen sind gesperrt, auch in der API. **Standard wiederherstellen** setzt ausschließlich die gewählte Ansicht auf ihre Cinema-Grundgestaltung zurück, einschließlich Widgets, Hintergründen und Entitätsbindungen. Die Schaltfläche steht in der Übersicht und im Editor. Erst **Speichern** übernimmt die Änderung; **Rückgängig** holt den vorherigen Entwurf zurück.
+Diese acht Ansichten lassen sich gestalten und duplizieren. Namen und Vorhandensein sind fest: Umbenennen und Löschen sind gesperrt, auch in der API. **Standard wiederherstellen** setzt ausschließlich die gewählte Ansicht auf ihren Cinema-Grundaufbau zurück, einschließlich Widgets und Entitätsbindungen. Farben und Hintergrund folgen danach wieder dem gewählten Standard-Theme. Die Schaltfläche steht in der Übersicht und im Editor. Erst **Speichern** übernimmt die Änderung; **Rückgängig** holt den vorherigen Entwurf zurück.
 
-**Neue Ansicht** oder eine Vorlage (**Cinema**, **Aurora**, **Sonnenstand**, **Paper & Sand**) legt eine unabhängige Ansicht an. Name und Aufbau wählen, Inhalte gestalten und speichern: Sie erscheint automatisch als eigene Quelle am LG-Mediaplayer und in der Fernbedienung. Eine weitere Zuordnung entfällt vollständig. Auch Kopien fester Ansichten sind eigene Quellen. Eigene Ansichten lassen sich umbenennen, duplizieren und löschen; ihre interne Kennung bleibt beim Umbenennen erhalten. Beim Löschen einer gerade angezeigten Ansicht wechselt das Display zum Dashboard. Die festen Mitteilungsansichten bleiben zeitlich begrenzte Aktionen; sie sind keine dauerhaften Quellen.
+**Neue Ansicht** legt eine unabhängige Ansicht an. Als Ausgangspunkt für den Aufbau stehen weiterhin **Cinema**, **Aurora**, **Sonnenstand** und **Paper & Sand** zur Auswahl. Farben und Hintergrund folgen anschließend dem gewählten Standard-Theme. Name und Aufbau wählen, Inhalte gestalten und speichern: Sie erscheint automatisch als eigene Quelle am LG-Mediaplayer und in der Fernbedienung. Eine weitere Zuordnung entfällt vollständig. Auch Kopien fester Ansichten sind eigene Quellen. Eigene Ansichten lassen sich umbenennen, duplizieren und löschen; ihre interne Kennung bleibt beim Umbenennen erhalten. Beim Löschen einer gerade angezeigten Ansicht wechselt das Display zum Dashboard. Die festen Mitteilungsansichten bleiben zeitlich begrenzte Aktionen; sie sind keine dauerhaften Quellen.
 
 **Bearbeiten** öffnet genau eine Ansicht. Links stehen Farbthemes und Hintergründe, rechts Widgets und Inhalte. Ein Theme verändert ausschließlich Farben und Hintergrund; Entitäten, Texte, Positionen, Größen und Reihenfolge bleiben erhalten. **Alle Ansichten** erhält offene Entwürfe. **Speichern** übernimmt die gesamte Bibliothek gemeinsam. Die App aktualisiert gespeicherte Änderungen ohne Quellenwechsel. **Anzeigen** verwendet stets die gespeicherte Quelle; offene Entwürfe werden dabei nicht automatisch gespeichert. In der Galerie müssen offene Änderungen zuerst gespeichert werden.
 
 Es gibt **acht feste und bis zu 24 eigene Ansichten**, jeweils mit höchstens 16 Widgets. Über alle verwendbaren Ansichten gilt weiterhin die gemeinsame Grenze von 32 Entitäten. **Rückgängig/Wiederholen** umfasst Gestaltung, Anlegen, Duplizieren, Löschen und Zurücksetzen innerhalb der Editorsitzung. Versionsprüfungen verhindern, dass ein alter Editor neuere Änderungen überschreibt.
 
 Beim Update auf 2.21 wird nur die Standard-**Startanzeige** ergänzt; alle bisherigen Gestaltungen bleiben erhalten. Beim Update von 2.14 wird ausschließlich die neue Standardansicht **Nur HDMI** ergänzt; sämtliche vorhandenen Ansichten bleiben erhalten. Bei älteren Versionen werden bestehende Zuordnungen einmalig in die entsprechenden festen Ansichten übernommen. Mehrfach verwendete Designs werden unabhängig kopiert. Übrige eigene und frühere Ohne-HDMI-Ansichten bleiben als eigene Quellen erhalten und können gelöscht werden. Inhalte, Entitäten und Hintergründe werden dabei bewahrt. Das Format wird erst beim nächsten Speichern dauerhaft umgestellt. Die bisherige Quelle **PiP** heißt jetzt **Dashboard PiP**; vorhandene Automationen mit einem fest eingetragenen Quellennamen entsprechend anpassen.
+
+## Themes und Hintergründe gemeinsam verwalten
+
+Der frühere Bereich **Vorlagen als Ausgangspunkt** heißt jetzt **Themes & Hintergründe**. Ein gespeichertes Theme enthält die Text-, Karten- und Akzentfarben sowie den vollständigen Hintergrund: Farbverlauf/Sonnenstand, eigenes Bild mit Einpassung und Abdunklung oder einen Medienplayer mit Cover bzw. nur Coverfarben. Die Auswahl Rand/Gesamtes Cover und die bisherige Cover-Pufferung gelten auch hier. Bei inaktiver Wiedergabe erscheint der normale Hintergrund des Themes.
+
+**Bearbeiten** öffnet ausschließlich die Gestaltung des Themes mit einer Vorschau anhand des Dashboards. Die Inhalte der Ansichten werden dabei nicht bearbeitet. **Als Standard** wählt das Theme für alle folgenden Ansichten; **Speichern** überträgt die Änderung gemeinsam auf das Display, ohne HDMI neu zu schalten. Änderungen am aktiven Theme wirken auf alle folgenden Ansichten. Auch neue Ansichten folgen diesem Standard.
+
+Vier mitgelieferte Themes sind bearbeitbar und mit **Theme zurücksetzen** wiederherstellbar. **Neues Theme** kopiert das aktuelle Theme; zusätzlich sind bis zu 20 eigene Themes möglich. Diese lassen sich umbenennen, duplizieren und löschen. Beim Löschen des aktiven eigenen Themes wird Cinema zum Standard. Theme-IDs bleiben beim Umbenennen stabil und stehen auf den Karten sowie im Theme-Editor.
+
+Wenn du Farben oder Hintergrund direkt in einer Ansicht veränderst, erhält diese eine **eigene Theme-Abweichung**. Diese umfasst ihre Gestaltung und bleibt bei späteren globalen Theme-Wechseln erhalten. Änderungen an Texten, Entitäten, Größen, Positionen oder Transparenz lösen keine solche Abweichung aus. **Theme-Standard wiederherstellen** entfernt nur die Abweichung und behält sämtliche Widgets und deren Anordnung. **Alle Ansichten dem Standard folgen lassen** entfernt alle Abweichungen gemeinsam. Das vollständige **Standard wiederherstellen** einer festen Ansicht setzt dagegen auch deren Inhalt und Aufbau zurück.
+
+Die Startanzeige übernimmt nur offlinefähige Bestandteile: Beim Sonnenstand wird ein statischer warmer Verlauf verwendet, Medienplayer-Hintergründe und deren Entitätsbindung entfallen. Die zugrunde liegenden Farben bzw. das gespeicherte Bild bleiben verfügbar. Ein Theme ersetzt keine Inhalte durch Live-Widgets.
+
+Vorhandene Gestaltungen bleiben beim Update zunächst unverändert. Alle Ansichten sind für die Vererbung vorgemerkt; mit der ersten Auswahl **Als Standard** folgen sie dem gewählten Theme, sofern du sie nicht vorher individuell anpasst. Bilder in inaktiven Themes werden bei der Bereinigung unbenutzter Hintergrundbilder berücksichtigt. Export und Import enthalten Themes und Vererbungsstatus; Bilddateien müssen weiterhin separat übertragen werden.
+
+### Theme beim Anzeigen durch eine Automation wählen
+
+```yaml
+action: lg_rs232_ip.show_view
+target:
+  entity_id: media_player.lg_display_display
+data:
+  view: dashboard
+  theme: morning
+  transition: smooth
+```
+
+Die Aktion hat im Home-Assistant-Editor das optionale Feld **Studio theme ID**. Die mitgelieferten Kennungen sind `cinema`, `aurora`, `morning` (Sonnenstand) und `sand`. Eigene Kennungen beginnen mit `theme_` und können aus dem Studio übernommen werden. Ein leeres oder ausgelassenes Feld lässt das globale Theme unverändert. Unbekannte Kennungen werden vor dem Aufwecken oder Quellenwechsel abgelehnt.
+
+Nach erfolgreicher Anzeige wird das gewählte Theme als globaler Standard gespeichert; individuelle Ansichtsabweichungen bleiben erhalten. Auch später eingeblendete Mitteilungen folgen diesem Standard. Eine optionale `duration` setzt nach Ablauf nur die Ansicht zurück, **nicht das globale Theme**. Die Auswahl bleibt über einen HA-Neustart erhalten. Ein bereits geöffneter Studio-Entwurf kann diese Änderung nicht unbemerkt überschreiben; zum Weiterbearbeiten die Seite neu laden.
+
+Die mitgelieferte Ereignisansicht-Blaupause enthält ebenfalls ein optionales Theme-Feld. Bereits installierte Blaupausen werden zum Schutz eigener Anpassungen nicht überschrieben; bei Bedarf aus der im Blueprint angegebenen GitHub-Adresse neu importieren oder die obige Aktion direkt verwenden.
 
 ## Eine Ansicht gestalten
 

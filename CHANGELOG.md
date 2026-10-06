@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.24.0
+
+- Replace the starting-template gallery with saved, editable visual themes: four resettable defaults and up to 20 custom themes, including images, solar backgrounds and Sonos/other media artwork settings.
+- Let all views inherit the selected global theme while preserving content and geometry. Direct appearance edits create an individual override; restore just the theme or make all views follow again. Keep startup backgrounds offline-safe and retain existing appearances until the first theme selection.
+- Add the optional `theme` field to `lg_rs232_ip.show_view` and the event-view blueprint. Validate before waking the display; persist after successful view selection, respect overrides, and keep the selected theme after a timed view returns. Existing drafts remain protected by revision checks.
+- Include inactive theme images in upload validation and cleanup protection; keep runtime scenes resolved in HA without adding work to the LG renderer. Display app remains 1.19.0.
+
 ## 2.23.0
 
 - Buffer media-card artwork and its background while the next cover loads. Swap only after successful decoding; preserve the background during the player’s buffering state and avoid placeholder flashes.

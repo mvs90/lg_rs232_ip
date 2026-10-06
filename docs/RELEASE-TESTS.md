@@ -1,5 +1,11 @@
 # Release acceptance
 
+## LG 2.24.0: shared Studio themes — 2026-10-06
+
+**436 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 240 browser cases pass across Chromium/WebKit.** Coverage includes theme inheritance across fixed/custom/notification views, offline-safe startup projection, preserving content and geometry, manual override/reset, custom-theme creation/rename/delete/undo, media background settings, empty-dashboard palette editing, phone layout, persistence, stale-editor rejection, pre-wake theme validation and successful/failed/timed view actions. Theme images are validated even while inactive and protected from cleanup. Existing cover-buffering, 4K and HDMI identity cases remain green.
+
+Installed **LG 2.24.0 / app 1.19.0** in the existing **unifi-air-quality-ha-dev** container with HA 2026.9.4. Real `show_view` selection of a temporary Sonos theme was acknowledged by the physical **75UH5F-HJ** at layout revision 117. Native capture shows the themed media view and fallback solar background: Sonos Wohnzimmer was playing its TV input without artwork during this test. Artwork rendering/palette extraction remains covered by controlled browser tests; this capture does not verify a new cover. The individual notification override, widget content/geometry and startup restrictions were verified through the live API. Original library and source were restored exactly at revision 118. The existing Studio browser shows the new theme manager and editor; no additional container or LG rendering loop was introduced. Private backups and captures remain excluded from Git.
+
 ## LG 2.23.0: retain covers while replacements load — 2026-10-06
 
 **422 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 234 browser cases pass across Chromium/WebKit.** Controlled image responses verify retained artwork/gradient during loading and buffering, no premature placeholder, delayed decoding, the legacy browser path without `image.decode`, superseded responses, missing covers, failed downloads, bounded timeouts/retries, player changes and view cleanup. Studio tests additionally cover authenticated pending/success/failure states, aborted old track requests and disconnect cleanup. Existing 4K, palette-cache and HDMI identity tests remain green.

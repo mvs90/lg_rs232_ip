@@ -4,6 +4,7 @@ from copy import deepcopy
 import re
 
 from .layout_config import make_layout, validate_layout, validate_startup_scene
+from .layout_themes import apply_theme, default_themes, validate_themes
 
 FIXED_VIEWS = {
     "hdmi_full": "Nur HDMI",
@@ -25,8 +26,10 @@ CUSTOM_ID = re.compile(r"view_[a-zA-Z0-9_-]{1,35}")
 def from_config(config):
     return {
         "library_version": 4,
+        "themes": default_themes(),
+        "active_theme": "",
         "views": [
-            {"id": key, "name": name, "scene": deepcopy(config["scenes"][key])}
+            {"id": key, "name": name, "theme_override": False, "scene": deepcopy(config["scenes"][key])}
             for key, name in FIXED_VIEWS.items()
         ],
     }
@@ -79,6 +82,9 @@ def validate_library(value, settings):
         raise ValueError("Supply a fixed-view library (version 4)")
     if len(value["views"]) > MAX_VIEWS:
         raise ValueError("Use at most 24 custom views")
+    active = value.get("active_theme", "")
+    themes = validate_themes(value.get("themes", default_themes()), active)
+    theme = next((row for row in themes if row["id"] == active), None)
     views, ids = [], set()
     for raw in value["views"]:
         if not isinstance(raw, dict):
@@ -103,9 +109,14 @@ def validate_library(value, settings):
         candidate = make_layout()
         candidate["scenes"]["dashboard"] = raw.get("scene")
         normalized = validate_layout(candidate)["scenes"]["dashboard"]
+        override = raw.get("theme_override", False)
+        if type(override) is not bool:
+            raise ValueError("Invalid theme override")
         if identifier == "startup":
             validate_startup_scene(normalized)
-        views.append({"id": identifier, "name": name.strip(), "scene": normalized})
+        if theme and not override:
+            normalized = apply_theme(normalized, theme, startup=identifier == "startup")
+        views.append({"id": identifier, "name": name.strip(), "theme_override": override, "scene": normalized})
     if not set(FIXED_VIEWS).issubset(ids):
         raise ValueError("Fixed views cannot be deleted")
     by_id = {view["id"]: view for view in views}
@@ -117,7 +128,7 @@ def validate_library(value, settings):
         key: deepcopy(settings["scenes"][key]) for key in ("signal", "no_signal")
     }
     config["scenes"].update({view["id"]: deepcopy(view["scene"]) for view in views})
-    return validate_layout(config), {"library_version": 4, "views": views}
+    return validate_layout(config), {"library_version": 4, "views": views, "themes": themes, "active_theme": active}
 
 
 def sync_legacy(library, config):
@@ -125,6 +136,9 @@ def sync_legacy(library, config):
     result = deepcopy(library)
     for view in result["views"]:
         if view["id"] in config["scenes"]:
+            if view["scene"] != config["scenes"][view["id"]] and result.get("active_theme"):
+                # Legacy saves have no inheritance control: preserve their explicit edit.
+                view["theme_override"] = True
             view["scene"] = deepcopy(config["scenes"][view["id"]])
     return validate_library(result, config)[1]
 

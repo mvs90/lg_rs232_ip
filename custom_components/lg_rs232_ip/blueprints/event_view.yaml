@@ -28,6 +28,12 @@ blueprint:
       description: Zum Beispiel pip_view oder die view_…-ID einer eigenen Kameraansicht.
       selector:
         text: {}
+    theme:
+      name: Globales Theme (optional)
+      description: Theme-ID aus dem Studio, z. B. morning. Bleibt nach der Rückkehr aktiv; eigene Ansichtsfarben bleiben erhalten. Leer lässt das Theme unverändert.
+      default: ""
+      selector:
+        text: {}
     duration:
       name: Anzeigedauer
       default: 30
@@ -70,4 +76,5 @@ actions:
       view: !input view
       duration: !input duration
       transition: !input transition
+      theme: !input theme
 mode: restart
