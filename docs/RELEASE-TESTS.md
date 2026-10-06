@@ -1,5 +1,13 @@
 # Release acceptance
 
+## LG 2.18.1: brief offline startup notice — 2026-10-06
+
+Release app **1.15.1**. Targeted local checks: **94 Python app/backend tests** and **86 display-app browser cases across Chromium/WebKit** pass, including six new cases for the first failed request, a silent five-second timeout, five-second expiry, early recovery, no repetition, hidden-page cleanup and unchanged HDMI decoder identity. Ruff and diff checks pass.
+
+In the existing HA 2026.9.4 container, a cached app reload was tested while its paired endpoints returned HTTP 503. Native LG captures showed the startup notice at approximately 1.6 seconds and its removal at approximately 8.2 seconds. There was no active HDMI picture during this acceptance run; continued decoder identity is verified by browser regression tests, not claimed as a new active-programme hardware test. The SI launcher remained foreground. The panel was initially in standby and was briefly awakened for cache update/testing, then returned to standby. The final app cache and installed source were checked after removing the temporary test hooks; saved views were retained.
+
+The notice is local HTML above the existing app content and makes no native OSD or source-setting call. It appears only for a failed initial state request, lasts at most five seconds, and closes earlier when HA responds. Existing long-poll timeouts resume after that first request. Private native captures and installation data are excluded from Git.
+
 ## LG 2.18.0: offline HDMI startup, multicast and platform controls — 2026-10-06
 
 **372 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 170 browser cases pass across Chromium and WebKit.** New coverage includes opt-in/scoped offline manifests, cache updates, invalid/foreign HDMI records, restoration before HA connects, native diagnostic allowlists and reply tickets, CPU counter reset handling, unsupported sensor values, multicast URL validation, decoder reuse/release, Studio saving/overlap rejection and the video-wall transaction's exact native parameter wrapper, verification and rollback. The real HA service-registry test covers video-wall routing, range validation and OSD-guard entry/exit.

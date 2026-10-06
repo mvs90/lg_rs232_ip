@@ -1,7 +1,7 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.15.0", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.15.1", video = null, sourceNode = null, videoSource = null;
   var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
   var hdmiFit = "contain";
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
@@ -10,10 +10,23 @@
   var active = null, dismissed = null, expires = 0, lastSuccess = Date.now();
   var acknowledged = false, ackBusy = false, heartbeatBusy = false, stopped = false;
   var pollXHR = null, pollTimer = null, cardsSignature = null, wasVisible = !document.hidden;
+  var startupChecked = false, startupNoticeTimer = null;
   function el(id) { return document.getElementById(id); }
   function text(id, value) { var node = el(id); if (node.textContent !== value) { node.textContent = value; } }
   function layout(value) { if (document.body.className !== value) { document.body.className = value; } }
-  function request(method, path, data, done) {
+  function hideStartupNotice() {
+    clearTimeout(startupNoticeTimer); startupNoticeTimer = null;
+    el("startup-notice").hidden = true;
+  }
+  function startupConnection(connected) {
+    if (connected) { hideStartupNotice(); }
+    else if (!startupChecked && !document.hidden) {
+      el("startup-notice").hidden = false;
+      startupNoticeTimer = window.setTimeout(hideStartupNotice, 5000);
+    }
+    startupChecked = true;
+  }
+  function request(method, path, data, done, timeout) {
     var xhr = new XMLHttpRequest(), finished = false;
     function finish(value) {
       if (finished) { return; } finished = true;
@@ -21,7 +34,7 @@
       if (value) { lastSuccess = Date.now(); }
       done(value);
     }
-    xhr.open(method, path, true); xhr.timeout = method === "GET" ? 30000 : 5000;
+    xhr.open(method, path, true); xhr.timeout = timeout || (method === "GET" ? 30000 : 5000);
     if (data) { xhr.setRequestHeader("Content-Type", "application/json"); }
     xhr.onload = function () {
       var result = null;
@@ -184,6 +197,7 @@
     pollXHR = request("GET", "state" + (revision === null ? "" : "?since=" + encodeURIComponent(revision)), null, function (data) {
       pollXHR = null;
       if (stopped) { return; }
+      startupConnection(!!data);
       if (data) {
         if (data.version !== VERSION || (window.LGOffline && window.LGOffline.status().enabled !== (data.offline_enabled===true))) { if(window.LGOffline){window.LGOffline.update();}else{window.location.reload();} pollTimer=window.setTimeout(poll,2000); return; }
         text("connection", "Mit Home Assistant verbunden");
@@ -205,7 +219,7 @@
         if (data.capture) { window.setTimeout(function () { capture(data.capture); }, 50); }
       } else { text("connection", "Verbindung unterbrochen"); }
       pollTimer = window.setTimeout(poll, data ? 0 : 2000);
-    });
+    }, startupChecked ? 30000 : 5000);
   }
   var tickTimer = window.setInterval(function () {
     if (active && (Date.now() >= expires || Date.now() - lastSuccess > 15000)) { clear("Anzeige beendet"); }
@@ -221,6 +235,7 @@
   }, 1000);
   var heartbeatTimer = window.setInterval(heartbeat, 5000);
   function stop() {
+    hideStartupNotice();
     if(window.LGPlatform){window.LGPlatform.close();}
     if (designer) { designer.cancelHdmiAnimation(); designer.stopCameras(); }
     stopped = true; clearTimeout(pollTimer); clearInterval(tickTimer); clearInterval(heartbeatTimer);

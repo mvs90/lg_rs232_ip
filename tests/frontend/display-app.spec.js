@@ -11,7 +11,7 @@ async function mount(page, state) {
     if(name === 'camera.json')return route.fulfill({contentType:'application/json',body:JSON.stringify({stream:state.cameraStream || null})});
     if(name === 'camera.jpg'){state.cameraFrames=(state.cameraFrames || 0)+1;return route.fulfill({contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});}
     if (name === 'state') {
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.15.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.15.1', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -865,4 +865,58 @@ test('multicast rebinds only on address change, releases its decoder and never r
   expect(state.cameraFrames).toBeUndefined();
   scene.elements.pop();await expect(page.locator('.lg-camera')).toHaveCount(0);
   expect(await page.evaluate(()=>originalHDMI===document.querySelector('#hdmi-slot video'))).toBe(true);
+});
+
+test('offline startup notice appears once for five seconds while HDMI and retries continue',async({page})=>{
+  await page.clock.install();
+  const state={cacheEnabled:true,offline:true,content:null,idle_hdmi:'ext://hdmi:1'};
+  await mount(page,state);
+  const notice=page.locator('#startup-notice');
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText('Home Assistant ist nicht erreichbar.');
+  await expect(page.locator('body')).toHaveClass('hdmi');
+  await page.evaluate(()=>window.bootDecoder=document.querySelector('#hdmi-slot video'));
+  await page.clock.fastForward(4000);await expect(notice).toBeVisible();
+  await page.clock.fastForward(1100);await expect(notice).toBeHidden();
+  await page.clock.fastForward(10000);await expect(notice).toBeHidden();
+  state.offline=false;await page.clock.fastForward(2000);
+  await expect(page.locator('#connection')).toHaveText('Mit Home Assistant verbunden');
+  expect(await page.evaluate(()=>bootDecoder===document.querySelector('#hdmi-slot video'))).toBe(true);
+});
+
+test('startup recovery hides the notice immediately and later outages never show it again',async({page})=>{
+  const state={cacheEnabled:true,offline:true,content:null,idle_hdmi:'ext://hdmi:1'};
+  await mount(page,state);await expect(page.locator('#startup-notice')).toBeVisible();
+  state.offline=false;
+  await expect(page.locator('#connection')).toHaveText('Mit Home Assistant verbunden',{timeout:4000});
+  await expect(page.locator('#startup-notice')).toBeHidden();
+  state.offline=true;
+  await expect(page.locator('#connection')).toHaveText('Verbindung unterbrochen');
+  await expect(page.locator('#startup-notice')).toBeHidden();
+});
+
+test('online startup never flashes a notice; a silent first request times out after five seconds',async({page})=>{
+  await page.clock.install();
+  await page.addInitScript(()=>{
+    window.stateRequests=[];const send=XMLHttpRequest.prototype.send,open=XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open=function(method,url,...args){this._path=url;return open.call(this,method,url,...args);};
+    XMLHttpRequest.prototype.send=function(...args){
+      if(this._path==='state'){
+        stateRequests.push(this.timeout);
+        if(location.search==='?timeout'){setTimeout(()=>this.ontimeout(),this.timeout);return;}
+      }
+      return send.apply(this,args);
+    };
+  });
+  const state={cacheEnabled:true,content:null,idle_hdmi:'ext://hdmi:1'};
+  await mount(page,state);
+  await expect(page.locator('#connection')).toHaveText('Mit Home Assistant verbunden');
+  await expect(page.locator('#startup-notice')).toBeHidden();
+  expect(await page.evaluate(()=>stateRequests[0])).toBe(5000);
+  await page.goto('http://display-app.test/index.html?timeout');
+  await expect(page.locator('#startup-notice')).toBeHidden();
+  await page.clock.fastForward(5000);await expect(page.locator('#startup-notice')).toBeVisible();
+  await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
+  await expect(page.locator('#startup-notice')).toBeHidden();
+  await page.clock.fastForward(10000);await expect(page.locator('#startup-notice')).toBeHidden();
 });

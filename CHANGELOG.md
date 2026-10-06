@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.18.1
+
+- Show a local five-second startup notice when the first HA state request fails or times out. Dismiss it immediately on recovery and never repeat it during later connection outages in the same app session.
+- Bound the initial connection attempt to five seconds while keeping normal long polling, cached HDMI, saved layouts and OSD state unchanged. Release app 1.15.1.
+
 ## 2.18.0
 
 - Add opt-in offline HDMI startup for resident SI mode on compatible LG browsers. Cache versioned app assets and only the paired last HDMI input/fit; restore HDMI before HA connects. Invalidate disabled caches and update cached assets without repeated reloads. Release app 1.15.0.
