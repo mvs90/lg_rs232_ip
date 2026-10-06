@@ -1,7 +1,7 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.16.0", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.17.0", video = null, sourceNode = null, videoSource = null;
   var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
   var hdmiFit = "contain";
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
@@ -69,6 +69,7 @@
     if (heartbeatBusy || stopped) { return; } heartbeatBusy = true;
     event({type:"hello", version:VERSION, bridge:typeof window.PalmServiceBridge === "function",
       offline:window.LGOffline ? window.LGOffline.status() : {},
+      startup_design:window.LGStartupDesign ? window.LGStartupDesign.status() : {},
       camera:designer ? designer.cameraStatus() : {mode:"inactive",ready:false},
       rendering:{width:window.innerWidth,height:window.innerHeight,pixel_ratio:window.devicePixelRatio || 1,screen_width:window.screen.width,screen_height:window.screen.height},
       visible:!document.hidden, layout_scene:sceneKey, layout_revision:design ? design.revision : null, hdmi_ready:!!(video && video.videoWidth && video.videoHeight && !video.error),
@@ -200,6 +201,7 @@
       startupConnection(!!data);
       if (data) {
         if (data.version !== VERSION || (window.LGOffline && window.LGOffline.status().enabled !== (data.offline_enabled===true))) { if(window.LGOffline){window.LGOffline.update();}else{window.location.reload();} pollTimer=window.setTimeout(poll,2000); return; }
+        if(window.LGStartupDesign){window.LGStartupDesign.sync(data.startup_design_version);}
         text("connection", "Mit Home Assistant verbunden");
         var first = revision === null;
         animateHdmi = !!(data.input_request && data.input_request !== inputRequest && data.input_transition === "smooth" && !first && idleHdmi && idleHdmi === data.idle_hdmi);

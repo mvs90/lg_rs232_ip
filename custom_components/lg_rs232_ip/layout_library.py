@@ -1,15 +1,16 @@
-"""Seven protected views and custom views that each become a display source."""
+"""Eight protected views and custom views that each become a display source."""
 
 from copy import deepcopy
 import re
 
-from .layout_config import make_layout, validate_layout
+from .layout_config import make_layout, validate_layout, validate_startup_scene
 
 FIXED_VIEWS = {
     "hdmi_full": "Nur HDMI",
     "dashboard": "Dashboard",
     "pip_view": "Dashboard PiP",
     "media_view": "Mediaplayer",
+    "startup": "Startanzeige",
     "overlay": "Mitteilung",
     "pip": "Mitteilung PiP",
     "fullscreen": "Mitteilung Vollbild",
@@ -17,13 +18,13 @@ FIXED_VIEWS = {
 SOURCE_VIEWS = {
     key: FIXED_VIEWS[key] for key in ("dashboard", "pip_view", "media_view")
 }
-MAX_VIEWS = 31  # Seven fixed views plus up to 24 custom sources.
+MAX_VIEWS = 32  # Eight fixed views plus up to 24 custom sources.
 CUSTOM_ID = re.compile(r"view_[a-zA-Z0-9_-]{1,35}")
 
 
 def from_config(config):
     return {
-        "library_version": 3,
+        "library_version": 4,
         "views": [
             {"id": key, "name": name, "scene": deepcopy(config["scenes"][key])}
             for key, name in FIXED_VIEWS.items()
@@ -33,12 +34,16 @@ def from_config(config):
 
 def upgrade_library(value, settings):
     """Keep the user's previously assigned designs when adopting fixed slots."""
-    if value.get("library_version") == 3:
+    if value.get("library_version") == 4:
         return deepcopy(value)
-    if value.get("library_version") == 2:
+    if value.get("library_version") in (2, 3):
         result = deepcopy(value)
-        result["library_version"] = 3
-        result["views"].insert(0, from_config(settings)["views"][0])
+        result["library_version"] = 4
+        defaults = from_config(settings)["views"]
+        if value["library_version"] == 2:
+            result["views"].insert(0, defaults[0])
+        if not any(view["id"] == "startup" for view in result["views"]):
+            result["views"].insert(4, next(view for view in defaults if view["id"] == "startup"))
         return result
     by_id = {view["id"]: view for view in value["views"]}
     assignments = value.get("assignments", {})
@@ -67,11 +72,11 @@ def upgrade_library(value, settings):
 def validate_library(value, settings):
     if (
         not isinstance(value, dict)
-        or value.get("library_version") != 3
+        or value.get("library_version") != 4
         or not isinstance(value.get("views"), list)
         or "assignments" in value
     ):
-        raise ValueError("Supply a fixed-view library (version 3)")
+        raise ValueError("Supply a fixed-view library (version 4)")
     if len(value["views"]) > MAX_VIEWS:
         raise ValueError("Use at most 24 custom views")
     views, ids = [], set()
@@ -98,6 +103,8 @@ def validate_library(value, settings):
         candidate = make_layout()
         candidate["scenes"]["dashboard"] = raw.get("scene")
         normalized = validate_layout(candidate)["scenes"]["dashboard"]
+        if identifier == "startup":
+            validate_startup_scene(normalized)
         views.append({"id": identifier, "name": name.strip(), "scene": normalized})
     if not set(FIXED_VIEWS).issubset(ids):
         raise ValueError("Fixed views cannot be deleted")
@@ -110,7 +117,7 @@ def validate_library(value, settings):
         key: deepcopy(settings["scenes"][key]) for key in ("signal", "no_signal")
     }
     config["scenes"].update({view["id"]: deepcopy(view["scene"]) for view in views})
-    return validate_layout(config), {"library_version": 3, "views": views}
+    return validate_layout(config), {"library_version": 4, "views": views}
 
 
 def sync_legacy(library, config):

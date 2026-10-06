@@ -38,7 +38,7 @@ def test_named_library_validation_and_independent_copies():
     assert normalized["views"][2]["scene"]["color"] != "#112233"
     assert runtime["scenes"]["dashboard"]["color"] != "#112233"
     assert next(p for p in presets() if p["id"] == "morning")["name"] == "Sonnenstand"
-    assert all(scene["background"] == "solar" for scene in config["scenes"].values())
+    assert all(scene["background"] == ("dawn" if key == "startup" else "solar") for key, scene in config["scenes"].items())
     for mutation in (
         lambda lib: lib["views"].append(deepcopy(lib["views"][0])),
         lambda lib: lib["views"][0].update(name="  "),
@@ -85,7 +85,7 @@ async def test_custom_views_publish_as_sources_survive_restart_and_delete(layout
     assert layouts.source_views["view_morning"] == "Mein Morgen"
     assert layouts.payload()["values"]["sensor.room"]["state"] == "22"
     assert "view_morning" in layouts.payload()["config"]["scenes"]
-    assert len(layouts.editor_document()["config"]["views"]) == 8
+    assert len(layouts.editor_document()["config"]["views"]) == 9
     second = DisplayLayouts(layouts.hass, layouts.entry)
     await second.async_start()
     try:
@@ -148,7 +148,7 @@ async def test_library_api_authorization_and_inactive_background_protection(layo
             path, headers=headers, json={"config": editor, "revision": 0}
         )
         assert response.status == 200
-        assert len((await response.json())["config"]["views"]) == 8
+        assert len((await response.json())["config"]["views"]) == 9
         assert (
             await client.post(
                 path, headers=headers, json={"config": editor, "revision": 0}
@@ -215,7 +215,7 @@ def test_existing_assignments_become_fixed_views_without_losing_designs():
     before = deepcopy(old)
     upgraded = upgrade_library(old, config)
     runtime, library = validate_library(upgraded, config)
-    assert [v["name"] for v in library["views"][:7]] == list(FIXED_VIEWS.values())
+    assert [v["name"] for v in library["views"][:len(FIXED_VIEWS)]] == list(FIXED_VIEWS.values())
     assert (
         runtime["scenes"]["dashboard"]
         == runtime["scenes"]["media_view"]
@@ -289,7 +289,7 @@ def test_version_two_adds_hdmi_default_and_preserves_every_existing_view():
 
     upgraded_config = validate_layout(config)
     upgraded = upgrade_library(legacy, upgraded_config)
-    assert upgraded["library_version"] == 3
+    assert upgraded["library_version"] == 4
     assert upgraded["views"][1:] == legacy["views"]
     assert upgraded["views"][0]["scene"] == make_layout()["scenes"]["hdmi_full"]
     runtime, library = validate_library(upgraded, upgraded_config)

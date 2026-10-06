@@ -1,5 +1,19 @@
 # Release acceptance
 
+## LG 2.21.0: fixed offline startup design — 2026-10-06
+
+**421 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 200 browser cases pass across Chromium/WebKit.** The final Studio geometry/status changes were additionally checked with its full 56-case suite. Coverage includes protected/resettable startup editing, restricted widget/background selectors, import and both save APIs rejecting live content, preservation of existing designs, paired bounded image bundles, content-version reuse, local clock updates, offline JPEG decoding, invalid cache rejection, storage quota failure, superseded downloads, pairing isolation, unchanged HDMI exemption and cache-status confirmation. Visual inspection exposed a WebKit preview with collapsed scene height despite existing DOM text assertions; the corrected positioning is covered by actual stage/scene geometry assertions and screenshots.
+
+Installed **LG 2.21.0 / app 1.17.0** in the existing HA 2026.9.4 Docker instance. All nine existing views were preserved, with the new protected startup slot added as the tenth. The actual Studio UI shows the new view, only local text/clock widget types, and a local-storage confirmation.
+
+On the physical **75UH5F-HJ**, saved a temporary startup design with “Willkommen zuhause”, a clock and an uploaded 3840×2160 gradient image through HA's real library/background APIs. The app reported the current design as `cached: true` and `image_cached: true`; the editor API independently matched its version to the saved design.
+
+- Standby to an already selected Mediaplayer completed in **46.7 seconds**. The target view was already rendered when capture became available, so no startup-screen observation is claimed for this case.
+- Standby to App-HDMI 1 completed in **54.3 seconds**, with `hdmi_full` acknowledged and original OSD restored. The app-backed screenshot was black in this run; it does not establish visible HDMI content. Transparent/pending HDMI behavior remains covered by the browser tests and earlier release hardware evidence.
+- With App-HDMI 1 selected before standby, App-Mediaplayer completed in **52.6 seconds**. An actual app-backed HA camera capture at **28.5 seconds** visibly shows the edited text, clock and uploaded gradient background. Captures from 51.1 seconds show the requested media layout. The preceding 27.9-second frame was still black; this feature does not eliminate the earlier firmware/app startup phase.
+
+The temporary startup design and its uploaded file were removed after acceptance. All prior views and original OSD state were preserved; the default editable startup design is confirmed cached. The final display state is on, App-Mediaplayer, app 1.17.0 connected. Sonos playback, Apple TV and socket configuration were not changed. Private screenshots, credentials and installation backups remain excluded from Git. Complete offline rendering is verified in browser tests; this release did not repeat a whole-device HA-outage reboot or physical mains-loss experiment. A fresh startup intent is still required and is never persisted over HDMI.
+
 ## LG 2.20.0: view-specific startup screen and bounded fast recovery — 2026-10-06
 
 **404 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 98 display-app browser cases pass in Chromium/WebKit.** Additional 4K rendering checks cover the Mediaplayer start screen. Tests verify non-persistent, paired and uncached startup intents, cancellation by input/off/shutdown, five-second startup versus thirty-second normal backoff, stale bootstrap replies, target-render dismissal, local expiry and HDMI with a previously selected media view.

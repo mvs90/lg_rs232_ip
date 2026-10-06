@@ -12,7 +12,7 @@
     {
       "id": "cinema",
       "name": "Cinema",
-      "description": "HDMI im Vollbild \u00b7 dezente Meldungen \u00b7 \u00dcbersicht ohne Signal",
+      "description": "HDMI im Vollbild · dezente Meldungen · Übersicht ohne Signal",
       "layout": {
         "schema": 1,
         "enabled": false,
@@ -53,7 +53,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -98,7 +103,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -107,7 +117,7 @@
                 "y": 7,
                 "width": 31,
                 "height": 28,
-                "label": "Drau\u00dfen",
+                "label": "Draußen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 5,
@@ -128,7 +138,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -158,7 +173,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -188,7 +208,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -218,7 +243,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -263,7 +293,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -293,7 +328,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -323,7 +363,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -353,7 +398,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -363,7 +413,7 @@
                 "width": 24,
                 "height": 27,
                 "label": "",
-                "text": "Zeit f\u00fcr einen guten Start.",
+                "text": "Zeit für einen guten Start.",
                 "entity_id": "",
                 "font_size": 2.8,
                 "color": "#f2f6fa",
@@ -383,7 +433,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -428,7 +483,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "message",
@@ -458,7 +518,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -503,7 +568,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "message",
@@ -533,7 +603,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "clock",
@@ -563,7 +638,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -608,7 +688,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "clock",
@@ -638,7 +723,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -683,7 +773,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -692,7 +787,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Drau\u00dfen",
+                "label": "Draußen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -713,7 +808,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -722,7 +822,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als N\u00e4chstes",
+                "label": "Als Nächstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -743,7 +843,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "hdmi",
@@ -773,7 +878,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -803,7 +913,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -813,7 +928,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Sch\u00f6n, dass du da bist.",
+                "text": "Schön, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#f2f6fa",
@@ -833,7 +948,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -857,7 +977,7 @@
                 "y": 12,
                 "width": 90,
                 "height": 76,
-                "label": "JETZT L\u00c4UFT",
+                "label": "JETZT LÄUFT",
                 "text": "",
                 "entity_id": "",
                 "font_size": 8,
@@ -878,7 +998,12 @@
                 "show_playback_icon": true,
                 "show_volume": false,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "clock",
@@ -908,7 +1033,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -953,7 +1083,132 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
+              }
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
+          },
+          "startup": {
+            "background": "midnight",
+            "color": "#101827",
+            "accent": "#8fb6ff",
+            "elements": [
+              {
+                "id": "text",
+                "kind": "text",
+                "x": 10,
+                "y": 33,
+                "width": 80,
+                "height": 9,
+                "label": "",
+                "text": "HOME ASSISTANT",
+                "entity_id": "",
+                "font_size": 2,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "center",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_playback_icon": false,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
+              },
+              {
+                "id": "startup_title",
+                "kind": "text",
+                "x": 10,
+                "y": 44,
+                "width": 80,
+                "height": 13,
+                "label": "",
+                "text": "Dein Display startet …",
+                "entity_id": "",
+                "font_size": 4.5,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "center",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_playback_icon": false,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
+              },
+              {
+                "id": "startup_detail",
+                "kind": "text",
+                "x": 10,
+                "y": 59,
+                "width": 80,
+                "height": 9,
+                "label": "",
+                "text": "Einen Moment bitte.",
+                "entity_id": "",
+                "font_size": 2.2,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "center",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_playback_icon": false,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -971,7 +1226,7 @@
     {
       "id": "aurora",
       "name": "Aurora",
-      "description": "Gr\u00fcne Lichtfl\u00e4chen \u00b7 HDMI neben Uhr, Wetter und Terminen",
+      "description": "Grüne Lichtflächen · HDMI neben Uhr, Wetter und Terminen",
       "layout": {
         "schema": 1,
         "enabled": false,
@@ -1012,7 +1267,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -1021,7 +1281,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Drau\u00dfen",
+                "label": "Draußen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -1042,7 +1302,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -1051,7 +1316,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als N\u00e4chstes",
+                "label": "Als Nächstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -1072,7 +1337,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "hdmi",
@@ -1102,7 +1372,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -1132,7 +1407,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -1142,7 +1422,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Sch\u00f6n, dass du da bist.",
+                "text": "Schön, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#f2f6fa",
@@ -1162,7 +1442,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -1207,7 +1492,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -1216,7 +1506,7 @@
                 "y": 7,
                 "width": 31,
                 "height": 28,
-                "label": "Drau\u00dfen",
+                "label": "Draußen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 5,
@@ -1237,7 +1527,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -1267,7 +1562,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -1297,7 +1597,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -1327,7 +1632,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -1372,7 +1682,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -1402,7 +1717,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -1432,7 +1752,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -1462,7 +1787,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -1472,7 +1802,7 @@
                 "width": 24,
                 "height": 27,
                 "label": "",
-                "text": "Zeit f\u00fcr einen guten Start.",
+                "text": "Zeit für einen guten Start.",
                 "entity_id": "",
                 "font_size": 2.8,
                 "color": "#f2f6fa",
@@ -1492,7 +1822,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -1537,7 +1872,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "message",
@@ -1567,7 +1907,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -1612,7 +1957,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "message",
@@ -1642,7 +1992,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "clock",
@@ -1672,7 +2027,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -1717,7 +2077,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "clock",
@@ -1747,7 +2112,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -1792,7 +2162,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -1801,7 +2176,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Drau\u00dfen",
+                "label": "Draußen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -1822,7 +2197,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -1831,7 +2211,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als N\u00e4chstes",
+                "label": "Als Nächstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -1852,7 +2232,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "hdmi",
@@ -1882,7 +2267,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -1912,7 +2302,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -1922,7 +2317,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Sch\u00f6n, dass du da bist.",
+                "text": "Schön, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#f2f6fa",
@@ -1942,7 +2337,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -1966,7 +2366,7 @@
                 "y": 12,
                 "width": 90,
                 "height": 76,
-                "label": "JETZT L\u00c4UFT",
+                "label": "JETZT LÄUFT",
                 "text": "",
                 "entity_id": "",
                 "font_size": 8,
@@ -1987,7 +2387,12 @@
                 "show_playback_icon": true,
                 "show_volume": false,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "clock",
@@ -2017,7 +2422,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -2062,7 +2472,132 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
+              }
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
+          },
+          "startup": {
+            "background": "aurora",
+            "color": "#0b2228",
+            "accent": "#79e5c0",
+            "elements": [
+              {
+                "id": "text",
+                "kind": "text",
+                "x": 10,
+                "y": 33,
+                "width": 80,
+                "height": 9,
+                "label": "",
+                "text": "HOME ASSISTANT",
+                "entity_id": "",
+                "font_size": 2,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "center",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_playback_icon": false,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
+              },
+              {
+                "id": "startup_title",
+                "kind": "text",
+                "x": 10,
+                "y": 44,
+                "width": 80,
+                "height": 13,
+                "label": "",
+                "text": "Dein Display startet …",
+                "entity_id": "",
+                "font_size": 4.5,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "center",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_playback_icon": false,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
+              },
+              {
+                "id": "startup_detail",
+                "kind": "text",
+                "x": 10,
+                "y": 59,
+                "width": 80,
+                "height": 9,
+                "label": "",
+                "text": "Einen Moment bitte.",
+                "entity_id": "",
+                "font_size": 2.2,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "center",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_playback_icon": false,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -2080,7 +2615,7 @@
     {
       "id": "morning",
       "name": "Sonnenstand",
-      "description": "Lebendiger Himmel \u00b7 Farben und Licht folgen der Sonne",
+      "description": "Lebendiger Himmel · Farben und Licht folgen der Sonne",
       "layout": {
         "schema": 1,
         "enabled": false,
@@ -2121,7 +2656,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -2130,7 +2670,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Drau\u00dfen",
+                "label": "Draußen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -2151,7 +2691,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -2160,7 +2705,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als N\u00e4chstes",
+                "label": "Als Nächstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -2181,7 +2726,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "hdmi",
@@ -2211,7 +2761,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -2241,7 +2796,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -2251,7 +2811,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Sch\u00f6n, dass du da bist.",
+                "text": "Schön, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#f2f6fa",
@@ -2271,7 +2831,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -2316,7 +2881,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -2325,7 +2895,7 @@
                 "y": 7,
                 "width": 31,
                 "height": 28,
-                "label": "Drau\u00dfen",
+                "label": "Draußen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 5,
@@ -2346,7 +2916,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -2376,7 +2951,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -2406,7 +2986,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -2436,7 +3021,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -2481,7 +3071,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -2511,7 +3106,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -2541,7 +3141,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -2571,7 +3176,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -2581,7 +3191,7 @@
                 "width": 24,
                 "height": 27,
                 "label": "",
-                "text": "Zeit f\u00fcr einen guten Start.",
+                "text": "Zeit für einen guten Start.",
                 "entity_id": "",
                 "font_size": 2.8,
                 "color": "#f2f6fa",
@@ -2601,7 +3211,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -2646,7 +3261,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "message",
@@ -2676,7 +3296,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -2721,7 +3346,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "message",
@@ -2751,7 +3381,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "clock",
@@ -2781,7 +3416,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -2826,7 +3466,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "clock",
@@ -2856,7 +3501,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -2901,7 +3551,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -2910,7 +3565,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Drau\u00dfen",
+                "label": "Draußen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -2931,7 +3586,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -2940,7 +3600,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als N\u00e4chstes",
+                "label": "Als Nächstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -2961,7 +3621,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "hdmi",
@@ -2991,7 +3656,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -3021,7 +3691,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -3031,7 +3706,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Sch\u00f6n, dass du da bist.",
+                "text": "Schön, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#f2f6fa",
@@ -3051,7 +3726,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -3075,7 +3755,7 @@
                 "y": 12,
                 "width": 90,
                 "height": 76,
-                "label": "JETZT L\u00c4UFT",
+                "label": "JETZT LÄUFT",
                 "text": "",
                 "entity_id": "",
                 "font_size": 8,
@@ -3096,7 +3776,12 @@
                 "show_playback_icon": true,
                 "show_volume": false,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "clock",
@@ -3126,7 +3811,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -3171,7 +3861,132 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
+              }
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
+          },
+          "startup": {
+            "background": "dawn",
+            "color": "#382033",
+            "accent": "#ffcfaa",
+            "elements": [
+              {
+                "id": "text",
+                "kind": "text",
+                "x": 10,
+                "y": 33,
+                "width": 80,
+                "height": 9,
+                "label": "",
+                "text": "HOME ASSISTANT",
+                "entity_id": "",
+                "font_size": 2,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "center",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_playback_icon": false,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
+              },
+              {
+                "id": "startup_title",
+                "kind": "text",
+                "x": 10,
+                "y": 44,
+                "width": 80,
+                "height": 13,
+                "label": "",
+                "text": "Dein Display startet …",
+                "entity_id": "",
+                "font_size": 4.5,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "center",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_playback_icon": false,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
+              },
+              {
+                "id": "startup_detail",
+                "kind": "text",
+                "x": 10,
+                "y": 59,
+                "width": 80,
+                "height": 9,
+                "label": "",
+                "text": "Einen Moment bitte.",
+                "entity_id": "",
+                "font_size": 2.2,
+                "color": "#f2f6fa",
+                "background": "#122333",
+                "opacity": 0,
+                "radius": 24,
+                "align": "center",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_playback_icon": false,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -3189,7 +4004,7 @@
     {
       "id": "sand",
       "name": "Paper & Sand",
-      "description": "Helle Fl\u00e4chen \u00b7 klare Typografie \u00b7 nat\u00fcrliche Farben",
+      "description": "Helle Flächen · klare Typografie · natürliche Farben",
       "layout": {
         "schema": 1,
         "enabled": false,
@@ -3230,7 +4045,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -3239,7 +4059,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Drau\u00dfen",
+                "label": "Draußen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -3260,7 +4080,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -3269,7 +4094,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als N\u00e4chstes",
+                "label": "Als Nächstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -3290,7 +4115,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "hdmi",
@@ -3320,7 +4150,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -3350,7 +4185,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -3360,7 +4200,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Sch\u00f6n, dass du da bist.",
+                "text": "Schön, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#302c26",
@@ -3380,7 +4220,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -3425,7 +4270,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -3434,7 +4284,7 @@
                 "y": 7,
                 "width": 31,
                 "height": 28,
-                "label": "Drau\u00dfen",
+                "label": "Draußen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 5,
@@ -3455,7 +4305,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -3485,7 +4340,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -3515,7 +4375,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -3545,7 +4410,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -3590,7 +4460,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -3620,7 +4495,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -3650,7 +4530,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -3680,7 +4565,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -3690,7 +4580,7 @@
                 "width": 24,
                 "height": 27,
                 "label": "",
-                "text": "Zeit f\u00fcr einen guten Start.",
+                "text": "Zeit für einen guten Start.",
                 "entity_id": "",
                 "font_size": 2.8,
                 "color": "#302c26",
@@ -3710,7 +4600,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -3755,7 +4650,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "message",
@@ -3785,7 +4685,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -3830,7 +4735,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "message",
@@ -3860,7 +4770,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "clock",
@@ -3890,7 +4805,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -3935,7 +4855,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "clock",
@@ -3965,7 +4890,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -4010,7 +4940,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "weather",
@@ -4019,7 +4954,7 @@
                 "y": 34,
                 "width": 27,
                 "height": 26,
-                "label": "Drau\u00dfen",
+                "label": "Draußen",
                 "text": "",
                 "entity_id": "",
                 "font_size": 4.5,
@@ -4040,7 +4975,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "calendar",
@@ -4049,7 +4989,7 @@
                 "y": 65,
                 "width": 27,
                 "height": 30,
-                "label": "Als N\u00e4chstes",
+                "label": "Als Nächstes",
                 "text": "",
                 "entity_id": "",
                 "font_size": 2.6,
@@ -4070,7 +5010,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "hdmi",
@@ -4100,7 +5045,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "entity",
@@ -4130,7 +5080,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "text",
@@ -4140,7 +5095,7 @@
                 "width": 29,
                 "height": 20,
                 "label": "",
-                "text": "Sch\u00f6n, dass du da bist.",
+                "text": "Schön, dass du da bist.",
                 "entity_id": "",
                 "font_size": 3,
                 "color": "#302c26",
@@ -4160,7 +5115,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -4184,7 +5144,7 @@
                 "y": 12,
                 "width": 90,
                 "height": 76,
-                "label": "JETZT L\u00c4UFT",
+                "label": "JETZT LÄUFT",
                 "text": "",
                 "entity_id": "",
                 "font_size": 8,
@@ -4205,7 +5165,12 @@
                 "show_playback_icon": true,
                 "show_volume": false,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               },
               {
                 "id": "clock",
@@ -4235,7 +5200,12 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",
@@ -4280,7 +5250,132 @@
                 "show_playback_icon": false,
                 "show_volume": true,
                 "status_coloring": true,
-                "accent_color": "#79e5c0"
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
+              }
+            ],
+            "image_id": "",
+            "image_fit": "cover",
+            "image_dim": 0.25,
+            "gradient_angle": 135,
+            "media_background_enabled": false,
+            "media_background_entity": "",
+            "media_background_fit": "contain",
+            "media_background_dim": 0.35
+          },
+          "startup": {
+            "background": "sand",
+            "color": "#e9e0cf",
+            "accent": "#76654c",
+            "elements": [
+              {
+                "id": "text",
+                "kind": "text",
+                "x": 10,
+                "y": 33,
+                "width": 80,
+                "height": 9,
+                "label": "",
+                "text": "HOME ASSISTANT",
+                "entity_id": "",
+                "font_size": 2,
+                "color": "#302c26",
+                "background": "#fffaf0",
+                "opacity": 0,
+                "radius": 24,
+                "align": "center",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_playback_icon": false,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
+              },
+              {
+                "id": "startup_title",
+                "kind": "text",
+                "x": 10,
+                "y": 44,
+                "width": 80,
+                "height": 13,
+                "label": "",
+                "text": "Dein Display startet …",
+                "entity_id": "",
+                "font_size": 4.5,
+                "color": "#302c26",
+                "background": "#fffaf0",
+                "opacity": 0,
+                "radius": 24,
+                "align": "center",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_playback_icon": false,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
+              },
+              {
+                "id": "startup_detail",
+                "kind": "text",
+                "x": 10,
+                "y": 59,
+                "width": 80,
+                "height": 9,
+                "label": "",
+                "text": "Einen Moment bitte.",
+                "entity_id": "",
+                "font_size": 2.2,
+                "color": "#302c26",
+                "background": "#fffaf0",
+                "opacity": 0,
+                "radius": 24,
+                "align": "center",
+                "font": "sans",
+                "show_label": false,
+                "forecast_type": "daily",
+                "forecast_count": 4,
+                "animate": true,
+                "weather_style": "glass",
+                "media_style": "compact",
+                "show_cover": true,
+                "show_progress": true,
+                "show_playback_icon": false,
+                "show_volume": true,
+                "status_coloring": true,
+                "accent_color": "#79e5c0",
+                "camera_source": "test",
+                "multicast_url": "",
+                "camera_mode": "auto",
+                "camera_interval": 2,
+                "camera_fit": "contain"
               }
             ],
             "image_id": "",

@@ -2170,3 +2170,26 @@ async def test_explicit_start_uses_short_read_retry_then_normal_backoff(app, fai
         assert app.startup is None
     finally:
         await layouts.async_close()
+
+
+async def test_startup_design_route_is_paired_static_and_not_embedded_in_every_state(app):
+    layouts = await configure_dashboard(app)
+    view = DisplayAppView(app.hass)
+    http = web.Application()
+    view.register(app.hass, http, http.router)
+    base = f'/api/lg_rs232_ip/display_app/test/{app.token}'
+    try:
+        async with TestClient(TestServer(http)) as client:
+            assert (await client.get(base.replace(app.token, 'wrong') + '/startup-design')).status == 404
+            response = await client.get(base + '/startup-design')
+            assert response.status == 200 and response.headers['Cache-Control'] == 'no-store'
+            assert '…' in await response.text()  # Avoid inflating offline text to JSON escapes.
+            design = await response.json()
+            assert design['version'] == app.state()['startup_design_version']
+            assert design['scene']['elements'][0]['kind'] == 'text'
+            assert 'image' not in app.state()
+            assert set(design) == {'schema', 'scene', 'timezone', 'version', 'image'}
+            app.event({'type':'hello', 'version':APP_VERSION, 'visible':True, 'startup_design':{'version':design['version'],'cached':True,'image_cached':False,'secret':'no'}})
+            assert app.attributes['startup_design'] == {'version':design['version'],'cached':True,'image_cached':False}
+    finally:
+        await layouts.async_close()

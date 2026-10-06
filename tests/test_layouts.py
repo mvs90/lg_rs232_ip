@@ -19,6 +19,7 @@ from custom_components.lg_rs232_ip.layouts import DisplayLayouts, LayoutConflict
 from custom_components.lg_rs232_ip.layout_api import (
     LayoutEditorView,
     LayoutListView,
+    LayoutLibraryView,
     LayoutValidateView,
 )
 
@@ -38,7 +39,7 @@ async def layouts(tmp_path):
 @pytest.mark.parametrize("preset", presets(), ids=lambda p: p["id"])
 def test_presets_have_valid_independent_signal_and_notification_scenes(preset):
     config = validate_layout(preset["layout"])
-    assert len(config["scenes"]) == 9
+    assert len(config["scenes"]) == 10
     assert config["scenes"]["signal"]["elements"][0]["kind"] in ("hdmi", "clock")
     assert not any(
         item["kind"] == "hdmi" for item in config["scenes"]["no_signal"]["elements"]
@@ -226,7 +227,7 @@ async def test_editor_routes_require_admin_and_pairing_token_cannot_edit(layouts
         LayoutListView(layouts.hass),
         LayoutValidateView(),
     )
-    for view in (editor, listing, validator):
+    for view in (editor, listing, validator, LayoutLibraryView(layouts.hass)):
         view.register(layouts.hass, app, app.router)
     assert editor.requires_auth and listing.requires_auth and validator.requires_auth
     async with TestClient(TestServer(app)) as client:
@@ -238,6 +239,30 @@ async def test_editor_routes_require_admin_and_pairing_token_cannot_edit(layouts
             )
         ).status == 401
         headers = {"X-Admin": "yes", "X-Auth": "yes"}
+        from custom_components.lg_rs232_ip.layout_library import from_config
+
+        invalid = make_layout()
+        invalid["scenes"]["startup"] = deepcopy(invalid["scenes"]["dashboard"])
+        for path, config in (
+            ("layout/one", invalid),
+            ("layout_validate", invalid),
+            ("layout_validate", {**make_layout(), **from_config(invalid)}),
+            ("layout_library/one", {**make_layout(), **from_config(invalid)}),
+        ):
+            assert (await client.post("/api/lg_rs232_ip/" + path, headers=headers,
+                                      json={"config": config, "revision": 0})).status == 400
+        assert layouts.revision == 0
+        data = layouts.hass.data["lg_rs232_ip"]["one"]
+        data["display_app"] = SimpleNamespace(connected=True, client_startup_design={
+            "cached": True, "version": layouts.startup_design.version,
+        }, enabled=True, resident=True, resident_connected=True)
+        for path in ("layout/one", "layout_library/one"):
+            doc = await (await client.get("/api/lg_rs232_ip/" + path, headers=headers)).json()
+            assert doc["startup_design"] == {"connected": True, "stored": True}
+        data["display_app"].client_startup_design["version"] = "old"
+        doc = await (await client.get("/api/lg_rs232_ip/layout/one", headers=headers)).json()
+        assert doc["startup_design"]["stored"] is False
+        del data["display_app"]
         assert (
             await client.get("/api/lg_rs232_ip/layouts", headers={"X-Auth": "yes"})
         ).status == 403

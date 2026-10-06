@@ -6,6 +6,7 @@
   function hide() {
     clearTimeout(timer); timer = null;
     if (current) { dismissed = current; }
+    if(window.LGStartupDesign){window.LGStartupDesign.stop();}
     current = null; node.hidden = true; document.body.removeAttribute("data-starting");
   }
   function show(intent, scene) {
@@ -14,6 +15,8 @@
     hide(); current = intent.id;
     document.getElementById("startup-target").textContent = String(intent.label || "Ansicht").slice(0, 100) + " wird gestartet …";
     node.hidden = false; document.body.setAttribute("data-starting", "true");
+    var designed=window.LGStartupDesign && window.LGStartupDesign.render(document.getElementById("startup-canvas"));
+    document.getElementById("startup-fallback").hidden=!!designed;document.getElementById("startup-canvas").hidden=!designed;
     timer = window.setTimeout(hide, Math.min(intent.remaining, 90) * 1000);
   }
   window.LGStartup = {
@@ -26,7 +29,7 @@
   xhr.open("GET", "startup", true); xhr.timeout = 3000;
   xhr.onload = function () {
     if (mainReady || xhr.status !== 200) { return; }
-    try { show(JSON.parse(xhr.responseText).startup, null); } catch (_) {}
+    try { var data=JSON.parse(xhr.responseText);if(window.LGStartupDesign){window.LGStartupDesign.sync(data.design_version);}show(data.startup, null); } catch (_) {}
   };
   xhr.send();
   document.addEventListener("visibilitychange", function () { if (document.hidden) { hide(); } });

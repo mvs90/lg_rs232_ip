@@ -16,6 +16,7 @@ SCENES = (
     "pip_view",
     "media_view",
     "hdmi_full",
+    "startup",
 )
 KINDS = (
     "hdmi",
@@ -42,6 +43,25 @@ BACKGROUNDS = (
 )
 COLORS = re.compile(r"^#[0-9a-fA-F]{6}$")
 ENTITY = re.compile(r"^[a-z_]+\.[a-z0-9_]+$")
+STARTUP_KINDS = ("text", "clock")
+STARTUP_BACKGROUNDS = tuple(value for value in BACKGROUNDS if value != "solar")
+
+
+def validate_startup_scene(value):
+    """Only local, declarative content; enforce this for imports and both APIs."""
+    if (
+        value["background"] not in STARTUP_BACKGROUNDS
+        or value.get("media_background_enabled")
+        or value.get("media_background_entity")
+        or any(
+            item["kind"] not in STARTUP_KINDS or item.get("entity_id")
+            for item in value["elements"]
+        )
+    ):
+        raise ValueError(
+            "Startup supports only offline text, local clock/date and static backgrounds"
+        )
+    return value
 
 
 def element(kind, x, y, width, height):
@@ -230,7 +250,7 @@ def make_layout(style="cinema"):
         "sun_entity": "sun.sun",
         "scenes": {
             key: scene(
-                "solar" if style == "morning" and key == "dashboard" else background,
+                "dawn" if key == "startup" and background == "solar" else background,
                 items,
                 color,
                 accent,
@@ -248,6 +268,11 @@ def make_layout(style="cinema"):
                     pip_view,
                     media_view,
                     [deepcopy(hdmi)],
+                    [
+                        block("text", 10, 33, 80, 9, text="HOME ASSISTANT", font_size=2, align="center", opacity=0, show_label=False),
+                        block("text", 10, 44, 80, 13, id="startup_title", text="Dein Display startet …", font_size=4.5, align="center", opacity=0, show_label=False),
+                        block("text", 10, 59, 80, 9, id="startup_detail", text="Einen Moment bitte.", font_size=2.2, align="center", opacity=0, show_label=False),
+                    ],
                 ),
             )
         },
@@ -344,6 +369,8 @@ def validate_layout(value):
         raise ValueError("Invalid custom view IDs or too many custom views")
     for key in (*SCENES, *extra):
         raw = value.get("scenes", {}).get(key)
+        if key == "startup" and raw is None:
+            raw = make_layout()["scenes"]["startup"]
         if key == "hdmi_full" and raw is None:
             raw = make_layout()["scenes"]["hdmi_full"]
         if key == "media_view" and raw is None:
@@ -523,6 +550,8 @@ def validate_layout(value):
             raise ValueError(
                 "Place the camera stream beside HDMI; use automatic/snapshot mode for overlays"
             )
+        if key == "startup":
+            validate_startup_scene(normalized)
         result["scenes"][key] = normalized
     if len(entities) > 32:
         raise ValueError("Select no more than 32 distinct entities")

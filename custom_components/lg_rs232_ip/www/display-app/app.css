@@ -10,3 +10,5 @@ body.boot {background:transparent;padding:0} .boot header,.boot main,.boot foote
 body[data-starting] #hdmi-slot {visibility:hidden!important}
 /* Brief offline notice remains independent of the requested view. */
 #startup-notice {position:fixed;z-index:10000;left:50%;bottom:6vh;transform:translateX(-50%);max-width:80vw;padding:1.5vh 2.2vw;border:1px solid rgba(255,255,255,.2);border-radius:1vh;background:rgba(10,23,35,.94);color:#f2f6fa;font-size:2.2vh;line-height:1.4;text-align:center;pointer-events:none} #startup-notice[hidden] {display:none} #startup-notice strong,#startup-notice span {display:block} #startup-notice span {font-size:1.8vh;color:#c2d0dd}
+
+#startup-fallback {display:flex;align-items:center;flex-direction:column} #startup-fallback[hidden],#startup-canvas[hidden] {display:none} #startup-canvas {position:absolute;top:0;left:0;width:100%;height:100%;text-align:left}

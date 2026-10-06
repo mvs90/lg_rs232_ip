@@ -15,6 +15,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
+from .startup_design import StartupDesign
 from .layout_backgrounds import LayoutBackgrounds
 from .layout_media import LayoutMedia
 from .layout_camera import LayoutCamera
@@ -51,6 +52,7 @@ class DisplayLayouts:
         self.config = make_layout()
         self.library = from_config(self.config)
         self.revision = 0
+        self.startup_design = StartupDesign(self)
         self.changed = lambda: None
         self._lock = asyncio.Lock()
         self._unsub = self._timer = self._debounce = self._sun_timer = None

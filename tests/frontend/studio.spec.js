@@ -27,9 +27,9 @@ async function mount(page,width=1500) {
         if(window.failSave)throw {status_code:409};
         if(url==='lg_rs232_ip/layout_validate')return {config:data.config};
         window.saved=JSON.parse(JSON.stringify(data.config));window.revision++;
-        if(saved.views)hass.states['media_player.display']={entity_id:'media_player.display',state:'on',attributes:{view_sources:Object.fromEntries(saved.views.filter(v=>!['hdmi_full','overlay','pip','fullscreen'].includes(v.id)).map(v=>[v.id,v.name]))}};
+        if(saved.views)hass.states['media_player.display']={entity_id:'media_player.display',state:'on',attributes:{view_sources:Object.fromEntries(saved.views.filter(v=>!['hdmi_full','startup','overlay','pip','fullscreen'].includes(v.id)).map(v=>[v.id,v.name]))}};
       }
-      return {config:window.saved,revision:window.revision,values:{},timezone:'Europe/Berlin'};
+      return {config:window.saved,revision:window.revision,values:{},timezone:'Europe/Berlin',startup_design:window.startupStatus};
     },callWS:async()=>[{config_entry_id:'one',entity_id:'media_player.display'}],callService:async(...args)=>window.calls.push(args)};
     window.studio=document.createElement('lg-display-studio');studio.hass=hass;document.body.append(studio);
   },catalog);
@@ -205,7 +205,7 @@ test('room suggestions add styled media/status cards once, support editing and r
 
 test('overview creates, renames, duplicates and deletes independent source views with undo',async({page})=>{
   await mount(page);
-  await expect(page.locator('.view-card')).toHaveCount(7);
+  await expect(page.locator('.view-card')).toHaveCount(8);
   await expect(page.getByText('Wann wird welche Ansicht angezeigt?',{exact:true})).toHaveCount(0);
   await page.getByRole('button',{name:'＋ Neue Ansicht',exact:true}).click();
   await page.getByLabel('Name',{exact:true}).fill('Mein Sonnenplatz');
@@ -218,7 +218,7 @@ test('overview creates, renames, duplicates and deletes independent source views
   expect(await page.evaluate(id=>saved.scenes[id].background,id)).toBe('solar');
   await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
   await page.getByRole('button',{name:'Mein Tageslicht duplizieren',exact:true}).click();
-  await expect(page.locator('.view-card')).toHaveCount(9);
+  await expect(page.locator('.view-card')).toHaveCount(10);
   await openView(page,'Mein Tageslicht · Kopie');
   await page.getByLabel('Hintergrund',{exact:true}).selectOption('ocean');
   await page.getByRole('button',{name:'← Alle Ansichten',exact:true}).click();
@@ -227,12 +227,12 @@ test('overview creates, renames, duplicates and deletes independent source views
   expect(await page.evaluate(id=>saved.scenes[id].background,id)).toBe('solar');
   expect(await page.evaluate(()=>saved.views.find(v=>v.name==='Mein Tageslicht · Kopie').scene.background)).toBe('ocean');
   await page.getByRole('button',{name:'Mein Tageslicht löschen',exact:true}).click();
-  await expect(page.locator('.view-card')).toHaveCount(8);
-  await page.getByTitle('Rückgängig',{exact:true}).click();
   await expect(page.locator('.view-card')).toHaveCount(9);
+  await page.getByTitle('Rückgängig',{exact:true}).click();
+  await expect(page.locator('.view-card')).toHaveCount(10);
   await page.getByRole('button',{name:'Speichern',exact:true}).click();
   await page.evaluate(()=>{studio.remove();document.body.append(studio);});
-  await expect(page.locator('.view-card')).toHaveCount(9);
+  await expect(page.locator('.view-card')).toHaveCount(10);
   await expect(page.locator('.overview')).toBeVisible();
 });
 
@@ -250,9 +250,9 @@ test('solar view follows live HA updates without reload and preserves edited fie
   expect(await page.evaluate(()=>calls.filter(c=>c[0]==='POST').length)).toBe(0);
 });
 
-test('seven fixed views are protected, reset independently and support undo on a phone',async({page})=>{
+test('eight fixed views are protected, reset independently and support undo on a phone',async({page})=>{
   await mount(page,390);
-  const names=['Nur HDMI','Dashboard','Dashboard PiP','Mediaplayer','Mitteilung','Mitteilung PiP','Mitteilung Vollbild'];
+  const names=['Nur HDMI','Dashboard','Dashboard PiP','Mediaplayer','Startanzeige','Mitteilung','Mitteilung PiP','Mitteilung Vollbild'];
   for(const name of names){
     await expect(page.getByRole('button',{name:name+' löschen',exact:true})).toHaveCount(0);
     await expect(page.getByRole('button',{name:name+' Standard wiederherstellen',exact:true})).toHaveCount(1);
@@ -270,7 +270,7 @@ test('seven fixed views are protected, reset independently and support undo on a
   expect(await page.evaluate(()=>studio.config.scenes.dashboard.background)).toBe('ocean');
   expect(await page.evaluate(()=>studio.dirty)).toBe(false);
   await page.evaluate(()=>studio.deleteView('dashboard'));
-  await expect(page.locator('.view-card')).toHaveCount(7);
+  await expect(page.locator('.view-card')).toHaveCount(8);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
@@ -441,7 +441,7 @@ test('music view saves colour-only background and optional timeline state withou
 
 test('HDMI is the first editable resettable view; notifications have a separate lower section',async({page})=>{
   await mount(page);
-  await expect(page.locator('.primary-gallery .view-card h3')).toHaveText(['Nur HDMI','Dashboard','Dashboard PiP','Mediaplayer']);
+  await expect(page.locator('.primary-gallery .view-card h3')).toHaveText(['Nur HDMI','Dashboard','Dashboard PiP','Mediaplayer','Startanzeige']);
   await expect(page.locator('.notification-gallery .view-card h3')).toHaveText(['Mitteilung','Mitteilung PiP','Mitteilung Vollbild']);
   await page.getByRole('button',{name:'Mitteilung duplizieren',exact:true}).click();
   await expect(page.locator('.primary-gallery .view-card h3').last()).toHaveText('Mitteilung · Kopie');
@@ -543,4 +543,60 @@ test('multicast widget exposes its address, preserves it on save and blocks HDMI
   await expect(page.locator('.status')).toHaveText('Gespeichert');
   expect(await page.evaluate(()=>saved.scenes.hdmi_full.elements.find(e=>e.kind==='camera').multicast_url)).toBe('udp://239.255.20.35:15000');
   await expect(page.locator('.scene video')).toHaveCount(0);
+});
+
+test('fixed startup view exposes only offline content, persists edits, resets and cannot be deleted',async({page})=>{
+  await mount(page);
+  const card=page.locator('.view-card').filter({has:page.getByRole('heading',{name:'Startanzeige',exact:true})});
+  await expect(card.getByRole('button',{name:'Löschen',exact:true})).toHaveCount(0);
+  await expect(card.getByRole('button',{name:'Anzeigen',exact:true})).toHaveCount(0);
+  await openView(page,'Startanzeige');
+  await expect(page.getByLabel('Name der Ansicht')).toBeDisabled();
+  expect(await page.getByLabel('Elementtyp',{exact:true}).locator('option').evaluateAll(nodes=>nodes.map(n=>n.value))).toEqual(['text','clock']);
+  await expect(page.locator('.cover-background-tools')).toBeHidden();
+  await expect(page.locator('.room-suggestions')).toBeHidden();
+  await expect(page.locator('#sun-entity')).toBeHidden();
+  await expect(page.getByLabel('Hintergrund',{exact:true}).locator('option[value=solar]')).toHaveCount(0);
+  await page.locator('.layer .name').first().click();
+  expect(await page.getByLabel('Widget-Typ').locator('option').evaluateAll(nodes=>nodes.map(n=>n.value))).toEqual(['text','clock']);
+  await page.getByLabel('Text',{exact:true}).fill('Willkommen zuhause');await page.getByLabel('Text',{exact:true}).press('Tab');
+  await page.locator('.sidebar').getByRole('button',{name:'Sonnenstand',exact:true}).click();
+  await expect(page.getByLabel('Hintergrund',{exact:true})).toHaveValue('dawn');
+  await page.getByLabel('Elementtyp',{exact:true}).selectOption('clock');await page.getByRole('button',{name:'＋',exact:true}).click();
+  await expect(page.locator('.scene .lg-clock')).toBeVisible();
+  const before=await page.evaluate(()=>JSON.stringify(studio.scene));
+  await page.evaluate(()=>studio.insertCard('weather','weather.home'));
+  expect(await page.evaluate(()=>JSON.stringify(studio.scene))).toBe(before);
+  await page.getByRole('button',{name:'Speichern',exact:true}).click();
+  expect(await page.evaluate(()=>saved.scenes.startup.elements.some(i=>i.text==='Willkommen zuhause'))).toBe(true);
+  expect(await page.evaluate(()=>saved.scenes.startup.elements.every(i=>['text','clock'].includes(i.kind)))).toBe(true);
+  await page.getByRole('button',{name:'Element entfernen',exact:true}).click();
+  await expect(page.locator('.scene .lg-clock')).toHaveCount(0);
+  await page.getByRole('button',{name:'Standard wiederherstellen',exact:true}).click();
+  expect(await page.evaluate(()=>studio.scene.elements.some(i=>i.text==='Willkommen zuhause'))).toBe(false);
+  await page.getByTitle('Rückgängig',{exact:true}).click();
+  expect(await page.evaluate(()=>studio.scene.elements.some(i=>i.text==='Willkommen zuhause'))).toBe(true);
+  await page.evaluate(()=>studio.deleteView('startup'));
+  expect(await page.evaluate(()=>studio.config.views.some(v=>v.id==='startup'))).toBe(true);
+  await expect(page.locator('.scene .lg-value').filter({hasText:'Willkommen zuhause'})).toBeVisible();
+  await expect(page.locator('.scene')).toHaveCSS('background-image',/gradient/);
+  const stage=await page.locator('.stage').boundingBox(),preview=await page.locator('.scene').boundingBox();
+  expect(preview.height).toBeGreaterThan(300);expect(Math.abs(preview.height-stage.height)).toBeLessThan(2);
+  await page.screenshot({path:test.info().outputPath('startup-editor.png'),fullPage:true});
+});
+
+
+test('startup editor distinguishes unsaved, pending and display-confirmed offline designs',async({page})=>{
+  await mount(page);await openView(page,'Startanzeige');
+  await expect(page.locator('.startup-cache-status')).toContainText('nicht verbunden');
+  await page.evaluate(async()=>{window.startupStatus={connected:true,stored:false};await studio.refreshValues();});
+  await expect(page.locator('.startup-cache-status')).toContainText('ausstehend');
+  await page.evaluate(async()=>{window.startupStatus={connected:true,stored:true};await studio.refreshValues();});
+  await expect(page.locator('.startup-cache-status')).toContainText('Auf dem Display gespeichert');
+  await page.evaluate(()=>{studio.scene.color='#123456';studio.changed();});
+  await expect(page.locator('.startup-cache-status')).toContainText('Entwurf noch nicht gespeichert');
+  await page.evaluate(async()=>{window.revision++;await studio.refreshValues();});
+  await expect(page.locator('.startup-cache-status')).toContainText('anderen Sitzung');
+  await openView(page,'Dashboard');
+  await expect(page.locator('.startup-cache-status')).toBeHidden();
 });

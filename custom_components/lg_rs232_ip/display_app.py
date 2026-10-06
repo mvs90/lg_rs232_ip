@@ -25,7 +25,7 @@ from .resident_app import ResidentApp, SI_APP_ID
 from .platform_diagnostics import PlatformDiagnostics
 from .web_manager import LGWebError
 
-APP_VERSION = "1.16.0"
+APP_VERSION = "1.17.0"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -82,6 +82,7 @@ class DisplayAppManager(ResidentApp):
         self.client_rendering = {}
         self.client_camera = {}
         self.client_offline = {}
+        self.client_startup_design = {}
         self.platform = PlatformDiagnostics(self)
         self.last_error = None
         self._rendered = asyncio.Event()
@@ -139,6 +140,7 @@ class DisplayAppManager(ResidentApp):
                         "camera.js",
                         "offline.js",
                         "startup.js",
+                        "startup-design.js",
                         "platform.js",
                         "wall.js",
                         "test-stream.m3u8",
@@ -270,6 +272,7 @@ class DisplayAppManager(ResidentApp):
             "rendering": self.client_rendering if self.connected else {},
             "camera_widget": self.client_camera if self.connected else {},
             "offline_start": self.client_offline if self.connected else {},
+            "startup_design": self.client_startup_design if self.connected else {},
             "platform_diagnostics": self.platform.data,
             "si_configured": bool(self.saved.get("installed")),
             "si_restore_pending": "previous" in self.saved and not self.resident,
@@ -494,6 +497,7 @@ class DisplayAppManager(ResidentApp):
             "media_view": self.media_view_selected,
             "selected_view": self.selected_view,
             "startup": self.startup,
+            "startup_design_version": self.layouts.startup_design.version if self.layouts else None,
             "capture": self._capture,
             "diagnostics": self.platform.ticket,
             "offline_enabled": self.resident and self.entry.options.get("display_app_offline", False),
@@ -548,6 +552,7 @@ class DisplayAppManager(ResidentApp):
             dict(self.client_rendering),
             dict(self.client_camera),
             dict(self.client_offline),
+            dict(self.client_startup_design),
             self.client_layout_scene,
             self.client_layout_revision,
             self.client_hdmi,
@@ -605,6 +610,14 @@ class DisplayAppManager(ResidentApp):
                 status = offline.get("cache_status")
                 if type(status) is int and 0 <= status <= 5:
                     self.client_offline["cache_status"] = status
+            startup_design = value.get("startup_design", {})
+            if isinstance(startup_design, dict):
+                version = startup_design.get("version")
+                self.client_startup_design = {
+                    "version": version if isinstance(version, str) and len(version) == 64 and all(c in "0123456789abcdef" for c in version) else None,
+                    "cached": startup_design.get("cached") is True,
+                    "image_cached": startup_design.get("image_cached") is True,
+                }
             camera_status = value.get("camera", {})
             if isinstance(camera_status, dict):
                 self.client_camera = {
@@ -653,6 +666,7 @@ class DisplayAppManager(ResidentApp):
             dict(self.client_rendering),
             dict(self.client_camera),
             dict(self.client_offline),
+            dict(self.client_startup_design),
             self.client_layout_scene,
             self.client_layout_revision,
             self.client_hdmi,
@@ -689,7 +703,7 @@ class DisplayAppView(HomeAssistantView):
             "Cache-Control": "no-store",
             "Referrer-Policy": "no-referrer",
             "X-Content-Type-Options": "nosniff",
-            "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'",
+            "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'",
         }
         if resource == "offline.appcache":
             if not manager.resident or not manager.entry.options.get(
@@ -714,7 +728,13 @@ class DisplayAppView(HomeAssistantView):
                 headers={**headers, "Cache-Control": "no-cache"},
             )
         if resource == "startup":
-            return web.json_response({"startup": manager.startup}, headers=headers)
+            return web.json_response({"startup": manager.startup, "design_version": manager.layouts.startup_design.version if manager.layouts else None}, headers=headers)
+        if resource == "startup-design" and manager.layouts:
+            try:
+                bundle = await manager.layouts.startup_design.async_bundle()
+            except (ValueError, OSError):
+                raise web.HTTPServiceUnavailable() from None
+            return web.json_response(bundle, headers=headers, dumps=lambda value: json.dumps(value, ensure_ascii=False))
         if resource == "state":
             return web.json_response(
                 await manager.async_state(request.query.get("since")), headers=headers
@@ -806,6 +826,7 @@ class DisplayAppView(HomeAssistantView):
             "camera.js": "application/javascript",
             "offline.js": "application/javascript",
             "startup.js": "application/javascript",
+            "startup-design.js": "application/javascript",
             "platform.js": "application/javascript",
             "wall.js": "application/javascript",
             "test-stream.m3u8": "application/vnd.apple.mpegurl",

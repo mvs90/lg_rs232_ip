@@ -99,6 +99,16 @@ class LayoutEntryView(HomeAssistantView):
             raise web.HTTPNotFound()
         return manager
 
+    def startup_status(self, entry_id, manager):
+        app = self.hass.data.get(DOMAIN, {}).get(entry_id, {}).get("display_app")
+        connected = bool(app and app.connected)
+        reported = getattr(app, "client_startup_design", {})
+        return {
+            "connected": connected,
+            "stored": bool(connected and reported.get("cached") is True
+                           and reported.get("version") == manager.startup_design.version),
+        }
+
 
 class LayoutEditorView(LayoutEntryView):
     url = "/api/lg_rs232_ip/layout/{entry_id}"
@@ -113,6 +123,7 @@ class LayoutEditorView(LayoutEntryView):
                 "sun": manager.sun(),
                 "backgrounds": await manager.backgrounds.async_list(),
                 "timezone": str(self.hass.config.time_zone),
+                "startup_design": self.startup_status(entry_id, manager),
             },
             headers={"Cache-Control": "no-store"},
         )
@@ -236,6 +247,7 @@ class LayoutLibraryView(LayoutEditorView):
                 "sun": manager.sun(),
                 "backgrounds": await manager.backgrounds.async_list(),
                 "timezone": str(self.hass.config.time_zone),
+                "startup_design": self.startup_status(entry_id, manager),
             },
             headers={"Cache-Control": "no-store"},
         )
@@ -256,5 +268,6 @@ class LayoutLibraryView(LayoutEditorView):
         except (ValueError, TypeError, KeyError, AttributeError) as err:
             raise web.HTTPBadRequest(text=str(err)) from None
         return web.json_response(
-            manager.editor_document(), headers={"Cache-Control": "no-store"}
+            {**manager.editor_document(), "startup_design": self.startup_status(entry_id, manager)},
+            headers={"Cache-Control": "no-store"},
         )

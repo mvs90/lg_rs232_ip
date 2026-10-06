@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.21.0
+
+- Fix the Studio preview collapsing in WebKit: keep its scene absolutely positioned inside the 16:9 stage so Safari can paint backgrounds and widgets.
+
+- Add the protected, editable and resettable **Startanzeige** to Display Studio. Permit local text/clock widgets, static colors/gradients and uploaded backgrounds only; enforce the same restrictions on API saves and imports. Preserve all existing views.
+- Cache the startup design and one bounded image in a validated, pairing-scoped local record. Reuse it without live data or image requests; confirm the current stored version in Studio. Keep 4K images where the 768 KiB JPEG budget permits and update visible clocks once per minute. Release app 1.17.0.
+- Preserve transparent HDMI startup, cancellation, expiry and the separate connection notice. Never persist or replay a startup source request; the offline app-code cache remains a separate opt-in.
+
 ## 2.20.0
 
 - Shorten explicit app startup recovery: retry web readiness after five seconds instead of thirty, with a four-second limit on the read-only readiness probe. Retain normal outage backoff, the overall startup deadline and OSD-preserving source changes.

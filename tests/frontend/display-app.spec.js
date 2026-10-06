@@ -7,18 +7,24 @@ async function mount(page, state) {
   const events = [];
   await page.route('http://display-app.test/**', async route => {
     const name = new URL(route.request().url()).pathname.split('/').pop();
-    if (state.offline && ['state','event','startup'].includes(name)) return route.fulfill({status:503,body:''});
+    if (state.offline && ['state','event','startup','startup-design'].includes(name)) return route.fulfill({status:503,body:''});
     if(name === 'camera.json')return route.fulfill({contentType:'application/json',body:JSON.stringify({stream:state.cameraStream || null})});
     if(name === 'camera.jpg'){state.cameraFrames=(state.cameraFrames || 0)+1;return route.fulfill({contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});}
     if (name === 'startup') {
-      const body = JSON.stringify({startup:state.startup || null});
+      const body = JSON.stringify({startup:state.startup || null,design_version:state.startupDesign?.version || null});
       if (state.onStartupRead) state.onStartupRead();
       if (state.delayStartup) await new Promise(resolve => setTimeout(resolve,state.delayStartup));
       return route.fulfill({contentType:'application/json',body});
     }
+    if (name === 'startup-design') {
+      state.designRequests=(state.designRequests || 0)+1;
+      const body=JSON.stringify(state.startupDesign);
+      if(state.delayDesign)await new Promise(resolve=>setTimeout(resolve,state.delayDesign));
+      return route.fulfill({contentType:'application/json',body});
+    }
     if (name === 'state') {
       if (state.delayState) await new Promise(resolve => setTimeout(resolve,state.delayState));
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.16.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.17.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -26,7 +32,7 @@ async function mount(page, state) {
       if (event.type === 'rendered' && state.content) state.content.rendered = true;
       return route.fulfill({contentType: 'application/json', body: '{"ok":true}'});
     }
-    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: name==='index.html' && state.cacheEnabled ? fs.readFileSync(path.join(assets,name),'utf8').replace('<html lang="de">','<html lang="de" manifest="offline.appcache" data-offline-hdmi="ext://hdmi:1">') : fs.readFileSync(path.join(assets, name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'"}});
+    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: name==='index.html' && state.cacheEnabled ? fs.readFileSync(path.join(assets,name),'utf8').replace('<html lang="de">','<html lang="de" manifest="offline.appcache" data-offline-hdmi="ext://hdmi:1">') : fs.readFileSync(path.join(assets, name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'"}});
   });
   await page.goto('http://display-app.test/index.html');
   return events;
@@ -978,4 +984,82 @@ test('withdrawn startup and offline recovery never leave a stale splash over HDM
   state.offline=true;
   await page.waitForTimeout(300);
   await expect(page.locator('#startup-screen')).toBeHidden();
+});
+
+function offlineDesign(version='a'.repeat(64)) {
+  const scene=JSON.parse(JSON.stringify(studioPresets[0].layout.scenes.startup));
+  scene.elements[1].text='Mein lokaler Start';
+  scene.elements.push({...JSON.parse(JSON.stringify(studioPresets[0].layout.scenes.dashboard.elements[0])),id:'local_clock',entity_id:'',x:4,y:3,width:40,height:25});
+  return {schema:1,version,timezone:'Europe/Berlin',scene,image:null};
+}
+
+test('offline startup design is stored once, restored without HA and only uses local clock/text',async({page})=>{
+  await page.clock.install({time:new Date('2026-10-06T10:12:59Z')});
+  const requests=[];page.on('request',request=>requests.push(request.url()));
+  const state={content:null,idle_hdmi:'ext://hdmi:1',startupDesign:offlineDesign(),startup:{id:'first',view:'media_view',label:'Player',remaining:90}};
+  await mount(page,state);
+  await expect(page.locator('#startup-canvas')).toContainText('Mein lokaler Start');
+  await expect(page.locator('#startup-canvas .lg-clock')).toContainText('12:12');
+  expect(await page.evaluate(()=>LGStartupDesign.status().cached)).toBe(true);
+  expect(state.designRequests).toBe(1);
+  await page.clock.fastForward(1200);
+  await expect(page.locator('#startup-canvas .lg-clock')).toContainText('12:13');
+  // Network is absent on reload: the fresh intent is supplied explicitly to test
+  // offline rendering, rather than persisting an old source choice over HDMI.
+  state.offline=true;await page.reload();
+  await expect(page.locator('#startup-notice')).toBeVisible();
+  await page.evaluate(()=>LGStartup.apply({id:'offline-check',view:'media_view',remaining:90},null));
+  await expect(page.locator('#startup-canvas')).toContainText('Mein lokaler Start');
+  expect(await page.evaluate(()=>LGStartupDesign.status().cached)).toBe(true);
+  expect(state.designRequests).toBe(1);
+  expect(requests.some(url=>/cover.jpg|camera.json|camera.jpg|background.jpg/.test(url))).toBe(false);
+  await page.evaluate(()=>LGStartup.apply({id:'hdmi',view:'hdmi_full',remaining:90},null));
+  await expect(page.locator('#startup-screen')).toBeHidden();
+});
+
+test('startup cache rejects a live widget and survives storage failures without blocking HDMI',async({page})=>{
+  const corrupt=offlineDesign();corrupt.scene.elements[0].kind='weather';
+  await page.addInitScript(value=>{localStorage.setItem('lg-display-startup-v1:/index.html',JSON.stringify(value));},corrupt);
+  const state={content:null,idle_hdmi:'ext://hdmi:1',startup:{id:'boot',view:'media_view',remaining:90,label:'Mediaplayer'}};
+  await mount(page,state);
+  await expect(page.locator('#startup-fallback')).toBeVisible();
+  await expect(page.locator('#startup-canvas .lg-weather')).toHaveCount(0);
+  expect(await page.evaluate(()=>LGStartupDesign.status().cached)).toBe(false);
+  await page.evaluate(()=>{Storage.prototype.setItem=function(){throw new Error('quota');};});
+  state.startupDesign=offlineDesign();
+  await expect(page.locator('#startup-canvas')).toContainText('Mein lokaler Start');
+  expect(await page.evaluate(()=>LGStartupDesign.status().cached)).toBe(false);
+  state.startup={id:'hdmi',view:'hdmi_full',remaining:90};
+  await expect(page.locator('#startup-screen')).toBeHidden();
+});
+
+test('new startup design supersedes a late download and remains scoped to its display',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',startupDesign:offlineDesign(),delayDesign:600,startup:{id:'boot',view:'media_view',remaining:90}};
+  await mount(page,state);
+  await expect.poll(()=>state.designRequests).toBe(1);
+  state.startupDesign=offlineDesign('b'.repeat(64));state.startupDesign.scene.elements[1].text='Neues Design';state.delayDesign=0;
+  await expect(page.locator('#startup-canvas')).toContainText('Neues Design');
+  await page.waitForTimeout(700);
+  await expect(page.locator('#startup-canvas')).toContainText('Neues Design');
+  state.offline=true;await page.goto('http://display-app.test/other/index.html');
+  expect(await page.evaluate(()=>LGStartupDesign.status().version)).toBeNull();
+  // The new document may fetch its own design, but cannot read the other record.
+  expect(await page.evaluate(()=>localStorage.getItem('lg-display-startup-v1:/index.html'))).toContain('Neues Design');
+  expect(await page.evaluate(()=>Object.keys(localStorage).every(key=>key.startsWith('lg-display-startup-v1:')))).toBe(true);
+});
+
+
+test('startup background is decoded from its bounded bundle after an offline reload',async({page})=>{
+  const design=offlineDesign();design.scene.background='image';design.scene.image_id='c'.repeat(64);
+  design.image='data:image/jpeg;base64,'+fs.readFileSync('tests/fixtures/startup-background.jpg').toString('base64');
+  const state={content:null,idle_hdmi:'ext://hdmi:1',startupDesign:design,startup:{id:'boot',view:'media_view',remaining:90}};
+  await mount(page,state);
+  await expect(page.locator('#startup-canvas')).toBeVisible();
+  await expect.poll(()=>page.evaluate(()=>LGStartupDesign.status().image_cached)).toBe(true);
+  state.offline=true;await page.reload();
+  await page.evaluate(()=>LGStartup.apply({id:'offline-render',view:'media_view',remaining:90},null));
+  await expect(page.locator('#startup-canvas')).toHaveCSS('background-image',/data:image\/jpeg;base64,/);
+  expect(await page.evaluate(()=>new Promise(resolve=>{const img=new Image();img.onload=()=>resolve([img.naturalWidth,img.naturalHeight]);img.onerror=()=>resolve(null);img.src=JSON.parse(localStorage.getItem('lg-display-startup-v1:/index.html')).image;}))).toEqual([32,18]);
+  expect(state.designRequests).toBe(1);
+  await expect(page.locator('#startup-fallback')).toBeHidden();
 });
