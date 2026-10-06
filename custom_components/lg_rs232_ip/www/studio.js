@@ -1,5 +1,5 @@
 /* Local Home Assistant layout editor. The LG only runs the small ES5 renderer. */
-const VERSION = "2.19.0";
+const VERSION = "2.19.1";
 const clone = value => JSON.parse(JSON.stringify(value));
 const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 const SCENES = {signal:"Mit HDMI",no_signal:"Ohne HDMI",dashboard:"Dashboard",overlay:"Meldung · Overlay",pip:"Meldung · PiP",fullscreen:"Meldung · Vollbild",pip_view:"PiP",media_view:"Mediaplayer"};

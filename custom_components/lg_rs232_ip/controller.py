@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from time import monotonic
 from homeassistant.components.media_player import MediaPlayerState
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.const import EVENT_HOMEASSISTANT_STOP
@@ -199,6 +200,53 @@ class DisplayController(TemporaryView, NativeControls):
     async def async_select_media_view(self):
         await self.async_select_app_view("media_view")
 
+    async def _async_wait_for_resident(self, app, generation, action):
+        """Wait through LG web-service startup, actively retrying bounded maintenance.
+
+        Power-on ACK precedes web/SI readiness. Do not depend on the normal
+        polling phase, restart a loading SI app or discard the requested view
+        after the former 30-second heartbeat-only wait.
+        """
+
+        def current():
+            return generation == self._view_generation and not self._ha_stopping
+
+        if not current():
+            return False
+        if app.resident_connected:
+            return True
+        timeout = max(90, self._config_entry.options.get("display_wake_timeout", 60))
+        deadline = monotonic() + timeout
+        try:
+            async with asyncio.timeout(timeout):
+                await app.async_resume()
+                next_retry = monotonic() + 5
+                while current():
+                    if self.external_owner or self.presentation_active:
+                        raise HomeAssistantError(
+                            "Display is busy with another presentation"
+                        )
+                    if app.resident_connected:
+                        return True
+                    now = monotonic()
+                    if now >= deadline:
+                        raise TimeoutError
+                    if now >= next_retry:
+                        # The manager honours its web-error backoff and preserves
+                        # an already running SI app while its heartbeat catches up.
+                        await app.async_maintain_resident()
+                        next_retry = monotonic() + 5
+                        continue
+                    await asyncio.sleep(min(0.25, deadline - now))
+        except TimeoutError:
+            if not current():
+                return False
+            self._view_pending_previous = None
+            raise HomeAssistantError(
+                f"Display app did not connect for {action} within {timeout} seconds"
+            ) from None
+        return False
+
     async def async_select_app_view(self, view, *, transition="none", duration=0):
         view = "pip_view" if view == "pip" else view
         if type(duration) is not int or not 0 <= duration <= 3600:
@@ -232,16 +280,8 @@ class DisplayController(TemporaryView, NativeControls):
         self._view_pending_previous = previous if duration else None
         async with self._control_lock:
             await self.async_ensure_on("app view selection")
-        if not app.resident_connected:
-            await app.async_resume()
-            try:
-                async with asyncio.timeout(30):
-                    while not app.resident_connected:
-                        await asyncio.sleep(0.2)
-            except TimeoutError:
-                raise HomeAssistantError(
-                    "Display app did not connect for view selection"
-                ) from None
+        if not await self._async_wait_for_resident(app, generation, "view selection"):
+            return
         async with self._control_lock:
             if generation != self._view_generation:
                 return
@@ -282,16 +322,10 @@ class DisplayController(TemporaryView, NativeControls):
             generation = self._view_generation
             async with self._control_lock:
                 await self.async_ensure_on("app HDMI selection")
-            if not app.resident_connected:
-                await app.async_resume()
-                try:
-                    async with asyncio.timeout(30):
-                        while not app.resident_connected:
-                            await asyncio.sleep(0.2)
-                except TimeoutError:
-                    raise HomeAssistantError(
-                        "Display app did not connect for HDMI selection"
-                    ) from None
+            if not await self._async_wait_for_resident(
+                app, generation, "HDMI selection"
+            ):
+                return
         async with self._control_lock:
             if via_app is True and generation != self._view_generation:
                 return

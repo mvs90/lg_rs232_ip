@@ -1965,3 +1965,130 @@ async def test_superseded_app_input_does_not_overwrite_confirmed_input(app):
     app.saved["paused"] = True
     assert entity.current_option == "HDMI 1"
     app.controller._lg_display.async_set_input.assert_not_awaited()
+
+
+@pytest.mark.parametrize("source", ["App-Mediaplayer", "App-HDMI 2"])
+async def test_input_from_standby_survives_delayed_si_startup(app, source):
+    """No periodic HA poll: the user request must outlive a 65-second LG boot."""
+    from custom_components.lg_rs232_ip.select import LGDisplayInputSelect
+
+    layouts = await configure_dashboard(app)
+    entity = LGDisplayInputSelect(app.controller._lg_display, "LG", "test")
+    entity.hass = app.hass
+    entity.async_write_ha_state = Mock()
+    app.last_seen = 0
+    app._resident_foreground = None
+    now = [0.0]
+    real_sleep = asyncio.sleep
+    attempts = []
+    app.async_resume = AsyncMock()  # Web service still unavailable at first attempt.
+
+    async def maintain():
+        attempts.append(now[0])
+        if now[0] >= 65:
+            app._resident_foreground = SI_APP_ID
+            connect_app(app)
+
+    async def advance(seconds):
+        now[0] += seconds
+        await real_sleep(0)
+
+    app.async_maintain_resident = AsyncMock(side_effect=maintain)
+    app.controller._lg_display.async_get_power_status.side_effect = [False, True]
+    try:
+        with patch("custom_components.lg_rs232_ip.controller.monotonic", side_effect=lambda: now[0]), patch("custom_components.lg_rs232_ip.controller.asyncio.sleep", side_effect=advance):
+            await acknowledge_selection(app, entity.async_select_option(source))
+        assert entity.current_option == source
+        assert now[0] >= 65 and len(attempts) == 13
+        app.async_resume.assert_awaited_once()
+        app.controller._lg_display.async_power_on.assert_awaited_once()
+        app.controller._lg_display.async_set_input.assert_not_awaited()
+    finally:
+        await layouts.async_close()
+
+
+async def test_startup_retry_keeps_si_foreground_and_honours_native_web_backoff(app):
+    """Use the real resident manager, including its transient-error backoff."""
+    layouts = await configure_dashboard(app)
+    app.last_seen = 0
+    app._resident_foreground = None
+    clock = [0.0]
+    real_sleep = asyncio.sleep
+    app.web.reset_mock()
+    app.web.async_foreground_app.side_effect = LGWebError("booting")
+    app.web.async_launch_app.side_effect = None
+
+    async def advance(seconds):
+        clock[0] += seconds
+        if clock[0] >= 35:
+            app._resident_retry = 0  # Expire the manager's monotonic backoff.
+            app.web.async_foreground_app.side_effect = None
+            app.web.async_foreground_app.return_value = SI_APP_ID
+        if clock[0] >= 65:
+            connect_app(app)
+        await real_sleep(0)
+
+    try:
+        with patch("custom_components.lg_rs232_ip.controller.monotonic", side_effect=lambda: clock[0]), patch("custom_components.lg_rs232_ip.controller.asyncio.sleep", side_effect=advance):
+            await acknowledge_selection(app, app.controller.async_select_app_view("media_view"))
+        assert app.media_view_selected and clock[0] >= 65
+        assert 2 <= app.web.async_foreground_app.await_count < 10
+        app.web.async_launch_app.assert_not_awaited()  # Already running SI is preserved.
+        app.controller._lg_display.async_set_input.assert_not_awaited()
+    finally:
+        await layouts.async_close()
+
+
+@pytest.mark.parametrize("takeover", ["input", "off", "shutdown"])
+async def test_new_action_cancels_pending_startup_without_late_view(app, takeover):
+    layouts = await configure_dashboard(app)
+    app.last_seen = 0
+    app.async_resume = AsyncMock()
+    app.async_maintain_resident = AsyncMock()
+    waiting = asyncio.Event()
+    resume_wait = asyncio.Event()
+
+    async def delay(_):
+        waiting.set()
+        await resume_wait.wait()
+
+    try:
+        with patch("custom_components.lg_rs232_ip.controller.asyncio.sleep", side_effect=delay):
+            task = asyncio.create_task(app.controller.async_select_app_view("media_view"))
+            await waiting.wait()
+            if takeover == "input":
+                await app.controller.async_select_input(0x90, via_app=False)
+            elif takeover == "off":
+                await app.controller.async_turn_off()
+            else:
+                await app.controller.async_close()
+            retries_after_takeover = app.async_maintain_resident.await_count
+            resume_wait.set()
+            await task
+        assert not app.media_view_selected and app._input_request is None
+        assert app.async_maintain_resident.await_count == retries_after_takeover
+    finally:
+        await layouts.async_close()
+
+
+async def test_missing_app_has_bounded_startup_deadline_and_no_delayed_selection(app):
+    layouts = await configure_dashboard(app)
+    app.last_seen = 0
+    app.async_resume = AsyncMock()
+    app.async_maintain_resident = AsyncMock()
+    clock = [0.0]
+
+    async def advance(seconds):
+        clock[0] += seconds
+
+    try:
+        with patch("custom_components.lg_rs232_ip.controller.monotonic", side_effect=lambda: clock[0]), patch("custom_components.lg_rs232_ip.controller.asyncio.sleep", side_effect=advance):
+            with pytest.raises(HomeAssistantError, match="within 90 seconds"):
+                await app.controller.async_select_app_view("media_view", duration=10)
+        assert clock[0] == 90 and not app.media_view_selected
+        assert app.controller._view_pending_previous is None
+        connect_app(app)
+        assert not app.media_view_selected  # Expired intent must never replay later.
+        app.controller._lg_display.async_set_input.assert_not_awaited()
+    finally:
+        await layouts.async_close()

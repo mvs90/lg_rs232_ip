@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.19.1
+
+- Fix selecting an app view or App-HDMI directly from standby: wait for LG web/SI startup with active, bounded recovery instead of abandoning the requested source after a passive 30-second wait. An existing SI app is not relaunched while its heartbeat starts.
+- Keep the requested view through delayed startup; cancel it when a newer input, power-off or shutdown takes over. Preserve OSD and avoid native HDMI fallback or replay of expired requests.
+
 ## 2.19.0
 
 - Replace arbitrary ISM byte entry in normal use with a German/English named select: Off, White Wash, User Image and User Video for indoor UH5F-H. Explain effects and media prerequisites; retain documented legacy modes only in the generic profile. Validate codes, exact ACK and fresh readback in both named and legacy controls.

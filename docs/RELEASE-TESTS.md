@@ -1,5 +1,13 @@
 # Release acceptance
 
+## LG 2.19.1: select an app source directly from standby — 2026-10-06
+
+**397 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14.** Regression tests hold the app unavailable for a simulated 65 seconds, then verify the originally requested Mediaplayer view/App-HDMI is applied without a background HA poll. Further cases cover native web backoff, no relaunch of an already foreground SI app, takeover by another input/power-off/shutdown, bounded timeout and no replay of expired requests.
+
+The user reported a black screen after selecting App-Mediaplayer from standby in 2.19.0. The HA log recorded the integration's 30-second view-connection timeout; the app connected later with `hdmi_full`, not the requested media view. The prior acceptance tests covered source switching on an already awake panel and did not catch this startup timing failure.
+
+Installed 2.19.1 in the existing HA 2026.9.4 Docker container. On the physical 75UH5F-HJ, selected App-HDMI 1, switched off, waited for confirmed standby plus ten seconds, then issued **only Input → App-Mediaplayer**. The request succeeded after **53.2 seconds**. Input state and the client heartbeat confirmed `media_view`; an independent native foreground query and panel screenshot confirmed the SI app and visible media layout. Original OSD state and all saved Studio views were preserved. The display was left **on in the requested Mediaplayer view**. This is a standby-wake test, not a mains-disconnected cold boot or a promise of identical startup duration on every firmware.
+
 ## LG 2.19.0: named ISM modes and explicit app inputs — 2026-10-06
 
 **390 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14.** New coverage verifies documented model-specific ISM codes, invalid-byte rejection, exact acknowledgement plus uncached readback, unknown/offline state, legacy-number validation, app/native routing, paused-app resumption, no native fallback on failure/timeout, superseded requests, Studio-source rename/removal and name collisions.

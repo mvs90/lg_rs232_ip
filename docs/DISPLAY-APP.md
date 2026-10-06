@@ -141,3 +141,9 @@ The display's **Input** select now exposes both routes:
 App HDMI options require resident SI mode; Studio view options also require enabled custom layouts. They remain selectable while the app is paused so that selecting one can resume it. Notifications are temporary content and do not become permanent input sources. The current option follows the acknowledged app view or embedded HDMI, even when LG's native `xb` response still refers to the underlying HDMI input. Controller/app events update the entity immediately without adding TCP requests.
 
 The media player, remote card and AV Companion keep their existing automatic routing: choosing HDMI there uses the connected resident app when available. Explicit native/app routing is provided by the **Input** select; existing media-player source names and the AV API remain unchanged.
+
+### Starting an app source from standby (2.19.1)
+
+LG can acknowledge power-on before its web services and resident app are ready. Selecting an app view or App-HDMI therefore retains the requested source while startup completes. The integration checks resident maintenance every five seconds during this bounded startup phase, honours the existing backoff after web errors and does not relaunch an SI app already in the foreground. It no longer relies solely on the normal polling schedule and a passive 30-second wait.
+
+The app-readiness budget after power-on is 90 seconds, or the configured Display wake timeout if that is longer. The separate power-on timeout still applies. A new source, power-off or HA shutdown supersedes the waiting request. An expired request reports failure and is not replayed later; there is no automatic native-HDMI fallback. HDMI may remain black while the attached player is asleep, which must not be mistaken for the requested Mediaplayer view. Source application still needs the app's matching acknowledgement and uses the existing OSD guard.
