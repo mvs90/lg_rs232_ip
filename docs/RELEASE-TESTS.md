@@ -1,5 +1,11 @@
 # Release acceptance
 
+## LG 2.23.0: retain covers while replacements load — 2026-10-06
+
+**422 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 234 browser cases pass across Chromium/WebKit.** Controlled image responses verify retained artwork/gradient during loading and buffering, no premature placeholder, delayed decoding, the legacy browser path without `image.decode`, superseded responses, missing covers, failed downloads, bounded timeouts/retries, player changes and view cleanup. Studio tests additionally cover authenticated pending/success/failure states, aborted old track requests and disconnect cleanup. Existing 4K, palette-cache and HDMI identity tests remain green.
+
+Installed **LG 2.23.0 / app 1.19.0** in the existing HA 2026.9.4 Docker instance. The physical **75UH5F-HJ** reports the new connected app in the foreground. A native capture confirms the current Sonos Wohnzimmer artwork, gradient and media information. Saved views, power state and source match the pre-update backup; Sonos remains playing. Slow/stalled response timing is verified in the controlled browser tests, not inferred from this single physical capture. Private capture and backup files remain excluded from Git.
+
 ## LG 2.22.1: skip black outer cover strips — 2026-10-06
 
 **422 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 216 browser cases pass across Chromium/WebKit.** New synthetic-cover cases verify exact gradient colours for asymmetric black borders, near-black compression residue, fully black covers, preserved dark artwork, black areas inside a motif and a single coloured pixel. The whole-cover palette remains unchanged. Existing tests continue to verify one pixel read per artwork and live mode changes without downloads or HDMI recreation.

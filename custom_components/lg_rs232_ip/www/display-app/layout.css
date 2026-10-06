@@ -33,3 +33,6 @@
 .lg-widget-enter { animation:lg-widget-enter .28s ease-out; }
 @keyframes lg-widget-enter { from {opacity:0;transform:translateY(6px)} to {opacity:1;transform:translateY(0)} }
 @media (prefers-reduced-motion:reduce) { .lg-widget-enter { animation:none; } }
+
+/* A pending replacement keeps the current cover; no placeholder flash. */
+.lg-media-art.loaded .lg-media-placeholder,.lg-media-art.loading .lg-media-placeholder{display:none}

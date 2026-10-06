@@ -1,5 +1,5 @@
 /* Local Home Assistant layout editor. The LG only runs the small ES5 renderer. */
-const VERSION = "2.22.1";
+const VERSION = "2.23.0";
 const clone = value => JSON.parse(JSON.stringify(value));
 const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 const SCENES = {signal:"Mit HDMI",no_signal:"Ohne HDMI",dashboard:"Dashboard",overlay:"Meldung · Overlay",pip:"Meldung · PiP",fullscreen:"Meldung · Vollbild",pip_view:"PiP",media_view:"Mediaplayer"};
@@ -260,7 +260,7 @@ class LGDisplayStudio extends HTMLElement {
   }
   removeItem(id) {this.checkpoint();this.scene.elements=this.scene.elements.filter(item=>item.id!==id);this.selected=null;this.changed(true);}
   async showDashboard() {await this.selectSource('dashboard');}
-  releaseImages() {for(const url of Object.values(this.imageUrls || {}))if(url)URL.revokeObjectURL(url);this.imageUrls={};this.imagePending=new Set();for(const record of Object.values(this.coverUrls || {}))if(record.url)URL.revokeObjectURL(record.url);this.coverUrls={};this.coverPending=new Set();}
+  releaseImages() {for(const url of Object.values(this.imageUrls || {}))if(url)URL.revokeObjectURL(url);this.imageUrls={};this.imagePending=new Set();for(const record of Object.values(this.coverUrls || {}))if(record.url)URL.revokeObjectURL(record.url);this.coverUrls={};for(const request of (this.coverPending || new Map()).values())request.controller.abort();this.coverPending=new Map();}
   imageUrl(id) {
     if(this.imageUrls[id]!==undefined)return this.imageUrls[id] || '';
     if(this.imagePending.has(id))return '';
@@ -295,16 +295,21 @@ class LGDisplayStudio extends HTMLElement {
   }
   mediaUrl(entity,key,size=640) {
     const cacheId=entity+"/"+size;
-    const cached=this.coverUrls[cacheId];if(cached?.key===key && (cached.url || Date.now()-cached.at<30000))return cached.url || '';
-    const pending=cacheId;if(this.coverPending.has(pending))return '';
-    const entry=this.entryId,generation=this._generation,pendingSet=this.coverPending;pendingSet.add(pending);
-    this.hass.fetchWithAuth(`/api/lg_rs232_ip/layout_media/${entry}/${encodeURIComponent(entity)}?v=preview&size=${size}`).then(async response=>{
+    const cached=this.coverUrls[cacheId];if(cached?.key===key && (cached.url || Date.now()-cached.at<30000))return cached.url || null;
+    const previous=this.coverPending.get(cacheId);if(previous?.key===key)return '';
+    if(previous)previous.controller.abort();
+    const entry=this.entryId,generation=this._generation,pendingMap=this.coverPending;
+    const request={key,controller:new AbortController()};pendingMap.set(cacheId,request);
+    const timeout=setTimeout(()=>request.controller.abort(),12000);
+    const current=()=>this.isConnected&&entry===this.entryId&&generation===this._generation&&pendingMap===this.coverPending&&pendingMap.get(cacheId)===request;
+    this.hass.fetchWithAuth(`/api/lg_rs232_ip/layout_media/${entry}/${encodeURIComponent(entity)}?v=preview&size=${size}`,{signal:request.controller.signal}).then(async response=>{
       if(!response.ok||response.status===204)throw Error();const url=URL.createObjectURL(await response.blob());
-      if(!this.isConnected||generation!==this._generation||entry!==this.entryId||pendingSet!==this.coverPending){URL.revokeObjectURL(url);return;}
-      const state=this.hass.states[entity];if(!state || this.cardData(state).artwork!==key){URL.revokeObjectURL(url);return;}
+      const state=this.hass.states[entity];
+      if(!current() || !state || this.cardData(state).artwork!==key){URL.revokeObjectURL(url);return;}
       if(this.coverUrls[cacheId]?.url)URL.revokeObjectURL(this.coverUrls[cacheId].url);this.coverUrls[cacheId]={key,url,at:Date.now()};const keys=Object.keys(this.coverUrls);if(keys.length>32){const old=keys.find(id=>id!==cacheId);if(this.coverUrls[old].url)URL.revokeObjectURL(this.coverUrls[old].url);delete this.coverUrls[old];}this.paint();
-    }).catch(()=>{if(entry===this.entryId&&generation===this._generation&&pendingSet===this.coverPending&&this.hass.states[entity]&&this.cardData(this.hass.states[entity]).artwork===key){if(this.coverUrls[cacheId]?.url)URL.revokeObjectURL(this.coverUrls[cacheId].url);this.coverUrls[cacheId]={key,url:null,at:Date.now()};}}).finally(()=>{pendingSet.delete(pending);if(this.isConnected&&entry===this.entryId&&generation===this._generation&&pendingSet===this.coverPending)this.paint();});return '';
+    }).catch(()=>{if(current()&&this.hass.states[entity]&&this.cardData(this.hass.states[entity]).artwork===key){if(this.coverUrls[cacheId]?.url)URL.revokeObjectURL(this.coverUrls[cacheId].url);this.coverUrls[cacheId]={key,url:null,at:Date.now()};}}).finally(()=>{clearTimeout(timeout);if(pendingMap.get(cacheId)===request)pendingMap.delete(cacheId);if(this.isConnected&&entry===this.entryId&&generation===this._generation&&pendingMap===this.coverPending)this.paint();});return '';
   }
+
   async loadSuggestions(area) {
     const entry=this.entryId,generation=this._generation,request=this._suggestionRequest=(this._suggestionRequest || 0)+1;
     try {const data=await this.hass.callApi('GET',`lg_rs232_ip/layout_suggestions/${entry}`+(area!==undefined?'?area_id='+encodeURIComponent(area):''));

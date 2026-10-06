@@ -607,3 +607,58 @@ test('startup editor distinguishes unsaved, pending and display-confirmed offlin
   await openView(page,'Dashboard');
   await expect(page.locator('.startup-cache-status')).toBeHidden();
 });
+
+test('Studio buffers covers during authenticated fetches and exposes confirmed failures',async({page})=>{
+  await mount(page);await openView(page,'Mediaplayer');
+  await page.evaluate(png=>{
+    window.fetches=[];window.replies=[];
+    const player={entity_id:'media_player.sonos',state:'playing',attributes:{entity_picture:'/art',media_title:'One'}};hass.states[player.entity_id]=player;
+    studio.scene.elements[0].entity_id=player.entity_id;
+    Object.assign(studio.scene,{media_background_enabled:true,media_background_entity:player.entity_id,media_background_fit:'colors'});
+    hass.fetchWithAuth=(url,options)=>new Promise((resolve,reject)=>{
+      fetches.push({title:player.attributes.media_title,url,signal:options.signal});
+      options.signal.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')));
+      replies.push(ok=>resolve(ok?new Response(Uint8Array.from(atob(png),c=>c.charCodeAt(0)),{headers:{'Content-Type':'image/png'}}):new Response('',{status:500})));
+    });
+    studio.paint();
+  },fs.readFileSync('tests/fixtures/media-cover.png').toString('base64'));
+  await expect.poll(()=>page.evaluate(()=>fetches.length)).toBeGreaterThan(0);
+  await expect(page.locator('.scene .lg-media-placeholder')).toBeHidden();
+  await page.evaluate(()=>{replies.splice(0).forEach(reply=>reply(true));});
+  await expect(page.locator('.scene .lg-media-art')).toHaveClass(/loaded/);
+  await expect(page.locator('.scene .lg-cover-background')).toHaveClass(/loaded/);
+  const previous=await page.locator('.scene .lg-media-art img').getAttribute('src');
+  const background=await page.locator('.scene .lg-cover-background').evaluate(n=>n.style.background);
+  await page.evaluate(()=>{hass.states['media_player.sonos'].attributes.media_title='Two';studio.paint();});
+  await expect.poll(()=>page.evaluate(()=>fetches.some(f=>f.title==='Two'))).toBe(true);
+  await expect(page.locator('.scene .lg-media-art img')).toHaveAttribute('src',previous);
+  expect(await page.locator('.scene .lg-cover-background').evaluate(n=>n.style.background)).toBe(background);
+  await expect(page.locator('.scene .lg-media-placeholder')).toBeHidden();
+  await page.evaluate(()=>{hass.states['media_player.sonos'].attributes.media_title='Three';studio.paint();});
+  await expect.poll(()=>page.evaluate(()=>fetches.filter(f=>f.title==='Two').every(f=>f.signal.aborted))).toBe(true);
+  await expect.poll(()=>page.evaluate(()=>fetches.some(f=>f.title==='Three'))).toBe(true);
+  // Releasing old rejected requests must not clear the latest pending fetch.
+  await page.evaluate(()=>{replies.splice(0).forEach(reply=>reply(true));});
+  await expect(page.locator('.scene .lg-media-art img')).not.toHaveAttribute('src',previous);
+  await expect(page.locator('.scene .lg-media-placeholder')).toBeHidden();
+  await page.evaluate(()=>{hass.states['media_player.sonos'].attributes.media_title='Bad';studio.paint();});
+  await expect.poll(()=>page.evaluate(()=>fetches.some(f=>f.title==='Bad'))).toBe(true);
+  await page.evaluate(()=>{replies.splice(0).forEach(reply=>reply(false));});
+  await expect(page.locator('.scene .lg-media-placeholder')).toBeVisible();
+  await expect(page.locator('.scene .lg-cover-background')).not.toHaveClass(/loaded/);
+  const failed=await page.evaluate(()=>fetches.length);
+  await page.evaluate(()=>studio.paint());await page.waitForTimeout(1100);
+  expect(await page.evaluate(()=>fetches.length)).toBe(failed);
+});
+
+test('Studio cancels pending cover fetches when disconnected',async({page})=>{
+  await mount(page);await openView(page,'Mediaplayer');
+  await page.evaluate(()=>{
+    hass.states['media_player.sonos']={entity_id:'media_player.sonos',state:'playing',attributes:{entity_picture:'/art',media_title:'Pending'}};
+    Object.assign(studio.scene,{media_background_enabled:true,media_background_entity:'media_player.sonos'});
+    window.signals=[];hass.fetchWithAuth=(url,options)=>new Promise((resolve,reject)=>{signals.push(options.signal);options.signal.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')));});studio.paint();
+  });
+  await expect.poll(()=>page.evaluate(()=>signals.length)).toBeGreaterThan(0);
+  await page.evaluate(()=>studio.remove());
+  expect(await page.evaluate(()=>signals.every(signal=>signal.aborted))).toBe(true);
+});

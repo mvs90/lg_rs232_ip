@@ -24,7 +24,7 @@ async function mount(page, state) {
     }
     if (name === 'state') {
       if (state.delayState) await new Promise(resolve => setTimeout(resolve,state.delayState));
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.18.1', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.19.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -479,9 +479,11 @@ test('cover edge colours come from the actual borders and slow old artwork never
   expect(await layer.evaluate(n=>n.style.background)).toContain('rgb(0, 0, 255)');
   let finish;const pending=new Promise(resolve=>finish=resolve);
   await page.route('**/cover.jpg?**',async r=>{await pending;await r.fulfill({contentType:'image/png',body:Buffer.from(png,'base64')}).catch(()=>{});});
+  const loading=page.waitForRequest(r=>r.url().includes('v=slow'));
   state.layout.values['media_player.music'].artwork='slow';
-  await expect(layer.locator('img')).toHaveAttribute('src',/v=slow(?:&|$)/);
-  await expect(layer).not.toHaveClass(/loaded/);
+  await loading;
+  await expect(layer.locator('img')).toHaveAttribute('src',/v=edge-colours(?:&|$)/);
+  await expect(layer).toHaveClass(/loaded/);
   state.layout.values['media_player.music'].state='paused';await expect(layer).toHaveCount(0);
   finish();await page.waitForTimeout(500);await expect(layer).toHaveCount(0);
 });
@@ -1094,7 +1096,8 @@ test('whole-cover colours include the centre and switch live without new downloa
   await expect(art).toBeHidden();
   expect(await page.evaluate(()=>window.paletteReads)).toBe(reads);expect(downloads).toBe(fetched);
   expect(await page.evaluate(()=>originalArt===document.querySelector('.lg-cover-background img') && originalVideo===document.querySelector('video'))).toBe(true);
-  media.artwork='slow';await expect(art).toHaveAttribute('src',/v=slow/);
+  const loading=page.waitForRequest(r=>r.url().includes('v=slow'));
+  media.artwork='slow';await loading;await expect(art).toHaveAttribute('src',/v=known/);
   scene.media_background_color_source='edges';
   await page.waitForTimeout(300);release();
   await expect.poll(()=>layer.evaluate(n=>n.style.background)).toContain('rgb(255, 0, 0)');
@@ -1138,3 +1141,125 @@ for (const sample of [
     }
   });
 }
+
+async function bufferedMedia(page, state={}) {
+  Object.assign(state,{content:null,idle_hdmi:'ext://hdmi:1',media_view:true,layout:designed()});
+  const scene=state.layout.config.scenes.media_view,card=scene.elements[0];card.entity_id='media_player.music';
+  Object.assign(scene,{media_background_enabled:true,media_background_entity:card.entity_id,media_background_fit:'colors'});
+  const media=state.layout.values[card.entity_id]={state:'playing',media_title:'First',artwork:'one'};
+  await mount(page,state);
+  await expect(page.locator('.lg-cover-background')).toHaveClass(/loaded/);
+  await expect(page.locator('.lg-media-art')).toHaveClass(/loaded/);
+  return {state,scene,card,media};
+}
+
+for(const legacy of [false,true])test('cover and background remain while replacement loads'+(legacy?' without image.decode':''),async({page})=>{
+  if(legacy)await page.addInitScript(()=>Object.defineProperty(HTMLImageElement.prototype,'decode',{value:undefined}));
+  const {media}=await bufferedMedia(page);
+  const layer=page.locator('.lg-cover-background'),art=page.locator('.lg-media-art');
+  const previous=await layer.evaluate(n=>n.style.background);
+  let release;const wait=new Promise(resolve=>release=resolve);let requests=0;
+  const png=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=c.height=32;const x=c.getContext('2d');x.fillStyle='#00aaff';x.fillRect(0,0,32,32);return c.toDataURL().split(',')[1];});
+  await page.route('**/cover.jpg?**',async route=>{requests++;await wait;await route.fulfill({contentType:'image/png',body:Buffer.from(png,'base64')}).catch(()=>{});});
+  await page.evaluate(()=>window.keptHdmi=document.querySelector('video'));
+  media.artwork='two';media.media_title='Second';media.state='buffering';
+  await expect(page.locator('.lg-media .lg-value')).toHaveText('Second');
+  await expect.poll(()=>requests).toBeGreaterThan(0);
+  await expect(art.locator('img')).toHaveAttribute('src',/v=one&/);
+  await expect(layer.locator('img')).toHaveAttribute('src',/v=one&/);
+  await expect(art).toHaveClass(/loaded/);await expect(layer).toHaveClass(/loaded/);
+  await expect(art.locator('.lg-media-placeholder')).toBeHidden();
+  expect(await layer.evaluate(n=>n.style.background)).toBe(previous);
+  release();
+  await expect(art.locator('img')).toHaveAttribute('src',/v=two&/);
+  await expect(layer.locator('img')).toHaveAttribute('src',/v=two&/);
+  await expect.poll(()=>layer.evaluate(n=>n.style.background)).toContain('rgb(0, 170, 255)');
+  expect(await page.evaluate(()=>keptHdmi===document.querySelector('video'))).toBe(true);
+  expect(requests).toBeLessThanOrEqual(2);
+});
+
+test('superseded cover success and failure never replace the latest cover',async({page})=>{
+  const {media}=await bufferedMedia(page);let release;const wait=new Promise(resolve=>release=resolve);let slow=0;
+  await page.route('**/cover.jpg?**',async route=>{
+    if(route.request().url().includes('v=slow')){slow++;await wait;return route.fulfill({status:204,body:''}).catch(()=>{});}
+    return route.fulfill({contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
+  });
+  media.artwork='slow';await expect.poll(()=>slow).toBeGreaterThan(0);
+  media.artwork='latest';
+  for(const selector of ['.lg-media-art img','.lg-cover-background img'])await expect(page.locator(selector)).toHaveAttribute('src',/v=latest&/);
+  release();await page.waitForTimeout(150);
+  await expect(page.locator('.lg-media-art')).toHaveClass(/loaded/);
+  await expect(page.locator('.lg-cover-background')).toHaveClass(/loaded/);
+  await expect(page.locator('.lg-media-placeholder')).toBeHidden();
+  // The same cancellation rule applies to late successful responses after removal.
+  let finish;const pending=new Promise(resolve=>finish=resolve);
+  await page.route('**/cover.jpg?**',async route=>{await pending;await route.fulfill({contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')}).catch(()=>{});});
+  const requested=page.waitForRequest(r=>r.url().includes('v=removed'));media.artwork='removed';await requested;
+  media.artwork=null;
+  await expect(page.locator('.lg-media-placeholder')).toBeVisible();await expect(page.locator('.lg-cover-background')).toHaveCount(0);
+  finish();await page.waitForTimeout(150);
+  await expect(page.locator('.lg-media-art')).not.toHaveClass(/loaded/);await expect(page.locator('.lg-cover-background')).toHaveCount(0);
+});
+
+test('failed replacement shows placeholder and normal background with bounded retries',async({page})=>{
+  const {media}=await bufferedMedia(page);let fail;const wait=new Promise(resolve=>fail=resolve);let requests=0,recovered=false;
+  await page.route('**/cover.jpg?**',async route=>{requests++;await wait;await route.fulfill(recovered?{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')}:{status:204,body:''}).catch(()=>{});});
+  media.artwork='bad';await expect.poll(()=>requests).toBeGreaterThan(0);
+  await expect(page.locator('.lg-media-placeholder')).toBeHidden();
+  fail();
+  await expect(page.locator('.lg-media-placeholder')).toBeVisible();
+  await expect(page.locator('.lg-cover-background')).not.toHaveClass(/loaded/);
+  await expect(page.locator('.lg-media-art img')).not.toHaveAttribute('src');
+  const count=requests;await page.waitForTimeout(1100);expect(requests).toBe(count);
+  recovered=true;await page.clock.install();await page.clock.fastForward(31000);await page.clock.runFor(200);
+  await expect(page.locator('.lg-media-art')).toHaveClass(/loaded/);
+  await expect(page.locator('.lg-cover-background')).toHaveClass(/loaded/);
+  expect(requests).toBeGreaterThan(count);
+});
+
+test('cover buffering bounds stalled loads and cancels work when a view is removed',async({page})=>{
+  const {state,media}=await bufferedMedia(page);let finish;const wait=new Promise(resolve=>finish=resolve);let requested=0;
+  await page.route('**/cover.jpg?**',async route=>{requested++;await wait;await route.fulfill({contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')}).catch(()=>{});});
+  await page.clock.install();media.artwork='stalled';await page.clock.runFor(150);
+  await expect.poll(()=>requested).toBeGreaterThan(0);
+  await page.clock.fastForward(14000);
+  await expect(page.locator('.lg-media-placeholder')).toBeHidden();
+  await page.clock.fastForward(1100);
+  await expect(page.locator('.lg-media-placeholder')).toBeVisible();
+  await expect(page.locator('.lg-cover-background')).not.toHaveClass(/loaded/);
+  const count=requested;await page.clock.fastForward(20000);expect(requested).toBe(count);
+  media.artwork='leaving';await page.clock.runFor(150);
+  state.media_view=false;await page.clock.runFor(150);
+  await expect(page.locator('.lg-media')).toHaveCount(0);await expect(page.locator('.lg-cover-background')).toHaveCount(0);
+  finish();await page.clock.runFor(1000);
+  await expect(page.locator('.lg-media')).toHaveCount(0);
+});
+
+test('switching the bound player does not buffer another players cover',async({page})=>{
+  const {state,scene,card}=await bufferedMedia(page);
+  let finish;const wait=new Promise(resolve=>finish=resolve);
+  await page.route('**/cover.jpg?**',async route=>{await wait;await route.fulfill({status:204,body:''}).catch(()=>{});});
+  state.layout.values['media_player.other']={state:'playing',artwork:'other',media_title:'Other player'};
+  scene.media_background_entity=card.entity_id='media_player.other';
+  await expect(page.locator('.lg-media .lg-value')).toHaveText('Other player');
+  await expect(page.locator('.lg-media-art')).not.toHaveClass(/loaded/);
+  await expect(page.locator('.lg-cover-background')).not.toHaveClass(/loaded/);
+  // No false "missing artwork" icon while the first fetch is still pending.
+  await expect(page.locator('.lg-media-placeholder')).toBeHidden();
+  finish();await expect(page.locator('.lg-media-placeholder')).toBeVisible();
+});
+
+test('a downloaded cover is kept off screen until image decoding finishes',async({page})=>{
+  await page.addInitScript(()=>{
+    const decode=HTMLImageElement.prototype.decode;window.decodedCovers=[];
+    HTMLImageElement.prototype.decode=function(){return decode.call(this).then(()=>this.src.includes('v=decoding')?new Promise(resolve=>decodedCovers.push(resolve)):undefined);};
+  });
+  const {media}=await bufferedMedia(page);
+  const oldBackground=await page.locator('.lg-cover-background').evaluate(n=>n.style.background);
+  media.artwork='decoding';await expect.poll(()=>page.evaluate(()=>decodedCovers.length)).toBe(2);
+  for(const selector of ['.lg-media-art img','.lg-cover-background img'])await expect(page.locator(selector)).toHaveAttribute('src',/v=one&/);
+  await expect(page.locator('.lg-media-placeholder')).toBeHidden();
+  expect(await page.locator('.lg-cover-background').evaluate(n=>n.style.background)).toBe(oldBackground);
+  await page.evaluate(()=>decodedCovers.forEach(done=>done()));
+  for(const selector of ['.lg-media-art img','.lg-cover-background img'])await expect(page.locator(selector)).toHaveAttribute('src',/v=decoding&/);
+});

@@ -94,6 +94,64 @@
     motion.timer=window.setTimeout(finish,1000);
   };
   function artworkSize(pixels) {return pixels>1280 ? 2160 : pixels>640 ? 1280 : 640;}
+  // Keep one displayed image and at most one detached replacement. Changing
+  // src on the displayed element itself can flash a broken/empty image.
+  function ArtworkBuffer(area, changed) {
+    this.area=area;this.changed=changed;this.image=document.createElement("img");
+    this.image.alt="";area.appendChild(this.image);this.owner=null;this.id=null;
+    this.pending=null;this.ready=false;this.retryAt=0;
+  }
+  ArtworkBuffer.prototype.cancel = function () {
+    var pending=this.pending;this.pending=null;
+    if(!pending){return;}window.clearTimeout(pending.timer);
+    if(pending.image){pending.image.onload=pending.image.onerror=null;pending.image.removeAttribute("src");}
+    this.area.classList.remove("loading");
+  };
+  ArtworkBuffer.prototype.clear = function () {
+    this.cancel();this.id=null;this.retryAt=0;this.ready=false;
+    this.image.removeAttribute("src");this.area.classList.remove("loaded");
+    this.changed(null);
+  };
+  ArtworkBuffer.prototype.update = function (owner, key, size, urlFor) {
+    if(this.owner!==owner){this.clear();this.owner=owner;}
+    if(!key || !urlFor){this.clear();return;}
+    var id=owner+"/"+key+"/"+size,self=this;
+    if(this.id!==id){this.cancel();this.id=id;this.retryAt=0;}
+    else if(!this.pending && (this.ready || Date.now()<this.retryAt)){return;}
+    if(!this.pending){
+      var request={image:null,timer:null};this.pending=request;
+      this.area.classList.add("loading");
+      function failed() {
+        if(self.pending!==request){return;}
+        self.cancel();self.ready=false;self.retryAt=Date.now()+30000;
+        self.image.removeAttribute("src");self.area.classList.remove("loaded");self.changed(null);
+      }
+      request.failed=failed;
+      // HA bounds its own fetch at eight seconds. Also bound a stalled browser
+      // connection or editor blob request instead of keeping an old cover forever.
+      request.timer=window.setTimeout(failed,15000);
+    }
+    var pending=this.pending;if(pending.image){return;}
+    var url=urlFor(owner,key,size);
+    // The editor distinguishes an in-flight blob ('') from a failed fetch (null).
+    if(url===null){pending.failed();return;}if(!url){return;}
+    var next=document.createElement("img");next.alt="";pending.image=next;
+    function loaded() {
+      if(self.pending!==pending){return;}
+      if(!next.naturalWidth){pending.failed();return;}
+      window.clearTimeout(pending.timer);next.onload=next.onerror=null;
+      var old=self.image;self.area.replaceChild(next,old);old.removeAttribute("src");
+      self.image=next;self.pending=null;self.ready=true;self.retryAt=0;
+      self.area.classList.remove("loading");self.area.classList.add("loaded");self.changed(next);
+    }
+    next.onload=function () {
+      if(self.pending!==pending){return;}
+      // Chromium 53 has no decode(); onload is its decoded-image boundary.
+      if(next.decode){next.decode().then(loaded,pending.failed);}else{loaded();}
+    };
+    next.onerror=pending.failed;
+    next.src=url+(this.retryAt && url.indexOf("blob:")!==0 ? "&retry="+Math.floor(Date.now()/30000) : "");
+  };
   function coverBackgrounds(image) {
     // One 32 x 32 sample per new cover, never per frame or progress update.
     // The scoped HA artwork endpoint and editor blob URLs are same-origin.
@@ -131,44 +189,34 @@
   }
   Renderer.prototype.clearCover = function () {
     var cover=this.cover;if(!cover){return;}
-    cover.image.onload=cover.image.onerror=null;cover.image.removeAttribute("src");
+    cover.buffer.clear();
     this.root.removeChild(cover.node);this.cover=null;
   };
   Renderer.prototype.renderCover = function () {
     var scene=this.scene,data=this.data[scene.media_background_entity],self=this;
-    if(!scene.media_background_enabled || !data || data.state!=="playing" || !data.artwork || !this.options.mediaUrl){this.clearCover();return;}
+    if(!scene.media_background_enabled || !data || ["playing","buffering"].indexOf(data.state)<0 || !data.artwork || !this.options.mediaUrl){this.clearCover();return;}
     var size=(scene.media_background_fit === "center" || scene.media_background_fit === "colors") ? 640 : artworkSize(this.root.clientHeight*(window.devicePixelRatio || 1));
-    var key=scene.media_background_entity+"/"+data.artwork+"/"+size,cover=this.cover;
-    if(cover && cover.key!==key){this.clearCover();cover=null;}
+    var cover=this.cover;
     if(!cover){
-      var node=child(this.root,"cover-background"),image=document.createElement("img");
-      image.alt="";node.appendChild(image);
-      cover={key:key,node:node,image:image,shade:child(node,"cover-shade"),url:"",retryAt:0,ready:false};this.cover=cover;
+      var node=child(this.root,"cover-background");
+      cover={node:node,ready:false};this.cover=cover;
+      cover.buffer=new ArtworkBuffer(node,function (image) {
+        cover.ready=!!image;cover.image=image;
+        if(!image){cover.palettes=null;return;}
+        try {
+          var artworkKey=cover.buffer.owner+"/"+self.data[cover.buffer.owner].artwork;
+          if(self.paletteKey!==artworkKey){self.coverPalettes=coverBackgrounds(image);self.paletteKey=artworkKey;}
+          cover.palettes=self.coverPalettes;
+        }catch(_){cover.palettes=null;}
+        self.coverGeometry();
+      });
+      cover.shade=child(node,"cover-shade");
     }
     var fit=scene.media_background_fit || "contain";
     cover.node.setAttribute("data-fit",fit);
     style(cover.shade,"background","rgba(0,0,0,"+(scene.media_background_dim === undefined ? .35 : scene.media_background_dim)+")");
-    if(cover.ready){this.coverGeometry();return;}
-    if(cover.url || Date.now()<cover.retryAt){return;}
-    var url=this.options.mediaUrl(scene.media_background_entity,data.artwork,size);
-    if(!url){return;}cover.url=url;
-    cover.image.onload=function () {
-      if(self.cover!==cover){return;}
-      if(!cover.image.naturalWidth){cover.image.onerror();return;}
-      try {
-        var artworkKey=scene.media_background_entity+"/"+data.artwork;
-        if(self.paletteKey!==artworkKey){self.coverPalettes=coverBackgrounds(cover.image);self.paletteKey=artworkKey;}
-        cover.palettes=self.coverPalettes;
-      }
-      catch(_){cover.palettes=null;}
-      cover.ready=true;cover.node.classList.add("loaded");self.coverGeometry();
-    };
-    cover.image.onerror=function () {
-      if(self.cover!==cover){return;}
-      cover.url="";cover.retryAt=Date.now()+30000;
-      cover.image.removeAttribute("src");
-    };
-    cover.image.src=url;
+    cover.buffer.update(scene.media_background_entity,data.artwork,size,this.options.mediaUrl);
+    this.coverGeometry();
   };
   Renderer.prototype.coverGeometry = function () {
     var cover=this.cover;if(!cover || !cover.ready){return;}
@@ -187,6 +235,7 @@
   };
   Renderer.prototype.removeNode = function (node) {
     if(node._camera){node._camera.close();}
+    if(node._artBuffer){node._artBuffer.clear();}
     this.root.removeChild(node);
   };
   Renderer.prototype.cameraStatus = function () {
@@ -314,6 +363,7 @@
     if (this.hdmi) {this.hdmi.removeAttribute("style"); this.hdmi._lgStyle={};}
   };
   window.LGArtworkSize=artworkSize;
+  window.LGArtworkBuffer=ArtworkBuffer;
   window.LGLayoutRenderer=Renderer;
   window.LGLayoutBackground=background;
 }());

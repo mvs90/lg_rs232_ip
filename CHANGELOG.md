@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.23.0
+
+- Buffer media-card artwork and its background while the next cover loads. Swap only after successful decoding; preserve the background during the player’s buffering state and avoid placeholder flashes.
+- Show the placeholder/normal background only for missing artwork, failed decoding/downloads or a 15-second stalled request. Keep the 30-second retry backoff; new tracks bypass it. Discard superseded responses and release pending images/timers when cards or views disappear.
+- Apply the same behavior to Studio’s authenticated previews, distinguish pending from failed blob fetches, and abort superseded/disconnected requests. Keep at most one visible and one loading image per presentation. Release app 1.19.0.
+
 ## 2.22.1
 
 - Skip completely black outer strips when deriving background colors from cover edges. Move the sampled borders inward independently on all four sides, with a small near-black tolerance for compression. Preserve dark artwork, internal black areas and fully black covers. Whole-cover colors remain unchanged.
