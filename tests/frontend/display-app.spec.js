@@ -1057,6 +1057,9 @@ test('startup background is decoded from its bounded bundle after an offline rel
   await expect(page.locator('#startup-canvas')).toBeVisible();
   await expect.poll(()=>page.evaluate(()=>LGStartupDesign.status().image_cached)).toBe(true);
   state.offline=true;await page.reload();
+  // Let the real offline response finish clearing any startup intent before
+  // supplying a synthetic fresh intent to exercise only the cached renderer.
+  await expect(page.locator('#startup-notice')).toBeVisible();
   await page.evaluate(()=>LGStartup.apply({id:'offline-render',view:'media_view',remaining:90},null));
   await expect(page.locator('#startup-canvas')).toHaveCSS('background-image',/data:image\/jpeg;base64,/);
   expect(await page.evaluate(()=>new Promise(resolve=>{const img=new Image();img.onload=()=>resolve([img.naturalWidth,img.naturalHeight]);img.onerror=()=>resolve(null);img.src=JSON.parse(localStorage.getItem('lg-display-startup-v1:/index.html')).image;}))).toEqual([32,18]);
