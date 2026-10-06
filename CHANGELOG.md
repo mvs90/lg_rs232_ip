@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.22.1
+
+- Skip completely black outer strips when deriving background colors from cover edges. Move the sampled borders inward independently on all four sides, with a small near-black tolerance for compression. Preserve dark artwork, internal black areas and fully black covers. Whole-cover colors remain unchanged.
+- Reuse the existing bounded 32×32 sample and palette cache in Studio and the display app; no extra image requests, canvas reads or continuous analysis. Release app 1.18.1.
+
 ## 2.22.0
 
 - Add **Coverränder / Gesamtes Cover** under the background media player in Display Studio. Choose whether background gradients use only the cover borders or the entire image, including its center. Existing views keep border colors.

@@ -1,5 +1,11 @@
 # Release acceptance
 
+## LG 2.22.1: skip black outer cover strips — 2026-10-06
+
+**422 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 216 browser cases pass across Chromium/WebKit.** New synthetic-cover cases verify exact gradient colours for asymmetric black borders, near-black compression residue, fully black covers, preserved dark artwork, black areas inside a motif and a single coloured pixel. The whole-cover palette remains unchanged. Existing tests continue to verify one pixel read per artwork and live mode changes without downloads or HDMI recreation.
+
+Installed **LG 2.22.1 / app 1.18.1** in the existing HA 2026.9.4 Docker instance. The physical **75UH5F-HJ** reconnected with the new app version and the SI launcher in the foreground. A native screenshot confirms the current Sonos Wohnzimmer cover, coloured background and media information render correctly. Saved views, power state and selected source match the pre-update backup; Sonos remains playing. No synthetic test image was sent to the physical display. Private capture and backup files remain excluded from Git.
+
 ## LG 2.22.0: choose edge or whole-cover background colours — 2026-10-06
 
 **422 Python tests pass on both HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; all 202 browser cases pass across Chromium/WebKit.** Coverage verifies the backwards-compatible edge default, rejected invalid values, per-view persistence/export/restart, theme and duplicate preservation, immediate preview changes and late image responses. A synthetic cover with distinct border and centre colours verifies the actual gradient values. Switching between both methods reuses the same decoded image, sampled pixels and HDMI element without another image request.

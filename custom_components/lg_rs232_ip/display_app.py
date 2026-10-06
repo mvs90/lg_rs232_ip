@@ -25,7 +25,7 @@ from .resident_app import ResidentApp, SI_APP_ID
 from .platform_diagnostics import PlatformDiagnostics
 from .web_manager import LGWebError
 
-APP_VERSION = "1.18.0"
+APP_VERSION = "1.18.1"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 

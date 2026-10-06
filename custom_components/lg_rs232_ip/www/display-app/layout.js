@@ -100,6 +100,20 @@
     var canvas=document.createElement("canvas"); canvas.width=32; canvas.height=32;
     var context=canvas.getContext("2d"); context.drawImage(image,0,0,32,32);
     var pixels=context.getImageData(0,0,32,32).data;
+    // Find the first content on each side, skipping only entirely black outer
+    // rows/columns. A small tolerance handles compression; dark colours above
+    // it and black areas inside the picture still participate in the average.
+    var left=32,top=32,right=0,bottom=0,x,y,i;
+    for(y=0;y<32;y++){for(x=0;x<32;x++){
+      i=(y*32+x)*4;
+      if(Math.max(pixels[i],pixels[i+1],pixels[i+2])>8){
+        left=Math.min(left,x);right=Math.max(right,x+1);
+        top=Math.min(top,y);bottom=Math.max(bottom,y+1);
+      }
+    }}
+    // A wholly black cover has no inner boundary; keep its actual colours.
+    if(right<=left || bottom<=top){left=top=0;right=bottom=32;}
+    var stripX=Math.min(4,right-left),stripY=Math.min(4,bottom-top);
     function average(x1,y1,x2,y2) {
       var r=0,g=0,b=0,n=0,x,y,i;
       for(y=y1;y<y2;y++){for(x=x1;x<x2;x++){i=(y*32+x)*4;r+=pixels[i];g+=pixels[i+1];b+=pixels[i+2];n++;}}
@@ -111,7 +125,7 @@
     // Prepare both from one small sample. Whole-cover halves include every
     // pixel, including the center, while retaining the image's colour direction.
     return {
-      edges:gradient(average(0,0,4,32),average(28,0,32,32),average(0,0,32,4),average(0,28,32,32)),
+      edges:gradient(average(left,top,left+stripX,bottom),average(right-stripX,top,right,bottom),average(left,top,right,top+stripY),average(left,bottom-stripY,right,bottom)),
       cover:gradient(average(0,0,16,32),average(16,0,32,32),average(0,0,32,16),average(0,16,32,32))
     };
   }

@@ -24,7 +24,7 @@ async function mount(page, state) {
     }
     if (name === 'state') {
       if (state.delayState) await new Promise(resolve => setTimeout(resolve,state.delayState));
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.18.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.18.1', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -1100,3 +1100,41 @@ test('whole-cover colours include the centre and switch live without new downloa
   await expect.poll(()=>layer.evaluate(n=>n.style.background)).toContain('rgb(255, 0, 0)');
   expect(await page.evaluate(()=>window.paletteReads)).toBe(reads+1);
 });
+
+for (const sample of [
+  {name:'asymmetric black frame', fill:'#000000', rect:[6,8,16,20,'#00ff00'], sides:true, expected:['rgb(255, 0, 0)','rgb(0, 0, 255)','rgb(64, 128, 64)']},
+  {name:'near-black compressed frame', fill:'#080808', rect:[8,8,16,16,'#c04020'], expected:['rgb(192, 64, 32)']},
+  {name:'fully black cover', fill:'#000000', expected:['rgb(0, 0, 0)']},
+  {name:'dark coloured artwork', fill:'#090509', rect:[8,8,16,16,'#ffffff'], expected:['rgb(9, 5, 9)']},
+  {name:'black areas inside the motif', fill:'#000000', rect:[4,4,24,24,'#ff0000'], gap:true, expected:['rgb(85, 0, 0)','rgb(255, 0, 0)']},
+  {name:'single coloured pixel', fill:'#000000', rect:[15,20,1,1,'#184882'], expected:['rgb(24, 72, 130)']},
+  {name:'black frame with whole-cover comparison', fill:'#000000', rect:[8,8,16,16,'#ff8000'], expected:['rgb(255, 128, 0)'], whole:'rgb(64, 32, 0)'}
+]) {
+  test('edge palette skips only outer black strips: '+sample.name,async({page})=>{
+    const state={content:null,idle_hdmi:'ext://hdmi:1',dashboard:true,layout:designed()};
+    const scene=state.layout.config.scenes.dashboard;
+    Object.assign(scene,{elements:[],media_background_enabled:true,media_background_entity:'media_player.music',media_background_fit:'colors',media_background_color_source:'edges'});
+    const media=state.layout.values['media_player.music']={state:'playing',artwork:'original'};
+    await mount(page,state);
+    const png=await page.evaluate(sample=>{
+      const canvas=document.createElement('canvas');canvas.width=canvas.height=32;const ctx=canvas.getContext('2d');
+      ctx.fillStyle=sample.fill;ctx.fillRect(0,0,32,32);
+      if(sample.rect){ctx.fillStyle=sample.rect[4];ctx.fillRect(...sample.rect.slice(0,4));}
+      if(sample.sides){ctx.fillStyle='#ff0000';ctx.fillRect(6,8,4,20);ctx.fillStyle='#0000ff';ctx.fillRect(18,8,4,20);}
+      if(sample.gap){ctx.fillStyle='#000000';ctx.fillRect(4,8,4,16);}
+      return canvas.toDataURL().split(',')[1];
+    },sample);
+    await page.route('**/cover.jpg?**',route=>route.fulfill({contentType:'image/png',body:Buffer.from(png,'base64')}));
+    media.artwork='black-frame';
+    const layer=page.locator('.lg-cover-background');
+    await expect(layer.locator('img')).toHaveAttribute('src',/v=black-frame/);
+    await expect(layer).toHaveClass(/loaded/);
+    const background=await layer.evaluate(n=>n.style.background);
+    for(const colour of sample.expected)expect(background).toContain(colour);
+    expect(background).not.toMatch(/NaN|undefined/);
+    if(sample.whole){
+      scene.media_background_color_source='cover';
+      await expect.poll(()=>layer.evaluate(n=>n.style.background)).toContain(sample.whole);
+    }
+  });
+}
