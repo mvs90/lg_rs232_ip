@@ -1,5 +1,17 @@
 # Release acceptance
 
+## LG 2.28.0: clock, NTP and dependent ISM settings — 2026-10-07
+
+**600 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 260 browser cases pass across Chromium/WebKit.** Official Hassfest reports zero invalid integrations. Added coverage includes partial/unknown settings, clock parsing and offsets, automatic/manual dependencies, server validation, all seven ISM weekdays, concurrent day edits, range and schedule checks, shared polling, missing power replies, single-write reconciliation and bounded media exports. Existing frontend and display-app regressions remain green; app version stays 1.20.0.
+
+Installed **LG 2.28.0** in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container. Real HA actions on the physical **75UH5F-HJ / 04.13.50** confirmed automatic time on/off, a deliberately different manual time and its restoration, hostname/IPv4/IPv6 NTP settings and the default server. Fresh native reads independently confirmed each change. Server persistence does not establish successful synchronization with each test server. The device's own menu and schema confirmed the additional ISM dependencies and weekday encoding.
+
+Real HA actions also confirmed repeat and weekly schedule, 1/2/24-hour waits, 1/2/240-minute durations, distinct start/end times, all seven weekday switches on/off and all four supported ISM modes. Dependent entities become unavailable outside their applicable mode. Tests used a schedule outside the current time and restored the original settings; timer expiry and playback of imported ISM content were not tested. German labels and automatic-time-dependent fields were checked in the actual HA device page.
+
+The new `prepare_ism_media` action exported four JPEG images and one MP4 from HA Media. Each export was browsed, resolved and downloaded through the real HA API; images were 1920×1080 JPEG and video bytes matched the input. Responses explicitly report USB import and no installation on the display. No USB device was imported in this run, and no direct network upload to ISM storage or general video-codec compatibility is claimed.
+
+Original ISM/NTP settings, correct clock, automatic time and No Signal sleep were restored. The final input is HDMI 1, matching the deployment baseline; saved Studio views, revision, backgrounds and startup design are unchanged. All 71 installed component files match the release source. Private baselines, device captures, credentials, transient exploration code and media fixtures remain outside Git. See [clock/ISM reference](CLOCK-ISM.md) for the reusable API findings and USB workflow.
+
 ## LG 2.27.0: power, sleep and network-wake configuration — 2026-10-07
 
 Backend regression covers the existing supported HA versions plus 32 focused power-setting cases: exact documented frames and subcommand echoes, no-signal entity identity, partial support, enum rejection, controller locking, offline/unknown power guards, dropped preflight queries, bounded readback, no write replay, shared polling, and warning creation/clearing. Actual network I/O tests require local socket permissions.

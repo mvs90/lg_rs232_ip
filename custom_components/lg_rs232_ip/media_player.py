@@ -155,6 +155,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
             "async_prepare_boot_image",
         ),
         "clear_content": ({}, "async_clear_content"),
+        "prepare_ism_media": (
+            {
+                vol.Required("media_ids"): vol.All(cv.ensure_list, [cv.string], vol.Length(min=1, max=4)),
+                vol.Optional("media_type", default="image"): vol.In(["image", "video"]),
+                vol.Optional("media_directory", default="local"): cv.string,
+            },
+            "async_prepare_ism_media",
+        ),
     }
     platform = async_get_current_platform()
     for name, (schema, method) in services.items():
@@ -163,7 +171,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             schema,
             method,
             supports_response=SupportsResponse.ONLY
-            if name == "prepare_boot_image"
+            if name in {"prepare_boot_image", "prepare_ism_media"}
             else SupportsResponse.NONE,
         )
 
@@ -542,6 +550,9 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
 
     async def async_prepare_boot_image(self, **kwargs):
         return await self.controller.async_prepare_boot_image(**kwargs)
+
+    async def async_prepare_ism_media(self, **kwargs):
+        return await self.controller.async_prepare_ism_media(**kwargs)
 
     async def async_clear_content(self, **kwargs):
         return await self.controller.async_clear_content(**kwargs)

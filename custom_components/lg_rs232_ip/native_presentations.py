@@ -48,6 +48,11 @@ class NativePresentations:
 
         return await async_prepare_boot_image(self, media_id, media_directory)
 
+    async def async_prepare_ism_media(self, **kwargs):
+        from .ism_media import async_prepare_ism_media
+
+        return await async_prepare_ism_media(self, **kwargs)
+
     async def async_show_toast(self, message, priority="normal"):
         web = self._require_web_manager()
         self._check_presentation_policy(priority)

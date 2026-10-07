@@ -185,6 +185,9 @@
           "wake_on_lan_disabled": "Wired Wake on LAN disabled",
           "unknown": "Configuration not fully known"
         }
+      },
+      "display_clock": {
+        "name": "Display date and time"
       }
     },
     "select": {
@@ -233,6 +236,17 @@
           "clock": "Clock",
           "clock_and_data": "Clock + DATA"
         }
+      },
+      "ism_repeat": {
+        "name": "ISM repetition",
+        "state": {
+          "once": "Off, run once",
+          "repeat": "Repeat after still image",
+          "schedule": "Weekly schedule"
+        }
+      },
+      "ism_duration": {
+        "name": "ISM duration (minutes)"
       }
     },
     "switch": {
@@ -253,11 +267,38 @@
       },
       "wake_on_wlan": {
         "name": "Wake on LAN (wireless)"
+      },
+      "clock_auto": {
+        "name": "Automatic date and time (NTP)"
+      },
+      "ism_mon": {
+        "name": "ISM Monday"
+      },
+      "ism_tue": {
+        "name": "ISM Tuesday"
+      },
+      "ism_wed": {
+        "name": "ISM Wednesday"
+      },
+      "ism_thu": {
+        "name": "ISM Thursday"
+      },
+      "ism_fri": {
+        "name": "ISM Friday"
+      },
+      "ism_sat": {
+        "name": "ISM Saturday"
+      },
+      "ism_sun": {
+        "name": "ISM Sunday"
       }
     },
     "text": {
       "signage_name": {
         "name": "Signage name"
+      },
+      "ntp_server": {
+        "name": "NTP server (empty = default)"
       }
     },
     "number": {
@@ -266,6 +307,22 @@
       },
       "power_on_delay": {
         "name": "Power-on delay"
+      },
+      "ism_standby": {
+        "name": "ISM still-image waiting period"
+      }
+    },
+    "datetime": {
+      "display_datetime": {
+        "name": "Set display date and time"
+      }
+    },
+    "time": {
+      "ism_start": {
+        "name": "ISM schedule start"
+      },
+      "ism_end": {
+        "name": "ISM schedule end"
       }
     }
   },

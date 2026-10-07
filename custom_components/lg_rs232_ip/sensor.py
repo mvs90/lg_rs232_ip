@@ -14,6 +14,7 @@ from .const import DOMAIN, READ_STATUS, OSD_LANGUAGES, ENERGY_SAVING_MODES
 from .device_profile import ok_payload, PM_STATES, PM_MODES
 from .lg_display import LGDisplay
 from .power_settings import PowerSettingEntity, remote_power_on_status
+from .system_settings import SystemSettingEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -146,7 +147,26 @@ async def async_setup_entry(
         entities.append(LGDisplayAppSensor(manager, config_entry))
     if power := data.get("power_settings"):
         entities.append(RemotePowerOnSensor(power))
+    if maintenance := data.get("maintenance"):
+        entities.append(DisplayClockSensor(maintenance))
     async_add_entities(entities)
+
+
+class DisplayClockSensor(SystemSettingEntity, SensorEntity):
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator):
+        super().__init__(coordinator, "clock", "display_clock", "mdi:clock-outline")
+
+    @property
+    def native_value(self):
+        return (self.coordinator.data or {}).get(self.key)
+
+    @property
+    def extra_state_attributes(self):
+        data = self.coordinator.data or {}
+        return {"display_timezone": data.get("timezone"), "automatic": data.get("clock_auto"), "precision": "minute"}
 
 
 class LGDisplaySerialNumberSensor(LGDisplayBaseSensor):

@@ -225,6 +225,8 @@ class LGWebManager:
                                     return value
                             elif reply[0] == event + "1":
                                 value = reply[1]
+                                if event == "ntp" and value is True:
+                                    return {"returnValue": True}
                                 if event in {"capture", "signageName"} and isinstance(value, str):
                                     return value
                                 if (
@@ -263,6 +265,41 @@ class LGWebManager:
                 except LGWebError:
                     values.pop("signageName", None)
         return valid_settings(values)
+
+    async def async_get_maintenance_settings(self):
+        """Clock and ISM values from the display's actual configuration service."""
+        from .maintenance import MAINTENANCE_KEYS, normalize_settings
+
+        async with self._lock:
+            values = await self._api("getSystemSettings", "systemSettings", category="commercial", keys=list(MAINTENANCE_KEYS))
+            clock = {}
+            for key, command, event in (
+                ("clock_auto", "getNTPStatus", "ntpStatus"),
+                ("clock", "getCurrentTime", "currentTime"),
+                ("timezone", "getTimeZone", "getTimeZone"),
+            ):
+                try:
+                    clock[key] = await self._api(command, event)
+                except LGWebError:
+                    pass
+        return normalize_settings(values, clock)
+
+    async def async_write_maintenance_settings(self, settings):
+        """Allowlisted atomic commercial writes, or dedicated clock commands."""
+        from .maintenance import validate_changes
+
+        settings = validate_changes(settings)
+        async with self._lock:
+            if "clock_auto" in settings:
+                await self._api("setNTPStatus", "ntp", useNTP=settings["clock_auto"])
+            elif "clock" in settings:
+                value = settings["clock"]
+                # LG calls this field utc, but its own UI passes local components.
+                # This setter has no ACK event on UH5F; caller verifies a new read.
+                await self._api("setCurrentTime", None, utc={key: value.strftime(fmt) for key, fmt in (
+                    ("year", "%Y"), ("month", "%m"), ("day", "%d"), ("hour", "%H"), ("minute", "%M"))})
+            else:
+                await self._api("setSystemSettings", "setSystemSettings", category="commercial", settings=settings, shouldCallback=True)
 
     async def async_write_display_setting(self, key, value):
         """Single validated mutation; caller verifies fresh readback, never replays."""

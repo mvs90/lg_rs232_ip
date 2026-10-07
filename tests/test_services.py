@@ -187,5 +187,13 @@ async def test_real_entity_services_target_registered_display(tmp_path):
             return_response=True,
         )
         assert response[player.entity_id]["installed_on_display"] is False
+        player.async_prepare_ism_media = AsyncMock(return_value={"installed_on_display": False, "import_method": "usb"})
+        response = await hass.services.async_call(
+            "lg_rs232_ip", "prepare_ism_media",
+            {"entity_id": player.entity_id, "media_ids": ["media-source://media_source/local/photo.jpg"]},
+            blocking=True, return_response=True,
+        )
+        assert response[player.entity_id]["import_method"] == "usb"
+        player.async_prepare_ism_media.assert_awaited_once_with(media_ids=["media-source://media_source/local/photo.jpg"], media_type="image", media_directory="local")
     finally:
         await hass.async_stop(force=True)

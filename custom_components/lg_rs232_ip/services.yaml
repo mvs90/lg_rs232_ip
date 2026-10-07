@@ -303,3 +303,31 @@ show_display_app:
             - fullscreen
             - overlay
             - pip
+
+prepare_ism_media:
+  name: Prepare ISM media for USB import
+  description: Prepare 1–4 images (JPEG, PNG or BMP, each up to 5 MiB) or one MP4 video (up to 50 MiB) in a separate ISM folder in Home Assistant Media. Images are fitted to 1920×1080. Download the files into ISM on USB and import through the LG ISM menu. This does not upload or install ISM media on the display.
+  target:
+    entity:
+      domain: media_player
+      integration: lg_rs232_ip
+  fields:
+    media_ids:
+      name: Media-source IDs or URLs
+      required: true
+      selector:
+        text:
+          multiple: true
+    media_type:
+      name: Media type
+      default: image
+      selector:
+        select:
+          options:
+            - image
+            - video
+    media_directory:
+      name: Home Assistant media directory
+      default: local
+      selector:
+        text:

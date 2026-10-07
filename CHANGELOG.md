@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.28.0
+
+- Add the display clock, manual date/time, automatic network time and a configurable NTP server (hostname, IPv4 or IPv6; empty restores LG defaults). Respect the display's UTC offset and disable manual editing while automatic time is active.
+- Extend ISM with once/repeat/week-schedule controls, still-image wait, duration, seven weekdays and local start/end times. Expose dependent controls only when their mode is active, preserve concurrent weekday edits and refresh after an ISM method change.
+- Add `prepare_ism_media` to prepare up to four fitted Full HD images or one bounded MP4 in HA Media for LG's documented USB import. Preserve older exports and explicitly report that files are not installed on the display. Direct network import into ISM storage remains unverified.
+- Use shared native-web polling, fresh power checks and verified single writes. Preserve clock/ISM values on unsupported devices and never wake the display for configuration. Display app remains 1.20.0.
+
 ## 2.27.0
 
 - Rename Auto Sleep to Auto Sleep No Signal while preserving its entity identity; add independent four-hour Auto Sleep No IR.

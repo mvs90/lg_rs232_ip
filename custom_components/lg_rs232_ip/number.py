@@ -13,6 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN, READ_STATUS, ENERGY_SAVING_MODES
 from .lg_display import LGDisplay
 from .system_settings import SystemSettingEntity
+from .maintenance import MaintenanceEntity
 from .device_profile import ASPECT_RATIOS, PM_STATES, ism_methods, is_uh5f
 from homeassistant.exceptions import HomeAssistantError
 
@@ -57,7 +58,27 @@ async def async_setup_entry(
         entities.extend([SystemSettingsNumber(settings, "signageSetId", "set_id", "mdi:identifier", 1, 1000),
                          SystemSettingsNumber(settings, "powerOnDelay", "power_on_delay", "mdi:timer-outline", 0, 250)])
 
+    if maintenance := data.get("maintenance"):
+        entities.append(IsmStandbyNumber(maintenance))
+
     async_add_entities(entities)
+
+
+class IsmStandbyNumber(MaintenanceEntity, NumberEntity):
+    _attr_native_min_value = 1
+    _attr_native_max_value = 24
+    _attr_native_step = 1
+    _attr_native_unit_of_measurement = "h"
+
+    def __init__(self, coordinator):
+        super().__init__(coordinator, "ismPeriod", "ism_standby", "mdi:timer-sand")
+
+    @property
+    def native_value(self):
+        return (self.coordinator.data or {}).get(self.key)
+
+    async def async_set_native_value(self, value):
+        await self.coordinator.async_set(self.key, value)
 
 
 class LGDisplayBrightnessNumber(LGDisplayBaseNumber):

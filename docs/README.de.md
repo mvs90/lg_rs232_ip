@@ -102,3 +102,7 @@ Ab 2.18 lassen sich **Offline-HDMI-Start**, eine **UDP-Multicastquelle** im Stud
 ## Systemeinstellungen
 
 Ab 2.26.0 stehen intelligente Energieeinsparung, Signage-Name, Set ID, Einschaltverzögerung, Kein-Signal-Bild und Temperatureinheit direkt auf der HA-Geräteseite bereit. Voraussetzung ist der native LG-Webzugriff; die Display-App ist optional. [Bedienung, Abhängigkeiten und getestete Schnittstellen](SYSTEM-SETTINGS.md).
+
+## Datum, Uhrzeit und ISM
+
+Datum/Uhrzeit, automatische NTP-Synchronisierung, eigener NTP-Server und die abhängigen ISM-Einstellungen lassen sich mit aktiviertem nativen Webzugang über HA bedienen. Bilder und Videos können über HA für den LG-USB-Import vorbereitet werden. Ein direkter Netzwerkimport in den ISM-Speicher ist bisher nicht bestätigt. [Einrichtung, Aktionen und Grenzen](CLOCK-ISM.md).

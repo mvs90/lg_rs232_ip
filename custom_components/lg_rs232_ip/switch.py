@@ -15,6 +15,7 @@ from .const import DOMAIN, READ_STATUS
 from .lg_display import LGDisplay
 from .system_settings import SystemSettingEntity
 from .power_settings import PowerSettingEntity
+from .maintenance import MaintenanceEntity, DAYS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,7 +61,42 @@ async def async_setup_entry(
         entities.extend(PowerSettingsSwitch(power, key) for key in (
             "auto_sleep", "auto_sleep_no_ir", "wake_on_lan", "wake_on_wlan"))
 
+    if maintenance := data.get("maintenance"):
+        entities.append(ClockAutomaticSwitch(maintenance))
+        entities.extend(IsmDaySwitch(maintenance, day) for day in DAYS)
+
     async_add_entities(entities)
+
+
+class IsmDaySwitch(MaintenanceEntity, SwitchEntity):
+    def __init__(self, coordinator, day):
+        super().__init__(coordinator, "ismDays", "ism_" + day.lower(), "mdi:calendar-week")
+        self.day = day
+
+    @property
+    def is_on(self):
+        return self.day in (self.coordinator.data or {}).get("ismDays", [])
+
+    async def async_turn_on(self, **kwargs):
+        await self.coordinator.async_set_day(self.day, True)
+
+    async def async_turn_off(self, **kwargs):
+        await self.coordinator.async_set_day(self.day, False)
+
+
+class ClockAutomaticSwitch(SystemSettingEntity, SwitchEntity):
+    def __init__(self, coordinator):
+        super().__init__(coordinator, "clock_auto", "clock_auto", "mdi:clock-check-outline")
+
+    @property
+    def is_on(self):
+        return (self.coordinator.data or {}).get(self.key) is True
+
+    async def async_turn_on(self, **kwargs):
+        await self.coordinator.async_set(self.key, True)
+
+    async def async_turn_off(self, **kwargs):
+        await self.coordinator.async_set(self.key, False)
 
 
 class LGDisplayPowerSwitch(LGDisplayBaseSwitch):

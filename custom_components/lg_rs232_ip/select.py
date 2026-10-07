@@ -1,6 +1,7 @@
 """Select platform for LG Display RS232/IP integration."""
 
 import logging
+from contextlib import nullcontext
 from datetime import timedelta
 from typing import Optional
 
@@ -20,6 +21,7 @@ from .const import (
 )
 from .lg_display import LGDisplay
 from .system_settings import SystemSettingEntity
+from .maintenance import MaintenanceEntity, REPEATS, DURATIONS
 from .power_settings import POWER_SETTINGS, PowerSettingEntity, remote_power_on_status
 from .layout_library import source_names
 from .device_profile import (
@@ -89,16 +91,39 @@ async def async_setup_entry(
         LGDisplayDpmDelaySelect(lg_display, data["name"], config_entry.entry_id)
     )
     entities.append(
-        LGDisplayIsmMethodSelect(lg_display, data["name"], config_entry.entry_id)
+        LGDisplayIsmMethodSelect(lg_display, data["name"], config_entry.entry_id, data.get("maintenance"))
     )
     if settings := data.get("system_settings"):
         entities.append(SystemTemperatureUnit(settings))
+
+    if maintenance := data.get("maintenance"):
+        entities.extend([IsmSettingSelect(maintenance, "ismTimer", "ism_repeat"), IsmSettingSelect(maintenance, "ismTime", "ism_duration")])
 
     if power := data.get("power_settings"):
         entities.extend(PowerSettingsSelect(power, key) for key in (
             "pm_mode", "power_on_status", "dpm_wake_up"))
 
     async_add_entities(entities)
+
+
+class IsmSettingSelect(MaintenanceEntity, SelectEntity):
+    def __init__(self, coordinator, key, translation_key):
+        super().__init__(coordinator, key, translation_key, "mdi:monitor-shimmer")
+        self._choices = REPEATS if key == "ismTimer" else {v: v for v in DURATIONS}
+
+    @property
+    def options(self):
+        return list(self._choices)
+
+    @property
+    def current_option(self):
+        value = (self.coordinator.data or {}).get(self.key)
+        return next((k for k, v in self._choices.items() if v == value), None)
+
+    async def async_select_option(self, option):
+        if option not in self._choices:
+            raise HomeAssistantError("Unsupported ISM option")
+        await self.coordinator.async_set(self.key, self._choices[option])
 
 
 class LGDisplayInputSelect(LGDisplayBaseSelect):
@@ -205,8 +230,9 @@ class LGDisplayIsmMethodSelect(LGDisplayBaseSelect):
     _attr_translation_key = "ism_method"
     _attr_icon = "mdi:monitor-shimmer"
 
-    def __init__(self, display, name, unique_id):
+    def __init__(self, display, name, unique_id, maintenance=None):
         self._lg_display = display
+        self._maintenance = maintenance
         self._attr_unique_id = f"{unique_id}_ism_method"
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, unique_id)})
         self._value = None
@@ -248,6 +274,13 @@ class LGDisplayIsmMethodSelect(LGDisplayBaseSelect):
             self._value = await self._lg_display.async_get_ism_method()
 
     async def async_select_option(self, option):
+        async with self._maintenance._settings_lock if self._maintenance else nullcontext():
+            async with self._maintenance.controller._control_lock if self._maintenance else nullcontext():
+                await self._async_select_mode(option)
+        if self._maintenance:
+            await self._maintenance.async_request_refresh()
+
+    async def _async_select_mode(self, option):
         modes = ism_methods(self._lg_display.model_name)
         if option not in modes:
             raise HomeAssistantError("Unsupported ISM method for this display profile")
@@ -261,6 +294,7 @@ class LGDisplayIsmMethodSelect(LGDisplayBaseSelect):
             )
         self._value = modes[option]
         self.async_write_ha_state()
+
 
 
 class LGDisplayPictureModeSelect(LGDisplayBaseSelect):

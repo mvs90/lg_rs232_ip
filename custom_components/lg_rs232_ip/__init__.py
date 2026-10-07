@@ -11,6 +11,7 @@ from .controller import DisplayController
 from .alerts import LGDisplayAlertState
 from .system_settings import SystemSettings, validate_setting
 from .power_settings import PowerSettings
+from .maintenance import MaintenanceSettings
 
 _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -23,6 +24,8 @@ PLATFORMS = [
     Platform.CAMERA,
     Platform.BUTTON,
     Platform.TEXT,
+    Platform.DATETIME,
+    Platform.TIME,
 ]
 
 
@@ -139,6 +142,9 @@ async def async_setup_entry(hass, entry):
         await display.async_get_software_version()
     power_settings = data["power_settings"] = PowerSettings(hass, entry, display, controller)
     await power_settings.async_refresh()
+    if native_enabled:
+        maintenance = data["maintenance"] = MaintenanceSettings(hass, entry, display, data["web_manager"], controller)
+        await maintenance.async_refresh()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await controller.async_start()
     return True

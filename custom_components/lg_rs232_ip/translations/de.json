@@ -185,6 +185,9 @@
           "wake_on_lan_disabled": "Wake on LAN (LAN) deaktiviert",
           "unknown": "Konfiguration nicht vollständig bekannt"
         }
+      },
+      "display_clock": {
+        "name": "Display-Datum und -Uhrzeit"
       }
     },
     "select": {
@@ -233,6 +236,17 @@
           "clock": "Clock (Taktsignal)",
           "clock_and_data": "Clock + DATA (Takt und Daten)"
         }
+      },
+      "ism_repeat": {
+        "name": "ISM-Wiederholung",
+        "state": {
+          "once": "Aus, einmal ausführen",
+          "repeat": "Nach Standbild wiederholen",
+          "schedule": "Wochenzeitplan"
+        }
+      },
+      "ism_duration": {
+        "name": "ISM-Dauer (Minuten)"
       }
     },
     "switch": {
@@ -253,11 +267,38 @@
       },
       "wake_on_wlan": {
         "name": "Wake on LAN (WLAN)"
+      },
+      "clock_auto": {
+        "name": "Datum und Uhrzeit automatisch (NTP)"
+      },
+      "ism_mon": {
+        "name": "ISM Montag"
+      },
+      "ism_tue": {
+        "name": "ISM Dienstag"
+      },
+      "ism_wed": {
+        "name": "ISM Mittwoch"
+      },
+      "ism_thu": {
+        "name": "ISM Donnerstag"
+      },
+      "ism_fri": {
+        "name": "ISM Freitag"
+      },
+      "ism_sat": {
+        "name": "ISM Samstag"
+      },
+      "ism_sun": {
+        "name": "ISM Sonntag"
       }
     },
     "text": {
       "signage_name": {
         "name": "Signage-Name"
+      },
+      "ntp_server": {
+        "name": "NTP-Server (leer = Standard)"
       }
     },
     "number": {
@@ -266,6 +307,22 @@
       },
       "power_on_delay": {
         "name": "Einschaltverzögerung"
+      },
+      "ism_standby": {
+        "name": "ISM-Wartezeit bei Standbild"
+      }
+    },
+    "datetime": {
+      "display_datetime": {
+        "name": "Datum und Uhrzeit einstellen"
+      }
+    },
+    "time": {
+      "ism_start": {
+        "name": "ISM-Zeitplan Start"
+      },
+      "ism_end": {
+        "name": "ISM-Zeitplan Ende"
       }
     }
   },

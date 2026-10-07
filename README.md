@@ -1,6 +1,8 @@
 # LG Professional Display
 
-Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.27.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
+Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.28.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
+
+Date/time, automatic NTP, custom NTP servers and mode-dependent ISM settings are available through native web access. Prepare ISM images/videos in HA Media for the documented USB import. [Clock and ISM guide](docs/CLOCK-ISM.md).
 
 Power and wake configuration: **Auto Sleep No Signal / No IR, PM mode, power-on status, wired/wireless WoL and DPM wake-up control**, with confirmed readback and a Home Assistant warning for restricted network power-on. See [power settings](docs/POWER-SETTINGS.md).
 
