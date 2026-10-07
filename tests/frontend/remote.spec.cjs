@@ -718,3 +718,40 @@ test('display app controls respect opt-in and send only selected display', async
   expect(sent[1][2].dashboard).toBe(true);
   expect(sent[1][2].entity_id).toBe('media_player.display');
 });
+
+test('source selection wakes from standby, including the previously selected input', async ({page}) => {
+  await mount(page);
+  await update(page, {state:'off'});
+  const input=page.getByRole('combobox',{name:'Eingang',exact:true});
+  await expect(input).toBeEnabled();
+  await expect(input).toHaveValue('');
+  await page.evaluate(()=>{window.pending=new Promise(resolve=>window.finishWake=resolve);});
+  await input.selectOption('HDMI 1');
+  await expect(input).toBeDisabled();
+  await expect(page.locator('#feedback')).toHaveText('Display wird gestartet …');
+  await expect(page.getByRole('button',{name:'Oben',exact:true})).toBeDisabled();
+  expect(await calls(page)).toEqual([['media_player','select_source',{source:'HDMI 1',entity_id:'media_player.display'}]]);
+  await update(page,{state:'on'});
+  await page.evaluate(()=>window.finishWake());
+  await expect(input).toBeEnabled();
+  await expect(input).toHaveValue('HDMI 1');
+  for (const state of ['unavailable','unknown']) {
+    await update(page,{state});
+    await expect(input).toBeDisabled();
+  }
+});
+
+test('failed source wake leaves the selector available for a new explicit retry', async ({page}) => {
+  await mount(page);
+  await update(page,{state:'off'});
+  await page.evaluate(()=>{window.fail=true;});
+  const input=page.getByRole('combobox',{name:'Eingang',exact:true});
+  await input.selectOption('Apple TV');
+  await expect(page.locator('#feedback')).toContainText('fehlgeschlagen');
+  await expect(input).toBeEnabled();
+  await expect(input).toHaveValue('');
+  await page.evaluate(()=>{window.fail=false;});
+  await input.selectOption('Apple TV');
+  expect((await calls(page)).length).toBe(2);
+  await expect(page.locator('#feedback')).toHaveText('Befehl gesendet');
+});

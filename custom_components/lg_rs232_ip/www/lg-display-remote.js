@@ -11,6 +11,7 @@ const TEXT = {
     powerOff: "Turn off",
     source: "Input",
     selectSource: "Choose input",
+    starting: "Starting display…",
     up: "Up",
     down: "Down",
     left: "Left",
@@ -77,6 +78,7 @@ const TEXT = {
     powerOff: "Ausschalten",
     source: "Eingang",
     selectSource: "Eingang wählen",
+    starting: "Display wird gestartet …",
     up: "Oben",
     down: "Unten",
     left: "Links",
@@ -557,9 +559,9 @@ class LGDisplayRemote extends LGPreviewHost {
     this._get("more").onclick = () =>
       fire(this, "hass-more-info", { entityId: this._config.entity });
     this._get("source").onchange = (event) =>
-      this._call("media_player", "select_source", {
+      event.target.value && this._call("media_player", "select_source", {
         source: event.target.value,
-      });
+      }, true);
     this._get("quieter").onclick = () =>
       this._call("media_player", "volume_down");
     this._get("louder").onclick = () => this._call("media_player", "volume_up");
@@ -615,7 +617,9 @@ class LGDisplayRemote extends LGPreviewHost {
     if (!this._ready(allowOff)) return;
     this._busy = true;
     const entity = this._config.entity;
-    this._feedback = "";
+    this._feedback = allowOff && this._state()?.state === "off"
+      ? TEXT[language(this._hass)].starting : "";
+    this._error = false;
     this._update();
     try {
       await this._hass.callService(domain, service, {
@@ -665,7 +669,7 @@ class LGDisplayRemote extends LGPreviewHost {
     this._get("more").disabled = !s;
     this.shadowRoot
       .querySelectorAll(
-        "[data-remote], #source, #quieter, #louder, #mute, #clear, #message",
+        "[data-remote], #quieter, #louder, #mute, #clear, #message",
       )
       .forEach((e) => {
         e.disabled = !this._ready();
@@ -673,16 +677,17 @@ class LGDisplayRemote extends LGPreviewHost {
     this._get("sources").hidden = this._config.show_sources === false;
     const sources = Array.isArray(a.source_list) ? a.source_list : [];
     const source = this._get("source"),
-      signature = JSON.stringify([sources, a.source]);
+      selectedSource = on ? a.source : "",
+      signature = JSON.stringify([sources, selectedSource]);
     if (this._sourceSignature !== signature) {
       source.replaceChildren();
-      if (!sources.includes(a.source))
-        source.add(new Option(a.source || t.selectSource, ""));
+      if (!sources.includes(selectedSource))
+        source.add(new Option(selectedSource || t.selectSource, ""));
       sources.forEach((value) => source.add(new Option(value, value)));
       this._sourceSignature = signature;
     }
-    source.value = sources.includes(a.source) ? a.source : "";
-    source.disabled ||= sources.length === 0;
+    source.value = sources.includes(selectedSource) ? selectedSource : "";
+    source.disabled = !this._ready(true) || sources.length === 0;
     this._get("volume").hidden = this._config.show_volume === false;
     const level = this._get("level"),
       volume =

@@ -18,7 +18,7 @@ Die Vorschaukamera ist optional. Zuerst in den Integrationseinstellungen nativen
 
 Ab Version 2.2.1 funktioniert die LG-Großansicht auch mit dem aktiven Home-Assistant-Service-Worker in macOS Safari. Nach dem Update die Home-Assistant-Seite vollständig neu laden, damit das neue Frontend-Modul geladen wird.
 
-Unbekannte/nicht erreichbare Geräte und laufende Befehle sperren die Tasten. Bei Standby ist Einschalten möglich; Navigation und Lautstärke wecken das Display nicht. Fehler werden auf der Karte angezeigt. Tastatur: Tab navigiert zwischen den Bedienelementen; die Pfeiltasten funktionieren, wenn eine Taste des Steuerkreuzes oder der Navigationsleiste fokussiert ist. Die Beschriftung folgt der HA-Sprache (Deutsch/Englisch), die Farben dem HA-Theme.
+Unbekannte/nicht erreichbare Geräte und laufende Befehle sperren die Tasten. Ab **2.25.1** sind bei Standby sowohl **Einschalten** als auch die **Quellenwahl** möglich. Die Auswahl einer HDMI-Quelle oder App-Ansicht startet das Display direkt mit dieser Quelle. Im Standby zeigt die Liste „Eingang wählen“, damit auch der zuletzt verwendete Eingang erneut gewählt werden kann. Währenddessen erscheint „Display wird gestartet …“; wiederholte Klicks bleiben bis zum Abschluss gesperrt. Navigation und Lautstärke wecken das Display nicht. Fehler werden auf der Karte angezeigt. Tastatur: Tab navigiert zwischen den Bedienelementen; die Pfeiltasten funktionieren, wenn eine Taste des Steuerkreuzes oder der Navigationsleiste fokussiert ist. Die Beschriftung folgt der HA-Sprache (Deutsch/Englisch), die Farben dem HA-Theme.
 
 ## YAML
 

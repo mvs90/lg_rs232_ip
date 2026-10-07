@@ -128,7 +128,9 @@ class DisplayController(TemporaryView, NativeControls):
             if app:
                 await app.async_maybe_recover(power=self.power)
             if self.power is True:
-                self._current_input_id = await self._lg_display.async_get_input()
+                input_id = await self._lg_display.async_get_input()
+                if input_id is not None:
+                    self._current_input_id = input_id
                 if app and app.logical_input is not None:
                     self._current_input_id = app.logical_input
                 self._source = (
@@ -145,35 +147,81 @@ class DisplayController(TemporaryView, NativeControls):
             self.async_write_ha_state()
 
     async def async_ensure_on(self, reason="display action"):
-        if await self._lg_display.async_get_power_status(use_cache=False) is True:
-            return
-        if self._lg_display.is_intentionally_unpowered:
+        """Confirm wake despite boot-time TCP loss; never confuse a lost ACK with NG."""
+        return await self._async_ensure_power(True, reason)
+
+    async def _async_ensure_power(self, on, reason):
+        """Retry idempotent power writes within one bounded, replaceable request."""
+        generation = self._view_generation
+        timeout = self._config_entry.options.get("display_wake_timeout", 60)
+        deadline = monotonic() + timeout
+        acknowledged = False
+        next_write = 0.0
+
+        def current():
+            return generation == self._view_generation and not self._ha_stopping
+
+        try:
+            async with asyncio.timeout(timeout):
+                while current():
+                    if self._lg_display.is_intentionally_unpowered:
+                        if not on:
+                            self.power = False
+                            return True
+                        raise HomeAssistantError(
+                            "Display has no external power; use the AV system to restore its supply"
+                        )
+                    if monotonic() >= deadline:
+                        raise TimeoutError
+                    power = await self._lg_display.async_get_power_status(use_cache=False)
+                    if not current():
+                        return False
+                    if power is on:
+                        self.power = on
+                        return True
+                    if not acknowledged and monotonic() >= next_write:
+                        # Power-on is idempotent. A lost reply may still have woken
+                        # the panel, so always read back before retrying the write.
+                        acknowledged = await (
+                            self._lg_display.async_power_on()
+                            if on else self._lg_display.async_power_off()
+                        )
+                        next_write = monotonic() + 5
+                        # A confirmed standby ACK is enough to finish shutdown;
+                        # an on ACK still needs readiness readback before inputs.
+                        if acknowledged and not on and current():
+                            self.power = False
+                            return True
+                    if not current():
+                        return False
+                    await asyncio.sleep(min(1, max(0, deadline - monotonic())))
+        except TimeoutError:
+            if not current():
+                return False
             raise HomeAssistantError(
-                "Display has no external power; use the AV system to restore its supply"
-            )
-        if not await self._lg_display.async_power_on():
-            raise HomeAssistantError("LG rejected power on")
-        async with asyncio.timeout(
-            self._config_entry.options.get("display_wake_timeout", 60)
-        ):
-            while (
-                await self._lg_display.async_get_power_status(use_cache=False)
-                is not True
-            ):
-                await asyncio.sleep(1)
-        self.power = True
+                f"Display did not confirm power {'on' if on else 'off'} for {reason} within {timeout} seconds; "
+                "check its network connection and standby settings"
+            ) from None
+        return False
 
     async def async_turn_on(self):
         await self.async_clear_content()
+        generation = self._view_generation
         async with self._control_lock:
-            await self.async_ensure_on()
+            if generation != self._view_generation or self._ha_stopping:
+                return
+            if await self.async_ensure_on() is False:
+                return
         await self.async_refresh()
 
     async def async_turn_off(self):
         await self.async_clear_content()
+        generation = self._view_generation
         async with self._control_lock:
-            if not await self._lg_display.async_power_off():
-                raise HomeAssistantError("LG rejected power off")
+            if generation != self._view_generation or self._ha_stopping:
+                return
+            if await self._async_ensure_power(False, "power off") is False:
+                return
         await self.async_refresh()
 
     @property
@@ -286,7 +334,15 @@ class DisplayController(TemporaryView, NativeControls):
         with app.starting(view, generation):
             self._view_pending_previous = previous if duration else None
             async with self._control_lock:
-                await self.async_ensure_on("app view selection")
+                if generation != self._view_generation or self._ha_stopping:
+                    return
+                try:
+                    if await self.async_ensure_on("app view selection") is False:
+                        return
+                except (HomeAssistantError, asyncio.CancelledError):
+                    if generation == self._view_generation:
+                        self._view_pending_previous = None
+                    raise
             if not await self._async_wait_for_resident(app, generation, "view selection"):
                 return
             async with self._control_lock:
@@ -329,25 +385,33 @@ class DisplayController(TemporaryView, NativeControls):
                 raise HomeAssistantError("Enable resident SI mode in LG options first")
             if self.external_owner:
                 raise HomeAssistantError("An external presentation owns the display")
+        # An optional configured resident app must be allowed to finish booting.
+        # Native HDMI remains available through the explicit Input select options.
+        use_app = via_app is True or (via_app is None and app and app.resident)
+        if use_app and self.external_owner:
+            raise HomeAssistantError("An external presentation owns the display")
         await self.async_clear_content()
+        generation = self._view_generation
         startup = (
-            app.starting("hdmi_full", self._view_generation)
-            if via_app is True
+            app.starting("hdmi_full", generation)
+            if use_app
             else nullcontext()
         )
         with startup:
-            if via_app is True:
-                generation = self._view_generation
-                async with self._control_lock:
-                    await self.async_ensure_on("app HDMI selection")
+            async with self._control_lock:
+                if generation != self._view_generation or self._ha_stopping:
+                    return
+                if await self.async_ensure_on("HDMI selection") is False:
+                    return
+            if use_app:
                 if not await self._async_wait_for_resident(
                     app, generation, "HDMI selection"
                 ):
                     return
             async with self._control_lock:
-                if via_app is True and generation != self._view_generation:
+                if generation != self._view_generation or self._ha_stopping:
                     return
-                if via_app is True and self.external_owner:
+                if use_app and self.external_owner:
                     raise HomeAssistantError("An external presentation owns the display")
                 if app:
                     if via_app is not False and await app.async_select_hdmi(input_id):
@@ -355,7 +419,7 @@ class DisplayController(TemporaryView, NativeControls):
                         self._source = self._resolve_source_name(input_id)
                         self.async_write_ha_state()
                         return
-                    if via_app is True:
+                    if use_app:
                         raise HomeAssistantError(
                             "Display app disconnected during HDMI selection"
                         )
@@ -364,9 +428,40 @@ class DisplayController(TemporaryView, NativeControls):
                     app.saved.pop("media_view", None)
                     app.saved.pop("custom_view", None)
                     await app.async_pause_resident(leave=False)
-                if not await self._lg_display.async_set_input(input_id):
-                    raise HomeAssistantError("LG rejected input")
+                if not await self._async_set_native_input(input_id, generation):
+                    return
+                self._current_input_id = input_id
+                self._source = self._resolve_source_name(input_id)
+                self.async_write_ha_state()
             await self.async_refresh()
+
+    async def _async_set_native_input(self, input_id, generation):
+        """Allow the native input service to settle after confirmed power-on."""
+        timeout = min(15, self._config_entry.options.get("display_wake_timeout", 60))
+        deadline = monotonic() + timeout
+
+        def current():
+            return generation == self._view_generation and not self._ha_stopping
+
+        try:
+            async with asyncio.timeout(timeout):
+                while current():
+                    if monotonic() >= deadline:
+                        raise TimeoutError
+                    confirmed = await self._lg_display.async_set_input(input_id)
+                    if not current():
+                        return False
+                    # A closed socket can lose just the ACK. Verify before resend.
+                    if confirmed or await self._lg_display.async_get_input(use_cache=False) == input_id:
+                        return current()
+                    await asyncio.sleep(min(5, max(0, deadline - monotonic())))
+        except TimeoutError:
+            if not current():
+                return False
+            raise HomeAssistantError(
+                f"Display did not confirm HDMI selection within {timeout} seconds"
+            ) from None
+        return False
 
     async def async_close(self):
         self._ha_stopping = True

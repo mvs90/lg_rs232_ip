@@ -279,6 +279,10 @@ class ResidentApp:
         if not self.saved.get("resident"):
             return
         self.saved["paused"] = True
+        # Source-only wake already confirmed the current on-cycle. A delayed
+        # maintenance poll must not treat it as another wake and undo this pause.
+        if self.controller.power is True:
+            self._resident_power = True
         self.saved.pop("auto_retry", None)
         self._resident_foreground = None
         self.last_seen = 0

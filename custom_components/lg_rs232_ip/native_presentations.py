@@ -328,7 +328,8 @@ class NativePresentations:
                 self._presentation_active = True
                 if not power:
                     woke = True
-                    await self.async_ensure_on("native media")
+                    if await self.async_ensure_on("native media") is False:
+                        raise asyncio.CancelledError
                     if (
                         await self._lg_display.async_get_power_status(use_cache=False)
                         is not True

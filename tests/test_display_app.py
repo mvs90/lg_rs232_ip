@@ -2221,3 +2221,86 @@ async def test_view_theme_is_validated_before_wake_and_persists_after_temporary_
     finally:
         controller._cancel_temporary_view()
         await layouts.async_close()
+
+
+@pytest.mark.parametrize('route', ['media_hdmi', 'native_hdmi', 'media_view', 'app_hdmi'])
+async def test_source_selection_from_standby_recovers_lost_power_reply(app, route):
+    from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
+    from custom_components.lg_rs232_ip.select import LGDisplayInputSelect
+
+    layouts = await configure_dashboard(app)
+    display = app.controller._lg_display
+    app.last_seen = 0
+    app.saved['paused'] = True
+    app._resident_foreground = None
+    clock = [0.0]
+    real_sleep = asyncio.sleep
+    display.async_get_power_status.side_effect = lambda **_: True if clock[0] >= 2 else None
+    display.async_power_on.return_value = False  # Lost TCP reply, not an NG.
+
+    async def resume():
+        app.saved.pop('paused', None)
+        app._resident_foreground = SI_APP_ID
+        connect_app(app)
+
+    async def advance(seconds):
+        clock[0] += seconds
+        await real_sleep(0)
+
+    app.async_resume = AsyncMock(side_effect=resume)
+    entity = LGDisplayInputSelect(display, 'LG', 'test')
+    entity.hass = app.hass
+    entity.async_write_ha_state = Mock()
+    media = LGDisplayMediaPlayer(app.controller, app.entry)
+    try:
+        action = (media.async_select_source('HDMI 2') if route == 'media_hdmi' else
+                  media.async_select_source('Mediaplayer') if route == 'media_view' else
+                  entity.async_select_option('HDMI 2' if route == 'native_hdmi' else 'App-HDMI 2'))
+        with patch('custom_components.lg_rs232_ip.controller.monotonic', side_effect=lambda: clock[0]), patch('custom_components.lg_rs232_ip.controller.asyncio.sleep', side_effect=advance):
+            if route == 'native_hdmi':
+                await action
+            else:
+                await acknowledge_selection(app, action)
+        display.async_power_on.assert_awaited_once()
+        if route == 'native_hdmi':
+            display.async_set_input.assert_awaited_once_with(0x91)
+            assert app.saved['paused']
+            app.async_resume.assert_not_awaited()
+        else:
+            app.async_resume.assert_awaited_once()
+            display.async_set_input.assert_not_awaited()
+            assert app.resident_connected
+            assert app.selected_view == ('media_view' if route == 'media_view' else None)
+        assert app.startup is None
+    finally:
+        await layouts.async_close()
+
+
+async def test_failed_power_wake_clears_timed_view_and_startup_intent(app):
+    layouts = await configure_dashboard(app)
+    app.controller.async_ensure_on = AsyncMock(side_effect=HomeAssistantError('wake timeout'))
+    app.last_seen = 0
+    try:
+        with pytest.raises(HomeAssistantError, match='wake timeout'):
+            await app.controller.async_select_app_view('media_view', duration=10)
+        assert app.startup is None and app.controller._view_pending_previous is None
+        connect_app(app)
+        assert not app.media_view_selected
+    finally:
+        await layouts.async_close()
+
+
+async def test_native_source_wake_is_not_undone_by_a_delayed_resident_power_poll(app):
+    await resident_app(app)
+    app.controller.hass = app.hass
+    app._resident_power = False
+    app.controller.power = True  # Explicit source wake confirmed this on-cycle.
+    await app.async_pause_resident(leave=False)
+    app.web.async_launch_app.reset_mock()
+    await app.async_maintain_resident(power=True)
+    assert app.saved['paused']
+    app.web.async_launch_app.assert_not_awaited()
+    # A genuinely new off/on cycle can still resume the optional app.
+    await app.async_maintain_resident(power=False)
+    await app.async_maintain_resident(power=True)
+    assert not app.saved.get('paused')

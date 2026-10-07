@@ -317,7 +317,7 @@ class LGDisplay:
                 return None
             except Exception as err:
                 error_message = str(err)
-                if (
+                if isinstance(err, (asyncio.IncompleteReadError, ConnectionError, OSError)) or (
                     "connection" in error_message.lower()
                     or "broken" in error_message.lower()
                 ):

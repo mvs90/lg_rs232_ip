@@ -142,6 +142,14 @@ App HDMI options require resident SI mode; Studio view options also require enab
 
 The media player, remote card and AV Companion keep their existing automatic routing: choosing HDMI there uses the connected resident app when available. Explicit native/app routing is provided by the **Input** select; existing media-player source names and the AV API remain unchanged.
 
+### Reliable source-only wake (2.25.1)
+
+Selecting a source through the media player, remote card or Input select explicitly wakes the display before applying the source. The remote card enables its input selector in confirmed standby. Native **Input → HDMI 1/2/3** keeps native HDMI; the media player's HDMI sources use the configured resident app, waiting for it to connect. **App-HDMI** and saved app views retain their explicit app routing. This also works after the app was paused by a native source selection.
+
+The configured **Display startup timeout** now covers the initial TCP query, power command and confirmation together. Temporary connection loss or a missing power-on reply is retried within this budget; it is not reported as a rejected command. Readback precedes each retry, power writes are at least five seconds apart, and a confirmed ACK is not sent repeatedly while the panel boots. Native HDMI selection additionally tolerates up to 15 seconds of service readiness delay and verifies readback after a missing ACK. Each source write retains the existing OSD guard. A native source selected during this wake remains paused from the app’s perspective; a delayed maintenance poll cannot mistake the same startup for a new wake cycle and resume the app over it. Unanswered follow-up input queries retain the last confirmed source.
+
+Power-off during startup uses the same bounded retries; an exact standby ACK or fresh off readback confirms shutdown. A newer source, power-off or HA shutdown supersedes the pending request, including while power readiness is being checked. A real timeout produces a bounded error without replaying the old source later. An intentionally disconnected external supply is still reported explicitly; use AV Companion to restore that supply. Network availability remains a prerequisite, and this does not add Wake-on-LAN or promise a shorter firmware boot.
+
 ### Starting an app source from standby (2.19.1)
 
 LG can acknowledge power-on before its web services and resident app are ready. Selecting an app view or App-HDMI therefore retains the requested source while startup completes. The integration checks resident maintenance every five seconds during this bounded startup phase, honours the existing backoff after web errors and does not relaunch an SI app already in the foreground. It no longer relies solely on the normal polling schedule and a passive 30-second wait.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.25.1
+
+- Restore source-only wake from the remote card: enable its input selector in standby, allow reselecting the previous source and show startup feedback while the request runs.
+- Retry transient TCP loss and missing power-on replies within the configured wake deadline, confirming readback before resending. Apply the same bounded retry to power-off during startup. Treat EOF as a reconnectable transport loss rather than an unexpected error. Keep genuine timeout and externally disconnected supply errors visible.
+- Wake before native and automatic HDMI selection; resume and await a configured resident app for media-player HDMI sources. Retry native source readiness with readback after lost ACKs. Cancel stale power/source work when a newer action or shutdown takes over; preserve OSD handling. Keep a just-selected native source paused across a delayed startup poll and retain confirmed input state after an unanswered follow-up query. Display app remains 1.20.0.
+
 ## 2.25.0
 
 - Add an edit pencil beside each widget title and a focused live-content editor. Move/resize individual parts, change fonts and text, hide/restore parts, undo changes or reset the internal layout while retaining the entity and outer widget geometry.
