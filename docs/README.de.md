@@ -94,3 +94,7 @@ Ab **2.15** steht **Nur HDMI** als erste bearbeitbare und rücksetzbare feste An
 
 
 Ab 2.18 lassen sich **Offline-HDMI-Start**, eine **UDP-Multicastquelle** im Studio und **Plattformdiagnosen** einrichten. Die neue Aktion `lg_rs232_ip.configure_video_wall` konfiguriert die Kachel eines Displays mit Auslesen, Prüfung, OSD-Schutz und Rücksetzversuch. Details und die Unterschiede zwischen bestätigten Funktionen und Hardwaregrenzen stehen in [Display App](DISPLAY-APP.md), [Studio](DISPLAY-STUDIO.md) und im [Geräteprotokoll](devices/LG-UH5F-H.md).
+
+## Systemeinstellungen
+
+Ab 2.26.0 stehen intelligente Energieeinsparung, Signage-Name, Set ID, Einschaltverzögerung, Kein-Signal-Bild und Temperatureinheit direkt auf der HA-Geräteseite bereit. Voraussetzung ist der native LG-Webzugriff; die Display-App ist optional. [Bedienung, Abhängigkeiten und getestete Schnittstellen](SYSTEM-SETTINGS.md).

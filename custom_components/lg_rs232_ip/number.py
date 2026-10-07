@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, READ_STATUS, ENERGY_SAVING_MODES
 from .lg_display import LGDisplay
+from .system_settings import SystemSettingEntity
 from .device_profile import ASPECT_RATIOS, PM_STATES, ism_methods, is_uh5f
 from homeassistant.exceptions import HomeAssistantError
 
@@ -51,6 +52,10 @@ async def async_setup_entry(
         LGDisplayIsmMethodNumber(lg_display, data["name"], config_entry.entry_id),
         LGDisplayAspectRatioNumber(lg_display, data["name"], config_entry.entry_id),
     ]
+
+    if settings := data.get("system_settings"):
+        entities.extend([SystemSettingsNumber(settings, "signageSetId", "set_id", "mdi:identifier", 1, 1000),
+                         SystemSettingsNumber(settings, "powerOnDelay", "power_on_delay", "mdi:timer-outline", 0, 250)])
 
     async_add_entities(entities)
 
@@ -653,3 +658,25 @@ class LGDisplayAspectRatioNumber(LGDisplayBaseNumber):
         self._attr_native_value = None
         if await self._lg_display.async_get_power_status() is True:
             self._attr_native_value = await self._lg_display.async_get_aspect_ratio()
+
+
+
+
+class SystemSettingsNumber(SystemSettingEntity, NumberEntity):
+    _attr_native_step = 1
+    _attr_mode = "box"
+
+    def __init__(self, settings, key, translation_key, icon, low, high):
+        super().__init__(settings, key, translation_key, icon)
+        self._attr_native_min_value = low
+        self._attr_native_max_value = high
+        if key == "powerOnDelay":
+            self._attr_native_unit_of_measurement = "s"
+
+    @property
+    def native_value(self):
+        value = (self.coordinator.data or {}).get(self.key)
+        return int(value) if value is not None else None
+
+    async def async_set_native_value(self, value):
+        await self.coordinator.async_set(self.key, value)

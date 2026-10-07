@@ -19,6 +19,7 @@ from .const import (
     SOUND_MODES,
 )
 from .lg_display import LGDisplay
+from .system_settings import SystemSettingEntity
 from .layout_library import source_names
 from .device_profile import (
     ASPECT_RATIOS,
@@ -89,6 +90,9 @@ async def async_setup_entry(
     entities.append(
         LGDisplayIsmMethodSelect(lg_display, data["name"], config_entry.entry_id)
     )
+    if settings := data.get("system_settings"):
+        entities.append(SystemTemperatureUnit(settings))
+
     async_add_entities(entities)
 
 
@@ -639,3 +643,19 @@ class LGDisplayAspectRatioSelect(LGDisplayBaseSelect):
             )
         self._attr_current_option = option
         self.async_write_ha_state()
+
+
+
+
+class SystemTemperatureUnit(SystemSettingEntity, SelectEntity):
+    _attr_options = ["celsius", "fahrenheit"]
+
+    def __init__(self, settings):
+        super().__init__(settings, "temperatureUnit", "display_temperature_unit", "mdi:temperature-celsius")
+
+    @property
+    def current_option(self):
+        return (self.coordinator.data or {}).get(self.key)
+
+    async def async_select_option(self, option):
+        await self.coordinator.async_set(self.key, option)

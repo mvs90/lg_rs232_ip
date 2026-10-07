@@ -13,6 +13,7 @@ from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 
 from .const import DOMAIN, READ_STATUS
 from .lg_display import LGDisplay
+from .system_settings import SystemSettingEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,6 +51,10 @@ async def async_setup_entry(
             LGDisplayBootLogoSwitch(lg_display, data["name"], config_entry.entry_id),
         ]
     )
+
+    if settings := data.get("system_settings"):
+        entities.extend([SystemSettingsSwitch(settings, "smartEnergy", "smart_energy_saving", "mdi:leaf"),
+                         SystemSettingsSwitch(settings, "noSignalImage", "no_signal_image", "mdi:image-off-outline")])
 
     async_add_entities(entities)
 
@@ -582,3 +587,18 @@ class LGDisplayBootLogoSwitch(LGDisplayBaseSwitch):
 
     async def async_turn_off(self, **kwargs):
         await self._async_set(False)
+
+
+
+
+class SystemSettingsSwitch(SystemSettingEntity, SwitchEntity):
+    @property
+    def is_on(self):
+        value = (self.coordinator.data or {}).get(self.key)
+        return value == "on" if value is not None else None
+
+    async def async_turn_on(self, **kwargs):
+        await self.coordinator.async_set(self.key, "on")
+
+    async def async_turn_off(self, **kwargs):
+        await self.coordinator.async_set(self.key, "off")

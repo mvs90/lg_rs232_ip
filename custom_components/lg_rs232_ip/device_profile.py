@@ -76,7 +76,7 @@ def ism_methods(model: str | None) -> dict[str, int]:
 def ok_payload(response: str | None) -> str | None:
     """Extract the entire payload, including ASCII, only from a complete OK frame."""
     match = re.fullmatch(
-        r"[a-z]\s+[0-9a-f]{2}\s+OK([^\r\n]*)x", (response or "").strip(), re.I
+        r"[a-z]\s+[0-9a-f]{2,4}\s+OK([^\r\n]*)x", (response or "").strip(), re.I
     )
     return match.group(1) if match and match.group(1) else None
 

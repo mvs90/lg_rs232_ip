@@ -9,6 +9,7 @@ from .lg_display import LGDisplay
 from .web_manager import LGWebManager
 from .controller import DisplayController
 from .alerts import LGDisplayAlertState
+from .system_settings import SystemSettings, validate_setting
 
 _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -20,6 +21,7 @@ PLATFORMS = [
     Platform.SENSOR,
     Platform.CAMERA,
     Platform.BUTTON,
+    Platform.TEXT,
 ]
 
 
@@ -63,9 +65,16 @@ async def _async_update_listener(hass, entry):
 async def async_setup_entry(hass, entry):
     hass.data.setdefault(DOMAIN, {})
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+    address_store = SystemSettings.address_store(hass, entry)
+    saved_address = await address_store.async_load()
+    try:
+        device_id = int(validate_setting("signageSetId", (saved_address or {}).get("device_id", entry.data.get("device_id", 1))))
+    except (ValueError, AttributeError):
+        device_id = 1
     display = LGDisplay(
         entry.data["host"],
         port=entry.data.get("port", 9761),
+        device_id=device_id,
         power_transition_mode=entry.options.get("power_transition_mode", True),
         power_transition_timeout=entry.options.get("power_transition_timeout", 20),
     )
@@ -119,6 +128,11 @@ async def async_setup_entry(hass, entry):
             _LOGGER.warning(
                 "LG SI recovery pending; use Restore SI settings when awake"
             )
+    if native_enabled:
+        settings = data["system_settings"] = SystemSettings(
+            hass, entry, display, data["web_manager"], controller, address_store, saved_address
+        )
+        await settings.async_refresh()
     if await display.async_connect() and await display.async_get_power_status() is True:
         await display.async_get_model_name()
         await display.async_get_software_version()

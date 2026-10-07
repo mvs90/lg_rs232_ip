@@ -7,7 +7,11 @@
         "data": {
           "host": "IP Address",
           "port": "Port",
-          "name": "Device Name"
+          "name": "Device Name",
+          "device_id": "Set ID (RS232 address)"
+        },
+        "data_description": {
+          "device_id": "Current ID under General → Set ID; default: 1. Setup does not change the display ID."
         }
       },
       "settings": {
@@ -187,6 +191,34 @@
           "color_wash": "Colour wash — white/colour patterns",
           "washing_bar": "Washing bar — moving bar"
         }
+      },
+      "display_temperature_unit": {
+        "name": "Display temperature unit",
+        "state": {
+          "celsius": "Celsius (°C)",
+          "fahrenheit": "Fahrenheit (°F)"
+        }
+      }
+    },
+    "switch": {
+      "smart_energy_saving": {
+        "name": "Smart energy saving"
+      },
+      "no_signal_image": {
+        "name": "No signal image"
+      }
+    },
+    "text": {
+      "signage_name": {
+        "name": "Signage name"
+      }
+    },
+    "number": {
+      "set_id": {
+        "name": "Set ID"
+      },
+      "power_on_delay": {
+        "name": "Power-on delay"
       }
     }
   }

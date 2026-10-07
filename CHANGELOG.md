@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.26.0
+
+- Add shared, verified HA configuration entities for Smart Energy Saving, the actual Signage name, Set ID (1–1000), power-on delay, no-signal image and on-display temperature units. Native LG web access is required; the resident app is optional.
+- Use LG's dedicated name API and actual `option.setId` rather than similarly named shadow database values. Serialize RS232 during address changes, accept extended/padded ID acknowledgements and persist confirmed addresses for reload/restart.
+- Track firmware-dependent power-on delay changes (UH5F: ID 1000 → 249 s) and include the last confirmed delay in bounded wake deadlines. Names, foreign media entities and Studio views remain independent.
+- Expose the current Set ID in initial setup without changing the physical device during setup. Unsupported system fields remain unavailable; writes require fresh power confirmation and readback and are never replayed.
+
 ## 2.25.1
 
 - Restore source-only wake from the remote card: enable its input selector in standby, allow reselecting the previous source and show startup feedback while the request runs.

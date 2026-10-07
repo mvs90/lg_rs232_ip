@@ -7,7 +7,11 @@
         "data": {
           "host": "IP-Adresse",
           "port": "Port",
-          "name": "Gerätename"
+          "name": "Gerätename",
+          "device_id": "Set ID (RS232-Adresse)"
+        },
+        "data_description": {
+          "device_id": "Aktuelle ID aus Allgemein → ID festlegen; Standard: 1. Ändert beim Einrichten keine Einstellung am Display."
         }
       },
       "settings": {
@@ -187,6 +191,34 @@
           "color_wash": "Farbwäsche – Weiß- und Farbmuster",
           "washing_bar": "Reinigungsbalken – bewegter Balken"
         }
+      },
+      "display_temperature_unit": {
+        "name": "Temperatureinheit am Display",
+        "state": {
+          "celsius": "Celsius (°C)",
+          "fahrenheit": "Fahrenheit (°F)"
+        }
+      }
+    },
+    "switch": {
+      "smart_energy_saving": {
+        "name": "Intelligente Energieeinsparung"
+      },
+      "no_signal_image": {
+        "name": "Kein-Signal-Bild"
+      }
+    },
+    "text": {
+      "signage_name": {
+        "name": "Signage-Name"
+      }
+    },
+    "number": {
+      "set_id": {
+        "name": "ID festlegen (Set ID)"
+      },
+      "power_on_delay": {
+        "name": "Einschaltverzögerung"
       }
     }
   }

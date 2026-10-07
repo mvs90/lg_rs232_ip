@@ -39,6 +39,7 @@ class LGDisplayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 lg = LGDisplay(
                     host=user_input[CONF_HOST],
                     port=user_input[CONF_PORT],
+                    device_id=user_input.get("device_id", 1),
                 )
                 # Test connection
                 if await lg.async_connect():
@@ -65,6 +66,7 @@ class LGDisplayConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_HOST): str,
                     vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
                     vol.Required(CONF_NAME, default="LG Display"): str,
+                    vol.Optional("device_id", default=1): vol.All(vol.Coerce(int), vol.Range(min=1, max=1000)),
                 }
             ),
             errors=errors,

@@ -225,7 +225,7 @@ class LGWebManager:
                                     return value
                             elif reply[0] == event + "1":
                                 value = reply[1]
-                                if event == "capture" and isinstance(value, str):
+                                if event in {"capture", "signageName"} and isinstance(value, str):
                                     return value
                                 if (
                                     not isinstance(value, dict)
@@ -241,6 +241,51 @@ class LGWebManager:
             raise LGWebError("Toast must contain 1–1000 characters")
         async with self._lock:
             await self._api("sendToast", "toast", message=message)
+
+    async def async_get_display_settings(self):
+        """Read only the public configuration allowlist; never return credentials."""
+        from .system_settings import SYSTEM_KEYS, valid_settings
+
+        async with self._lock:
+            values = await self._api(
+                "getSystemSettings", "systemSettings",
+                category="commercial", keys=[key for key in SYSTEM_KEYS if key not in {"signageSetId", "signageName"}],
+            )
+            # getSetID is the controller's public readback, not a guessed DB key.
+            try:
+                address = await self._api("getSetID", "getSetID")
+            except LGWebError:
+                address = {}
+            if isinstance(values, dict):
+                values["signageSetId"] = address.get("setId")
+                try:
+                    values["signageName"] = await self._api("getSignageName", "signageName")
+                except LGWebError:
+                    values.pop("signageName", None)
+        return valid_settings(values)
+
+    async def async_write_display_setting(self, key, value):
+        """Single validated mutation; caller verifies fresh readback, never replays."""
+        from .system_settings import validate_setting
+
+        try:
+            value = validate_setting(key, value)
+        except ValueError as err:
+            raise LGWebError(str(err)) from None
+        async with self._lock:
+            if key == "signageName":
+                # The actual Signage/network name has its own setter; the
+                # similarly named commercial DB value is not authoritative.
+                await self._api("setSignageName", None, signageName=value)
+                return
+            # option.setId controls RS232; commercial.signageSetId is a separate
+            # value and must never be mistaken for the actual controller address.
+            category = "option" if key == "signageSetId" else "commercial"
+            settings = {"setId": int(value)} if key == "signageSetId" else {key: value}
+            await self._api(
+                "setSystemSettings", "setSystemSettings", category=category,
+                settings=settings, shouldCallback=True,
+            )
 
     async def async_foreground_app(self) -> str | None:
         async with self._lock:

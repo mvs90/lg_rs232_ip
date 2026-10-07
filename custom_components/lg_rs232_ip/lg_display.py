@@ -279,11 +279,11 @@ class LGDisplay:
                             "ascii", errors="replace"
                         ).strip()
                         match = re.fullmatch(
-                            rf"{cmd2}\s+{self.device_id:02x}\s+(?:OK|NG)[^\r\n]*x",
+                            rf"{cmd2}\s+([0-9a-f]{{2,4}})\s+(?:OK|NG)[^\r\n]*x",
                             response_str,
                             re.IGNORECASE,
                         )
-                        if match:
+                        if match and int(match.group(1), 16) == self.device_id:
                             self._last_successful_response = time.monotonic()
                             if is_query:
                                 if re.search(r"\sNG", response_str, re.IGNORECASE) and (
@@ -349,7 +349,7 @@ class LGDisplay:
         # Parse response pattern: cmd2 id OK|NG value
         # Example: "a 01 OK01" -> OK, value=01
         match = re.search(
-            r"([a-z])\s+([0-9a-f]{2})\s+(OK|NG)([0-9a-f]+)?", response, re.IGNORECASE
+            r"([a-z])\s+([0-9a-f]{2,4})\s+(OK|NG)([0-9a-f]+)?", response, re.IGNORECASE
         )
         if match:
             status = match.group(3).upper()

@@ -1,5 +1,13 @@
 # Release acceptance
 
+## LG 2.26.0: verified physical system settings — 2026-10-07
+
+**521 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 260 browser cases pass across Chromium/WebKit.** Added coverage includes allowed fields/types, name limits/control characters, actual vendor endpoints rather than shadow settings, missing optional capabilities, fresh power/readback requirements, failed/lost/cancelled writes, external ID changes, locked RS232 handover, extended/padded ID framing, durable address/delay state, firmware-dependent delay changes and bounded wake deadlines. Existing frontend checks cover Studio and remote regressions.
+
+Installed **LG 2.26.0 / app 1.20.0** in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container. All six new configuration entities are visible and usable in the actual German HA device page. On the physical **75UH5F-HJ**, changed/restored Smart Energy Saving, actual Signage name, 0 → 2 → 0 second power-on delay, no-signal image and Celsius/Fahrenheit. Actual Set ID **1 → 2 → 1000 → 1** retained uncached RS232 control; an entry reload at ID 2 retained the stored address. The firmware's ID-1000 → 249-second delay coupling was independently confirmed and restored. Manual Backlight 75 remained acknowledged with intelligent saving on/off and Energy Saving OFF. The HA temperature stayed 35 °C during the native Fahrenheit test.
+
+The complete saved library/configuration, revision, background list and startup design are unchanged; the previously selected App custom camera view remains selected. A preliminary whole-response comparison also included live sun/entity values and correctly differed; the final check compares the persisted content. Preliminary name/ID shadow-database probes did not change the corresponding active properties and were corrected using the native public APIs. Their original shadow values were restored. Private baselines, actual names, logs and UI screenshots remain excluded from Git.
+
 ## LG 2.25.1: reliable source-only wake — 2026-10-07
 
 **485 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 260 browser cases pass across Chromium/WebKit.** New tests exercise transient TCP loss, lost/early power ACKs, bounded query and power deadlines, source/power-off/shutdown takeover, stale queued wake cancellation, external supply guards, native source ACK readback, delayed resident power polls, retained confirmed input, power-off during startup and timed-view cleanup. Browser coverage verifies standby source selection (including the previous input), pending-start feedback and a usable explicit retry after failure.

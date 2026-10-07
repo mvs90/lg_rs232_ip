@@ -154,6 +154,9 @@ class DisplayController(TemporaryView, NativeControls):
         """Retry idempotent power writes within one bounded, replaceable request."""
         generation = self._view_generation
         timeout = self._config_entry.options.get("display_wake_timeout", 60)
+        settings = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id, {}).get("system_settings")
+        if on and settings is not None:
+            timeout += settings.power_on_delay
         deadline = monotonic() + timeout
         acknowledged = False
         next_write = 0.0

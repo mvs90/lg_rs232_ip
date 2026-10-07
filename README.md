@@ -1,15 +1,15 @@
 # LG Professional Display
 
-Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.25.1 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
+Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.26.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
 
-[Deutsche Anleitung](docs/README.de.md) · [Display Studio](docs/DISPLAY-STUDIO.md) · [Dashboard remote](docs/DASHBOARD-CARD.md) · [Features and actions](docs/FEATURES.md) · [Device reference](docs/devices/LG-UH5F-H.md) · [MIT license](LICENSE)
+[Deutsche Anleitung](docs/README.de.md) · [Display Studio](docs/DISPLAY-STUDIO.md) · [Dashboard remote](docs/DASHBOARD-CARD.md) · [System settings](docs/SYSTEM-SETTINGS.md) · [Features and actions](docs/FEATURES.md) · [Device reference](docs/devices/LG-UH5F-H.md) · [MIT license](LICENSE)
 
 ## Install with HACS
 
 1. HACS → Custom repositories: add `https://github.com/mvs90/lg_rs232_ip`, category **Integration**.
 2. Download, then restart Home Assistant.
 3. Settings → Devices & services → Add integration → **LG Professional Display**.
-4. Enter the display host and TCP port (normally **9761**).
+4. Enter the display host, TCP port (normally **9761**) and its current Set ID (normally **1**).
 5. Confirm the full display settings form, including optional native web access and screenshot preview. Home Assistant asks for an area only after this step.
 6. Reload the frontend, edit a dashboard and add **LG Display Remote**. Its visual editor lets you select the display and optional preview camera; the card is bundled and registered automatically.
 
