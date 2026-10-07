@@ -164,6 +164,12 @@
       },
       "refresh_platform": {
         "name": "Plattformdiagnose aktualisieren"
+      },
+      "picture_reset": {
+        "name": "Aktuellen Bildmodus zurücksetzen"
+      },
+      "picture_apply_all_inputs": {
+        "name": "Aktuellen Bildmodus auf alle Eingänge anwenden"
       }
     },
     "sensor": {
@@ -247,6 +253,100 @@
       },
       "ism_duration": {
         "name": "ISM-Dauer (Minuten)"
+      },
+      "picture_mode": {
+        "name": "Bildmodus",
+        "state": {
+          "mall": "Mall / QSR",
+          "general": "Allgemein",
+          "corporate": "Regierung / Unternehmen",
+          "transportation": "Transportwesen",
+          "education": "Bildung",
+          "expert1": "Experte",
+          "aps": "Automatisches Energiesparen",
+          "calibration": "Kalibrierung",
+          "hospital": "Krankenhaus"
+        }
+      },
+      "gamma": {
+        "name": "Gamma",
+        "state": {
+          "low": "1,9",
+          "medium": "2,2",
+          "high1": "2,4",
+          "high2": "BT.1886"
+        }
+      },
+      "black_level": {
+        "name": "Schwarzwert",
+        "state": {
+          "low": "Niedrig",
+          "high": "Hoch",
+          "auto": "Automatisch"
+        }
+      },
+      "dynamic_contrast": {
+        "name": "Dynamischer Kontrast",
+        "state": {
+          "off": "Aus",
+          "low": "Niedrig",
+          "medium": "Mittel",
+          "high": "Hoch"
+        }
+      },
+      "dynamic_color": {
+        "name": "Dynamische Farbe",
+        "state": {
+          "off": "Aus",
+          "low": "Niedrig",
+          "medium": "Mittel",
+          "high": "Hoch"
+        }
+      },
+      "super_resolution": {
+        "name": "Super Resolution",
+        "state": {
+          "off": "Aus",
+          "low": "Niedrig",
+          "medium": "Mittel",
+          "high": "Hoch"
+        }
+      },
+      "noise_reduction": {
+        "name": "Rauschunterdrückung",
+        "state": {
+          "off": "Aus",
+          "low": "Niedrig",
+          "medium": "Mittel",
+          "high": "Hoch",
+          "auto": "Automatisch"
+        }
+      },
+      "mpeg_noise_reduction": {
+        "name": "MPEG-Rauschunterdrückung",
+        "state": {
+          "off": "Aus",
+          "low": "Niedrig",
+          "medium": "Mittel",
+          "high": "Hoch",
+          "auto": "Automatisch"
+        }
+      },
+      "color_gamut": {
+        "name": "Farbumfang",
+        "state": {
+          "auto": "Automatisch",
+          "extended": "Erweitert"
+        }
+      },
+      "hdr_picture_mode": {
+        "name": "HDR-Bildmodus",
+        "state": {
+          "mall": "Mall / QSR",
+          "general": "Allgemein",
+          "corporate": "Regierung / Unternehmen",
+          "education": "Bildung"
+        }
       }
     },
     "switch": {
@@ -291,6 +391,24 @@
       },
       "ism_sun": {
         "name": "ISM Sonntag"
+      },
+      "hdmi_it_content": {
+        "name": "HDMI IT Content (automatischer Bildmodus)"
+      },
+      "brightness_schedule": {
+        "name": "Helligkeitszeitplan"
+      },
+      "deep_color_hdmi1": {
+        "name": "UHD Deep Color HDMI 1"
+      },
+      "deep_color_hdmi2": {
+        "name": "UHD Deep Color HDMI 2"
+      },
+      "deep_color_hdmi3": {
+        "name": "UHD Deep Color HDMI 3"
+      },
+      "hdr_tone_mapping": {
+        "name": "HDR Dynamic Tone Mapping"
       }
     },
     "text": {
@@ -310,6 +428,39 @@
       },
       "ism_standby": {
         "name": "ISM-Wartezeit bei Standbild"
+      },
+      "brightness": {
+        "name": "Helligkeit"
+      },
+      "contrast": {
+        "name": "Kontrast"
+      },
+      "sharpness": {
+        "name": "Schärfe"
+      },
+      "color": {
+        "name": "Farbtiefe"
+      },
+      "tint": {
+        "name": "Farbton (50 = neutral)"
+      },
+      "color_temperature": {
+        "name": "Farbtemperatur"
+      },
+      "skin_color": {
+        "name": "Hauttöne"
+      },
+      "sky_color": {
+        "name": "Blautöne"
+      },
+      "grass_color": {
+        "name": "Grüntöne"
+      },
+      "min_backlight": {
+        "name": "Automatische Hintergrundbeleuchtung Minimum"
+      },
+      "max_backlight": {
+        "name": "Automatische Hintergrundbeleuchtung Maximum"
       }
     },
     "datetime": {

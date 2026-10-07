@@ -4,10 +4,13 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN
+from .picture_settings import PictureSettingEntity, PICTURE_ACTIONS
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
     data = hass.data[DOMAIN][entry.entry_id]
+    if picture := data.get("picture_settings"):
+        async_add_entities([PictureActionButton(picture, key) for key in sorted(PICTURE_ACTIONS)])
     manager = data.get("display_app")
     if manager is None:
         return
@@ -17,6 +20,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
         if manager.resident:
             keys += ["resume_display_app", "refresh_platform"]
     async_add_entities([DisplayAppButton(manager, entry, key) for key in keys])
+
+
+class PictureActionButton(PictureSettingEntity, ButtonEntity):
+    async def async_press(self):
+        await self.coordinator.async_action(self.key)
 
 
 class DisplayAppButton(ButtonEntity):

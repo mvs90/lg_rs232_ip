@@ -2,6 +2,10 @@
 
 All actions here belong to the standalone LG integration. Configure these under **LG Professional Display → Configure**. Apple TV, Sonos, external sockets and combined HomeKit control are documented in [AV Companion](https://github.com/mvs90/av_companion).
 
+## Picture settings and remaining coverage
+
+Version 2.29.0 adds visible translated picture presets, preset reset/apply-to-all buttons and advanced picture/HDMI controls with verified writes and model/input dependencies. The [settings audit](SETTINGS-AUDIT.md) lists exact controls, connection requirements, automation changes and remaining menu coverage.
+
 ## Clock, NTP and ISM configuration
 
 Version 2.28.0 adds native-web clock/NTP controls and dependent ISM repeat, duration and weekly schedule settings. Images and MP4 videos can be prepared through an HA action and downloaded from HA Media for LG's USB import; this does not install files into ISM storage over the network. See [clock and ISM setup](CLOCK-ISM.md) for supported formats, dependencies, automation examples and hardware limits.

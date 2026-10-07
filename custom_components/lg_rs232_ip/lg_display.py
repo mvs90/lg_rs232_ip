@@ -31,6 +31,11 @@ AVAILABILITY_TIMEOUT = 20.0
 RECONNECT_BACKOFF_SECONDS = 5.0
 CONNECT_ERROR_LOG_INTERVAL_SECONDS = 60.0
 POWER_STATUS_CACHE_SECONDS = 2.0
+PICTURE_NUMBERS = {
+    "brightness": ("kh", 0, 100), "contrast": ("kg", 0, 100),
+    "color": ("ki", 0, 100), "sharpness": ("kk", 0, 50),
+    "tint": ("kj", 0, 100), "color_temperature": ("xu", 0, 254),
+}
 
 
 class LGDisplay:
@@ -66,6 +71,7 @@ class LGDisplay:
         self._connected = False
         self._last_successful_response: Optional[float] = None
         self._command_lock = asyncio.Lock()  # Lock to synchronize command sending
+        self._command_not_before = 0.0
         self._next_connect_attempt_at: float = 0.0
         self._last_connect_error_log_at: float = 0.0
         self._last_connect_error_message: Optional[str] = None
@@ -101,6 +107,8 @@ class LGDisplay:
             ("k", "c"),
             ("d", "x"),
             ("j", "q"),
+            ("k", "g"), ("k", "h"), ("k", "i"), ("k", "j"),
+            ("k", "k"), ("x", "u"), ("s", "n"),
             ("s", "m"),
             ("s", "v"),
             ("k", "d"),
@@ -236,8 +244,10 @@ class LGDisplay:
                 return None
 
         async with self._command_lock:
+            if (delay := self._command_not_before - time.monotonic()) > 0:
+                await asyncio.sleep(delay)
             key = (cmd1, cmd2, value, query_suffix)
-            is_query = value == READ_STATUS or query_suffix.strip().lower() == "ff"
+            is_query = value == READ_STATUS or query_suffix.strip().lower().split()[-1:] == ["ff"]
             if is_query:
                 if time.monotonic() < self._unsupported_until.get(key, 0):
                     return None
@@ -264,6 +274,12 @@ class LGDisplay:
                 cmd_bytes = cmd_str.encode("utf-8")
                 _LOGGER.debug("Command bytes: %s", cmd_bytes)
                 self._writer.write(cmd_bytes)
+                if (cmd1 + cmd2 == "fk" and value == 0) or (
+                    cmd1 + cmd2 == "sn" and value == 0x52 and query_suffix.strip() == "01"
+                ):
+                    # LG temporarily rejects other commands after these actions.
+                    # Also guard a missing ACK; writing may already have succeeded.
+                    self._command_not_before = time.monotonic() + 3
                 await self._writer.drain()
 
                 # TCP may split an ACK across packets. Only accept the requested
@@ -577,6 +593,43 @@ class LGDisplay:
             "d", "x", READ_STATUS, use_cache=use_cache
         )
         return result
+
+    async def async_picture_action(self, action: str) -> bool:
+        """Picture-only reset/copy; never expose the factory-reset byte fk 02."""
+        if action == "picture_reset":
+            response = await self.async_send_raw_command("f", "k", 0, use_cache=False)
+            expected = "00"
+        elif action == "picture_apply_all_inputs":
+            response = await self.async_send_raw_command("s", "n", 0x52, query_suffix=" 01", use_cache=False)
+            expected = "5201"
+        else:
+            return False
+        return (ok_payload(response) or "").lower() == expected
+
+    async def async_read_picture_number(self, key):
+        if key not in PICTURE_NUMBERS:
+            return None
+        command, low, high = PICTURE_NUMBERS[key]
+        value = await self.async_send_command(*command, READ_STATUS, use_cache=False)
+        return value if type(value) is int and low <= value <= high else None
+
+    async def async_write_picture_number(self, key, value):
+        if key not in PICTURE_NUMBERS:
+            return False
+        command, low, high = PICTURE_NUMBERS[key]
+        if type(value) is not int or not low <= value <= high:
+            return False
+        # A rejected read can indicate a temporary input/mode lock.
+        if await self.async_read_picture_number(key) is None:
+            return False
+        await self.async_send_command(*command, value)
+        for attempt in range(3):
+            if await self.async_read_picture_number(key) == value:
+                self._picture_settings_changed()
+                return True
+            if attempt < 2:
+                await asyncio.sleep(.25)
+        return False
 
     async def async_set_picture_mode(self, mode: int) -> bool:
         """Set a picture mode."""

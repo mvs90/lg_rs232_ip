@@ -28,15 +28,15 @@ PM_STATES = {
     4: "Screen off & backlight on",
 }
 SIGNAGE_PICTURE_MODES = {
-    "MALL/QSR": 0,
-    "GENERAL": 1,
-    "GOV./CORP.": 2,
-    "TRANSPORTATION": 3,
-    "EDUCATION": 4,
-    "EXPERT1": 5,
-    "AUTO POWER SAVE": 8,
-    "CALIBRATION": 0x11,
-    "HOSPITAL": 0x12,
+    "mall": 0,
+    "general": 1,
+    "corporate": 2,
+    "transportation": 3,
+    "education": 4,
+    "expert1": 5,
+    "aps": 8,
+    "calibration": 0x11,
+    "hospital": 0x12,
 }
 
 # LG webOS 4.0 guide, pp. 22–23/85; older Signage installation guides

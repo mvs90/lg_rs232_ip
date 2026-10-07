@@ -98,7 +98,7 @@ async def test_uh5f_picture_labels_and_unknown_status():
     display.async_get_picture_mode = AsyncMock(return_value=1)
     select = LGDisplayPictureModeSelect(display, "Display", "test")
     await select.async_update()
-    assert select.current_option == "GENERAL"
+    assert select.current_option == "general"
     assert "FILMMAKER" not in select.options
     display.async_get_subcommand = AsyncMock(side_effect=[0, None])
     sensor = LGDisplayStatusSensor(
@@ -151,7 +151,7 @@ async def test_uh5f_color_temperature_rejects_query_sentinel_as_write():
     display.async_get_power_status = AsyncMock(return_value=True)
     display.async_set_color_temperature = AsyncMock()
     number = LGDisplayColorTemperatureNumber(display, "Display", "test")
-    assert (number.native_min_value, number.native_max_value) == (0x70, 0xD2)
+    assert (number.native_min_value, number.native_max_value, number.native_step) == (3200, 13000, 100)
     with pytest.raises(HomeAssistantError):
         await number.async_set_native_value(0xFF)
     display.async_set_color_temperature.assert_not_awaited()

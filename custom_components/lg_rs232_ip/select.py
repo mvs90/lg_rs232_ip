@@ -22,6 +22,7 @@ from .const import (
 from .lg_display import LGDisplay
 from .system_settings import SystemSettingEntity
 from .maintenance import MaintenanceEntity, REPEATS, DURATIONS
+from .picture_settings import PictureSettingEntity, NATIVE_OPTIONS
 from .power_settings import POWER_SETTINGS, PowerSettingEntity, remote_power_on_status
 from .layout_library import source_names
 from .device_profile import (
@@ -66,6 +67,7 @@ async def async_setup_entry(
             lg_display,
             data["name"],
             config_entry.entry_id,
+            data.get("picture_settings"),
         ),
         LGDisplayEnergySavingSelect(
             lg_display,
@@ -99,6 +101,11 @@ async def async_setup_entry(
     if maintenance := data.get("maintenance"):
         entities.extend([IsmSettingSelect(maintenance, "ismTimer", "ism_repeat"), IsmSettingSelect(maintenance, "ismTime", "ism_duration")])
 
+    if picture := data.get("picture_settings"):
+        entities.extend(PictureOptionSelect(picture, key) for key in ("gamma", "black_level", "hdr_picture_mode"))
+        if picture.web and is_uh5f(lg_display.model_name):
+            entities.extend(PictureOptionSelect(picture, key) for key in NATIVE_OPTIONS)
+
     if power := data.get("power_settings"):
         entities.extend(PowerSettingsSelect(power, key) for key in (
             "pm_mode", "power_on_status", "dpm_wake_up"))
@@ -124,6 +131,19 @@ class IsmSettingSelect(MaintenanceEntity, SelectEntity):
         if option not in self._choices:
             raise HomeAssistantError("Unsupported ISM option")
         await self.coordinator.async_set(self.key, self._choices[option])
+
+
+class PictureOptionSelect(PictureSettingEntity, SelectEntity):
+    @property
+    def options(self):
+        return self.coordinator.options_for(self.key)
+
+    @property
+    def current_option(self):
+        return (self.coordinator.data or {}).get(self.key)
+
+    async def async_select_option(self, option):
+        await self.coordinator.async_set(self.key, option)
 
 
 class LGDisplayInputSelect(LGDisplayBaseSelect):
@@ -300,11 +320,16 @@ class LGDisplayIsmMethodSelect(LGDisplayBaseSelect):
 class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
     """Picture mode selection for LG Display."""
 
-    def __init__(self, lg_display: LGDisplay, name: str, unique_id: str) -> None:
+    _attr_entity_registry_enabled_default = True
+    _attr_translation_key = "picture_mode"
+
+    def __init__(self, lg_display: LGDisplay, name: str, unique_id: str, picture=None) -> None:
         self._lg_display = lg_display
         self._name = name
         self._unique_id = unique_id
         self._current_mode: Optional[str] = None
+        self._picture = picture
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, unique_id)})
 
     @property
     def _modes(self):
@@ -319,10 +344,6 @@ class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
         return f"{self._unique_id}_picture_mode"
 
     @property
-    def name(self) -> str:
-        return "Picture Mode"
-
-    @property
     def options(self) -> list[str]:
         return list(self._modes.keys())
 
@@ -332,7 +353,7 @@ class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
 
     @property
     def available(self) -> bool:
-        return self._lg_display.is_available
+        return self._lg_display.is_available and self._current_mode is not None
 
     @property
     def icon(self) -> str:
@@ -343,21 +364,23 @@ class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
 
     async def async_update(self) -> None:
         power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
+        if power_status is not True:
+            self._current_mode = None
             return
 
         mode_value = await self._lg_display.async_get_picture_mode()
-        if mode_value is None:
-            return
-
-        for name, value in self._modes.items():
-            if value == mode_value:
-                self._current_mode = name
-                return
-
-        self._current_mode = f"0x{mode_value:02x}"
+        self._current_mode = next(
+            (name for name, value in self._modes.items() if value == mode_value), None
+        )
 
     async def async_select_option(self, option: str) -> None:
+        async with self._picture._settings_lock if self._picture else nullcontext():
+            async with self._picture.controller._control_lock if self._picture else nullcontext():
+                await self._async_select_picture_mode(option)
+        if self._picture:
+            await self._picture.async_request_refresh()
+
+    async def _async_select_picture_mode(self, option):
         if option not in self._modes:
             raise HomeAssistantError("Unsupported picture mode")
         if await self._lg_display.async_get_power_status() is not True:

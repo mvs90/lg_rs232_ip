@@ -1,6 +1,6 @@
 # Picture controls and power modes
 
-LG Professional Display **2.10.1**, display app **1.7.2**. Verified on **75UH5F-HJ / firmware 04.13.50 / webOS 4.0.1-136**. Other models can reject controls depending on their input and mode; an unavailable value is not a zero reading.
+Picture/backlight acceptance originally performed with **2.10.1 / app 1.7.2**. Preset reset/copy and advanced controls added in **2.29.0** are documented in the [settings audit](SETTINGS-AUDIT.md). Verified on **75UH5F-HJ / firmware 04.13.50 / webOS 4.0.1-136**. Other models can reject controls depending on their input and mode; an unavailable value is not a zero reading.
 
 ## Aspect ratio
 
@@ -31,7 +31,7 @@ A 16:9 signal inside a 16:9 rectangle can look identical in both modes. Black ba
 
 The **Backlight Control** diagnostic sensor explains the current restriction, including energy-saving mode, scheduling and actual panel state. It remains readable while the number is unavailable. Home Assistant itself omits custom attributes on unavailable number entities, so relying only on the slider's attributes would hide the reason.
 
-For manual control, choose **Energy Saving → OFF, MINIMUM or MEDIUM**. If scheduling is active, turn off **Display → Advanced Setting → Energy Saving → Brightness Scheduling** on the LG. The integration never disables an energy policy or schedule automatically when moving the slider.
+For manual control, choose **Energy Saving → OFF, MINIMUM or MEDIUM**. If scheduling is active, turn off the **Brightness scheduling** switch in HA (from 2.29), or **Display → Advanced Setting → Energy Saving → Brightness Scheduling** on the LG. The integration never disables an energy policy or schedule automatically when moving the slider.
 
 Writes require an exact acknowledgement **and a fresh matching readback**. Failed or blocked reads clear the displayed number. Relevant setting changes invalidate temporary rejection caches and refresh the controls; an earlier `NG` must not lock a now-valid control for another five minutes. Unrelated commands, such as volume changes, retain the optional-command backoff to avoid excessive device traffic.
 
@@ -68,7 +68,7 @@ Brightness-scheduling and panel-off blocking have automated coverage and were cr
 | User image / Benutzerbild | `90` | Uses images imported through the LG ISM menu. |
 | User video / Benutzervideo | `91` | Uses a video imported through the LG ISM menu. |
 
-Import ISM media on the LG under **General → Safety Mode → ISM Method** from the USB `ISM` folder. This is separate from HA display-app media and the boot logo. Repeat, standby time and duration remain LG settings; selecting a method does not configure a schedule or upload media. A confirmed method value does not prove a scheduled wash is currently visible.
+Import ISM media on the LG under **General → Safety Mode → ISM Method** from the USB `ISM` folder. This is separate from HA display-app media and the boot logo. From 2.28, repeat, standby time, duration and weekly timing are configurable in HA; see [clock and ISM](CLOCK-ISM.md). Selecting a method alone does not configure a schedule or install media. A confirmed method value does not prove a scheduled wash is currently visible.
 
 The [LG webOS 4.0 guide](https://gscs-b2c.lge.com/open/downloadFile?fileId=c1dJJrQEObZ7aWsYE0hHA), pages 22–23 and 85, also documents Orbiter (`02`, four-pixel shifts), but limits it to outdoor models and requires a signal. It is therefore **not offered for the known indoor UH5F-H profile**. The guide also excludes Orbiter while User Video is active.
 

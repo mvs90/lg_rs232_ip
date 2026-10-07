@@ -164,6 +164,12 @@
       },
       "refresh_platform": {
         "name": "Refresh platform diagnostics"
+      },
+      "picture_reset": {
+        "name": "Reset current picture mode"
+      },
+      "picture_apply_all_inputs": {
+        "name": "Apply current picture mode to all inputs"
       }
     },
     "sensor": {
@@ -247,6 +253,100 @@
       },
       "ism_duration": {
         "name": "ISM duration (minutes)"
+      },
+      "picture_mode": {
+        "name": "Picture mode",
+        "state": {
+          "mall": "Mall / QSR",
+          "general": "General",
+          "corporate": "Government / corporate",
+          "transportation": "Transportation",
+          "education": "Education",
+          "expert1": "Expert",
+          "aps": "Auto Power Save",
+          "calibration": "Calibration",
+          "hospital": "Hospital"
+        }
+      },
+      "gamma": {
+        "name": "Gamma",
+        "state": {
+          "low": "1.9",
+          "medium": "2.2",
+          "high1": "2.4",
+          "high2": "BT.1886"
+        }
+      },
+      "black_level": {
+        "name": "Black level",
+        "state": {
+          "low": "Low",
+          "high": "High",
+          "auto": "Auto"
+        }
+      },
+      "dynamic_contrast": {
+        "name": "Dynamic contrast",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "dynamic_color": {
+        "name": "Dynamic color",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "super_resolution": {
+        "name": "Super Resolution",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      },
+      "noise_reduction": {
+        "name": "Noise reduction",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "auto": "Auto"
+        }
+      },
+      "mpeg_noise_reduction": {
+        "name": "MPEG noise reduction",
+        "state": {
+          "off": "Off",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "auto": "Auto"
+        }
+      },
+      "color_gamut": {
+        "name": "Color gamut",
+        "state": {
+          "auto": "Auto",
+          "extended": "Extended"
+        }
+      },
+      "hdr_picture_mode": {
+        "name": "HDR picture mode",
+        "state": {
+          "mall": "Mall / QSR",
+          "general": "General",
+          "corporate": "Government / corporate",
+          "education": "Education"
+        }
       }
     },
     "switch": {
@@ -291,6 +391,24 @@
       },
       "ism_sun": {
         "name": "ISM Sunday"
+      },
+      "hdmi_it_content": {
+        "name": "HDMI IT content (automatic picture mode)"
+      },
+      "brightness_schedule": {
+        "name": "Brightness scheduling"
+      },
+      "deep_color_hdmi1": {
+        "name": "UHD Deep Color HDMI 1"
+      },
+      "deep_color_hdmi2": {
+        "name": "UHD Deep Color HDMI 2"
+      },
+      "deep_color_hdmi3": {
+        "name": "UHD Deep Color HDMI 3"
+      },
+      "hdr_tone_mapping": {
+        "name": "HDR dynamic tone mapping"
       }
     },
     "text": {
@@ -310,6 +428,39 @@
       },
       "ism_standby": {
         "name": "ISM still-image waiting period"
+      },
+      "brightness": {
+        "name": "Brightness"
+      },
+      "contrast": {
+        "name": "Contrast"
+      },
+      "sharpness": {
+        "name": "Sharpness"
+      },
+      "color": {
+        "name": "Color"
+      },
+      "tint": {
+        "name": "Tint (50 = neutral)"
+      },
+      "color_temperature": {
+        "name": "Color temperature"
+      },
+      "skin_color": {
+        "name": "Skin tone"
+      },
+      "sky_color": {
+        "name": "Sky tone"
+      },
+      "grass_color": {
+        "name": "Grass tone"
+      },
+      "min_backlight": {
+        "name": "Automatic backlight minimum"
+      },
+      "max_backlight": {
+        "name": "Automatic backlight maximum"
       }
     },
     "datetime": {

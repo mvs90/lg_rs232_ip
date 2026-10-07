@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.29.0
+
+- Enable and attach the picture-mode select to its display, with nine translated Signage presets; add current-preset reset and apply-to-all-inputs buttons. Use exact picture-only commands, single-write acknowledgements and a shared settling period.
+- Add gamma, black level, native dynamic contrast/colour, Super Resolution, noise/MPEG reduction, gamut and preferred colours. Respect preset/editing dependencies, verify changes and keep controls available while background reads run. Add conditional HDMI IT content, per-input Deep Color, brightness schedule, automatic-backlight bounds and HDR controls.
+- Correct sharpness to 0–50 and UH5F temperature to 3200–13000 Kelvin; refresh basic picture numbers after preset changes and clear failed reads. **Automation update:** temperature now takes Kelvin, and translated picture presets use lowercase IDs such as `general` and `aps`. Existing entity identities remain.
+- Document the complete settings audit, source/preset scope, device evidence and remaining motion/calibration/scheduler gaps. The optional display app remains 1.20.0.
+
 ## 2.28.0
 
 - Add the display clock, manual date/time, automatic network time and a configurable NTP server (hostname, IPv4 or IPv6; empty restores LG defaults). Respect the display's UTC offset and disable manual editing while automatic time is active.

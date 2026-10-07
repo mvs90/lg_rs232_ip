@@ -24,14 +24,15 @@ INPUT_DETECTION_CANDIDATES = {
 }
 
 PICTURE_MODES = {
-    "VIVID": 0x01,
-    "STANDARD": 0x02,
-    "CINEMA": 0x03,
-    "SPORTS": 0x04,
-    "GAME": 0x05,
-    "HDR": 0x06,
-    "FILMMAKER": 0x07,
-    "ECO": 0x08,
+    "mall": 0x00,
+    "general": 0x01,
+    "corporate": 0x02,
+    "transportation": 0x03,
+    "education": 0x04,
+    "expert1": 0x05,
+    "aps": 0x08,
+    "calibration": 0x11,
+    "hospital": 0x12,
 }
 
 ENERGY_SAVING_MODES = {

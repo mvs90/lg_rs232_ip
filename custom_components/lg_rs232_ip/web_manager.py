@@ -284,6 +284,27 @@ class LGWebManager:
                     pass
         return normalize_settings(values, clock)
 
+    async def async_get_picture_options(self):
+        """Read the active input/preset through LG's picture-specific API."""
+        from .picture_settings import NATIVE_KEYS
+
+        async with self._lock:
+            return await self._api("getPictureDBVal", "pictureDB", keys=NATIVE_KEYS)
+
+    async def async_write_picture_option(self, key, value, mode):
+        from .picture_settings import NATIVE_OPTIONS, NATIVE_NUMBERS, native_options
+
+        raw = NATIVE_OPTIONS[key][0] if key in NATIVE_OPTIONS else NATIVE_NUMBERS.get(key)
+        if raw is None or key not in native_options({
+            raw: value, "pictureMode": mode,
+            "pictureModeSettingsActive": "true", "pictureControlLimitation": "false",
+        }):
+            raise LGWebError("Unsupported picture parameter")
+        async with self._lock:
+            await self._api("setPictureDBVal", None, settings={
+                raw: value, "pictureSettingModified": {mode: True},
+            }, **{"from": raw})
+
     async def async_write_maintenance_settings(self, settings):
         """Allowlisted atomic commercial writes, or dedicated clock commands."""
         from .maintenance import validate_changes

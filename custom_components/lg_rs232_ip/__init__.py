@@ -4,6 +4,7 @@ import logging
 from homeassistant.const import Platform
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.storage import Store
+from homeassistant.helpers import entity_registry as er
 from .const import DOMAIN
 from .lg_display import LGDisplay
 from .web_manager import LGWebManager
@@ -12,6 +13,7 @@ from .alerts import LGDisplayAlertState
 from .system_settings import SystemSettings, validate_setting
 from .power_settings import PowerSettings
 from .maintenance import MaintenanceSettings
+from .picture_settings import PictureSettings
 
 _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -142,6 +144,14 @@ async def async_setup_entry(hass, entry):
         await display.async_get_software_version()
     power_settings = data["power_settings"] = PowerSettings(hass, entry, display, controller)
     await power_settings.async_refresh()
+    picture = data["picture_settings"] = PictureSettings(hass, entry, display, controller, data.get("web_manager") if native_enabled else None)
+    await picture.async_refresh()
+    entry.async_on_unload(display.subscribe_picture_settings(
+        lambda: hass.async_create_task(picture.async_request_refresh())))
+    registry = er.async_get(hass)
+    if entity_id := registry.async_get_entity_id("select", DOMAIN, f"{entry.entry_id}_picture_mode"):
+        if registry.async_get(entity_id).disabled_by is er.RegistryEntryDisabler.INTEGRATION:
+            registry.async_update_entity(entity_id, disabled_by=None)
     if native_enabled:
         maintenance = data["maintenance"] = MaintenanceSettings(hass, entry, display, data["web_manager"], controller)
         await maintenance.async_refresh()

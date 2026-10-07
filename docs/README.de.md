@@ -2,6 +2,12 @@
 
 Diese Integration steuert ausschließlich das LG-Display. Für Apple TV, Sonos, Steckdose und einen gemeinsamen HomeKit-TV gibt es die separate Erweiterung [AV Companion](https://github.com/mvs90/av_companion). Beide Pakete haben eigene HACS-Repositories und Releases. Es wird eine neue Einrichtung ohne Migration vorausgesetzt.
 
+## Bild und weitere Einstellungen
+
+Ab **2.29.0** stehen die neun Bildmodi, **aktuellen Bildmodus zurücksetzen** und **auf alle Eingänge anwenden** auf der Geräteseite bereit. Ergänzt sind Gamma, Schwarzwert, dynamischer Kontrast/Farbe, Super Resolution, Rauschunterdrückung, Farbumfang und bevorzugte Haut-/Blau-/Grüntöne. Weitere HDMI- und HDR-Einstellungen erscheinen entsprechend der Geräteunterstützung.
+
+Farbtemperatur wird beim UH5F jetzt in **Kelvin** angezeigt, Schärfe ist korrekt auf **0–50** begrenzt. Automationen müssen die neuen Bildmodus-IDs wie `general` sowie Kelvin statt Rohwerten verwenden. [Vollständige Bestandsaufnahme, Bedienung, Abhängigkeiten und offene Punkte](SETTINGS-AUDIT.md).
+
 ## Energie und Aufwecken
 
 Auto Sleep No Signal (15 Minuten), Auto Sleep No IR (4 Stunden), PM-Modus, Einschaltstatus nach Netzversorgung, Wake on LAN und DPM Wake Up-Steuerung stehen direkt auf der Geräteseite bereit. Dafür ist kein Webzugriff nötig. Bei eingeschränktem Netzwerk-Einschalten zeigt HA einen Warnhinweis. [Bedienung und Zusammenhänge](POWER-SETTINGS.md).

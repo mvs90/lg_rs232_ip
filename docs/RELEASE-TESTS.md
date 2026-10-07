@@ -1,5 +1,23 @@
 # Release acceptance
 
+## LG 2.29.0: picture presets, actions and settings audit — 2026-10-07
+
+**667 Python tests pass on each of HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 260 browser cases pass across Chromium/WebKit.** Official Hassfest reports zero invalid integrations; Ruff and whitespace checks pass. New tests cover exact multi-operand frames, wrong-input acknowledgements, picture-only reset/copy, lost replies without command replay, cooldown after reset/copy, mode restrictions, crossed backlight bounds, preferred colours, Kelvin conversion, sharpness limits and availability during background reads. The optional display app remains 1.20.0.
+
+Installed in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** instance. Through real HA actions on the **75UH5F-HJ / 04.13.50**, all nine presets, all offered native advanced-select values, preferred colours at −2/+2, all four gamma values, Low/High black level, six basic picture numbers, HDMI IT content and brightness scheduling were changed and restored. Native web reads independently confirmed the advanced values and 6500 K temperature. These checks establish setting persistence, not measured colour accuracy, noise reduction efficacy or timer expiry.
+
+The physical UH5F rejected black-level Auto on native HDMI 1. Its offered values are now restricted to Low/High unless an automatic context is actually read. HDR preset/tone mapping, HDMI 2/3 Deep Color and automatic-backlight bounds were unavailable in the baseline; no guessed readings or writes were substituted. A background-refresh race that temporarily hid controls and allowed HA to skip a service call was reproduced and fixed. All new German labels, actions and unavailable-state behaviour were checked on HA's real device page after frontend reload.
+
+HDMI 1 Deep Color accepted off/on with fresh readback and was restored. Automatic-backlight bounds remained unavailable with Energy Saving AUTO as well as OFF. General-picture and commercial settings were compared against the pre-test snapshots; Smart Energy Saving, which LG changed during the preset/energy tests, was explicitly restored.
+
+The **picture reset** button was exercised on an unmodified Expert preset: change contrast 80 → 79, press reset, compare the entire returned picture database to the saved baseline. The comparison had no differences; returning to General also restored the original full profile. Factory reset was never used.
+
+**Apply-to-all-inputs** has automated exact-frame, acknowledgement and settling coverage. It was not physically executed: the firmware can overwrite preset memories on internal as well as external inputs, and its web wrapper ignored dimension-specific backup requests. This limitation is explicit; no hardware copy/restore result is claimed. Likewise, motion processing, HDR rendering, local dimming and multi-point calibration remain unverified rather than exposed through arbitrary database writes.
+
+The final native picture and commercial dictionaries match the saved baseline. The saved Studio configuration, revision, backgrounds and startup design are unchanged; all 72 installed component files match the release source. Private credentials, snapshots, firmware source and temporary probes are excluded from Git.
+
+See [settings audit](SETTINGS-AUDIT.md) for the implemented inventory and remaining work, and the [device reference](devices/LG-UH5F-H.md) for reusable protocol evidence. Existing automation users must switch the picture-mode option values to lowercase IDs and UH5F temperature values to Kelvin.
+
 ## LG 2.28.0: clock, NTP and dependent ISM settings — 2026-10-07
 
 **600 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 260 browser cases pass across Chromium/WebKit.** Official Hassfest reports zero invalid integrations. Added coverage includes partial/unknown settings, clock parsing and offsets, automatic/manual dependencies, server validation, all seven ISM weekdays, concurrent day edits, range and schedule checks, shared polling, missing power replies, single-write reconciliation and bounded media exports. Existing frontend and display-app regressions remain green; app version stays 1.20.0.

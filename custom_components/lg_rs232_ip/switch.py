@@ -16,6 +16,7 @@ from .lg_display import LGDisplay
 from .system_settings import SystemSettingEntity
 from .power_settings import PowerSettingEntity
 from .maintenance import MaintenanceEntity, DAYS
+from .picture_settings import PictureSettingEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,6 +67,23 @@ async def async_setup_entry(
         entities.extend(IsmDaySwitch(maintenance, day) for day in DAYS)
 
     async_add_entities(entities)
+
+    if picture := data.get("picture_settings"):
+        async_add_entities([PictureOptionSwitch(picture, key) for key in (
+            "hdmi_it_content", "brightness_schedule", "deep_color_hdmi1", "deep_color_hdmi2", "deep_color_hdmi3", "hdr_tone_mapping",
+        )])
+
+
+class PictureOptionSwitch(PictureSettingEntity, SwitchEntity):
+    @property
+    def is_on(self):
+        return (self.coordinator.data or {}).get(self.key) == "on"
+
+    async def async_turn_on(self, **kwargs):
+        await self.coordinator.async_set(self.key, "on")
+
+    async def async_turn_off(self, **kwargs):
+        await self.coordinator.async_set(self.key, "off")
 
 
 class IsmDaySwitch(MaintenanceEntity, SwitchEntity):
