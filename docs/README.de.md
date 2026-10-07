@@ -112,3 +112,9 @@ Ab 2.26.0 stehen intelligente Energieeinsparung, Signage-Name, Set ID, Einschalt
 ## Datum, Uhrzeit und ISM
 
 Datum/Uhrzeit, automatische NTP-Synchronisierung, eigener NTP-Server und die abhängigen ISM-Einstellungen lassen sich mit aktiviertem nativen Webzugang über HA bedienen. Bilder und Videos können über HA für den LG-USB-Import vorbereitet werden. Ein direkter Netzwerkimport in den ISM-Speicher ist bisher nicht bestätigt. [Einrichtung, Aktionen und Grenzen](CLOCK-ISM.md).
+
+## Weitere Geräteeinstellungen ab 2.30
+
+Neu sind sechs RGB-Weißabgleichregler, der vollständige Klangmodus einschließlich Nachrichten, LG-Audioausgangspegel und Digital-/Analogeingang. Drei Sensoren zeigen die im LG gespeicherten Ein-, Ausschalt- und Helligkeitszeitpläne. Über HA-Aktionen lassen sich einzelne Einträge hinzufügen und entfernen; alle anderen Einträge bleiben erhalten.
+
+Zeitzonen werden aus dem Katalog des Displays gewählt; manuelle Sommerzeit ist mit Start-/Endregel einstellbar. Die Aktionen stehen unter **Entwicklerwerkzeuge → Aktionen → LG Professional Display** bereit. Für Zeitpläne und Zeitzone ist der native Webzugriff erforderlich, die optionale Display-App nicht. [Anleitung, Beispiele und Grenzen](NATIVE-SCHEDULES-AUDIO.md).

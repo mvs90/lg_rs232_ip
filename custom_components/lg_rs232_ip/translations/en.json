@@ -194,6 +194,15 @@
       },
       "display_clock": {
         "name": "Display date and time"
+      },
+      "power_on_schedule": {
+        "name": "Power-on schedules"
+      },
+      "power_off_schedule": {
+        "name": "Power-off schedules"
+      },
+      "brightness_schedule": {
+        "name": "Brightness schedule entries"
       }
     },
     "select": {
@@ -347,6 +356,24 @@
           "corporate": "Government / corporate",
           "education": "Education"
         }
+      },
+      "sound_mode": {
+        "name": "Sound mode"
+      },
+      "audio_out": {
+        "name": "LG audio output level",
+        "state": {
+          "off": "Off",
+          "variable": "Variable (follows LG volume)",
+          "fixed": "Fixed level"
+        }
+      },
+      "digital_audio_input": {
+        "name": "LG audio input",
+        "state": {
+          "digital": "Digital (HDMI/DP/OPS)",
+          "analog": "Analog audio input"
+        }
       }
     },
     "switch": {
@@ -409,6 +436,9 @@
       },
       "hdr_tone_mapping": {
         "name": "HDR dynamic tone mapping"
+      },
+      "manual_dst": {
+        "name": "Manual daylight saving"
       }
     },
     "text": {
@@ -461,6 +491,27 @@
       },
       "max_backlight": {
         "name": "Automatic backlight maximum"
+      },
+      "audio_balance": {
+        "name": "LG balance (50 = centre)"
+      },
+      "white_balance_red_gain": {
+        "name": "White balance red gain"
+      },
+      "white_balance_red_offset": {
+        "name": "White balance red offset"
+      },
+      "white_balance_green_gain": {
+        "name": "White balance green gain"
+      },
+      "white_balance_green_offset": {
+        "name": "White balance green offset"
+      },
+      "white_balance_blue_gain": {
+        "name": "White balance blue gain"
+      },
+      "white_balance_blue_offset": {
+        "name": "White balance blue offset"
       }
     },
     "datetime": {
@@ -481,6 +532,104 @@
     "remote_power_on_restricted": {
       "title": "Check network power-on for {name}",
       "description": "The last confirmed PM mode or wired Wake on LAN setting can prevent network power-on after shutdown. For IP control, select **Network ready** and enable **Wake on LAN (wired)** in the device settings. Other PM modes can require the physical power button or an IR remote; wake support depends on the model and the type of shutdown. With wired Wake on LAN disabled, waking through wired LAN is disabled. The integration uses IP power commands; this switch configures the display and does not send a magic packet. The diagnostic sensor **Network power-on configuration** shows the last confirmed settings. No settings are changed automatically."
+    }
+  },
+  "services": {
+    "add_power_schedule": {
+      "name": "Add native power schedule",
+      "description": "Store an on/off time in the LG itself (display local time). Requires native web access and an awake UH5F. Does not switch a smart plug or linked player. Matching duplicates are a no-op; at most seven entries per list.",
+      "fields": {
+        "kind": {
+          "name": "Action"
+        },
+        "time": {
+          "name": "Display local time (HH:MM)"
+        },
+        "repeat": {
+          "name": "Repeat days"
+        }
+      }
+    },
+    "add_brightness_schedule": {
+      "name": "Add native brightness schedule",
+      "description": "Store a daily backlight level in the LG (maximum six entries). Enable brightness scheduling first. Local display time; other entries are preserved. To change an existing time, remove its entry first.",
+      "fields": {
+        "time": {
+          "name": "Display local time (HH:MM)"
+        },
+        "backlight": {
+          "name": "Backlight"
+        }
+      }
+    },
+    "remove_native_schedule": {
+      "name": "Remove native schedule entry",
+      "description": "Remove exactly one entry using its ID from the schedule sensor's entries attribute. The active list and serial slot are checked again before deletion. Brightness scheduling must be enabled to edit it.",
+      "fields": {
+        "kind": {
+          "name": "Schedule type"
+        },
+        "schedule_id": {
+          "name": "Entry ID from the schedule sensor"
+        }
+      }
+    },
+    "set_timezone": {
+      "name": "Set LG timezone",
+      "description": "Select a timezone from the display's own catalog. Requires native web access, an awake UH5F and automatic time enabled. Existing native schedules follow the new local time. Continent, country and timezone are verified in sequence.",
+      "fields": {
+        "continent": {
+          "name": "LG continent"
+        },
+        "country": {
+          "name": "Country code"
+        },
+        "timezone": {
+          "name": "Timezone from get_timezones"
+        }
+      }
+    },
+    "get_timezones": {
+      "name": "Read LG timezone catalog",
+      "description": "Return the timezone identifiers supported by this display for a country. Requires native web access and an awake UH5F.",
+      "fields": {
+        "country": {
+          "name": "Country code"
+        }
+      }
+    },
+    "configure_dst": {
+      "name": "Configure manual daylight saving",
+      "description": "Manual DST requires automatic time to be disabled before enabling it. Supply all eight rule fields together, or omit all to change only enabled. Week 5 means last; weekday 0 means Sunday. Rule changes temporarily disable manual DST until both rules are verified.",
+      "fields": {
+        "enabled": {
+          "name": "Enable manual DST"
+        },
+        "start_month": {
+          "name": "Start month"
+        },
+        "start_week": {
+          "name": "Start week"
+        },
+        "start_weekday": {
+          "name": "Start weekday"
+        },
+        "start_hour": {
+          "name": "Start hour"
+        },
+        "end_month": {
+          "name": "End month"
+        },
+        "end_week": {
+          "name": "End week"
+        },
+        "end_weekday": {
+          "name": "End weekday"
+        },
+        "end_hour": {
+          "name": "End hour"
+        }
+      }
     }
   }
 }

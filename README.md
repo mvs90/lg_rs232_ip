@@ -1,6 +1,6 @@
 # LG Professional Display
 
-Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.29.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
+Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.30.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
 
 Picture presets, **reset current preset / apply to all inputs**, gamma, black level and verified advanced picture controls are available on the device page. See the [settings audit](docs/SETTINGS-AUDIT.md), including model limits and the Kelvin/option-ID changes for existing automations.
 
@@ -82,3 +82,7 @@ Select **Mediaplayer** in Display Studio to configure a full-screen cover, title
 Version 2.18 adds optional cached HDMI startup during HA outages, UDP multicast beside HDMI, on-demand platform diagnostics and verified video-wall tile configuration. Camera widgets, short transitions and timed event views remain included. See [Display Studio](docs/DISPLAY-STUDIO.md) and the [hardware capability report](docs/devices/LG-UH5F-H.md#additional-video-and-platform-capability-tests-2026-10-06).
 
 Version 2.21 adds a fixed editable **Startanzeige** in Studio, with local text, clock/date and cached static backgrounds only. Studio confirms when the display has stored the design; full-screen HDMI remains exempt. See [offline startup design](docs/DISPLAY-STUDIO.md#startanzeige-ohne-live-daten).
+
+### Additional device settings (2.30)
+
+RGB white balance, complete sound presets and LG audio input/output controls now accompany native on/off and brightness schedule actions, timezone selection and manual DST rules. See [configuration and examples](docs/NATIVE-SCHEDULES-AUDIO.md) for supported hardware, dependencies and the remaining settings audit.

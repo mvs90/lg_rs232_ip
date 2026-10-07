@@ -14,6 +14,8 @@ from .system_settings import SystemSettings, validate_setting
 from .power_settings import PowerSettings
 from .maintenance import MaintenanceSettings
 from .picture_settings import PictureSettings
+from .hardware_settings import HardwareSettings
+from .native_schedules import NativeSchedules
 
 _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -144,6 +146,8 @@ async def async_setup_entry(hass, entry):
         await display.async_get_software_version()
     power_settings = data["power_settings"] = PowerSettings(hass, entry, display, controller)
     await power_settings.async_refresh()
+    hardware = data["hardware_settings"] = HardwareSettings(hass, entry, display, controller)
+    await hardware.async_refresh()
     picture = data["picture_settings"] = PictureSettings(hass, entry, display, controller, data.get("web_manager") if native_enabled else None)
     await picture.async_refresh()
     entry.async_on_unload(display.subscribe_picture_settings(
@@ -155,6 +159,9 @@ async def async_setup_entry(hass, entry):
     if native_enabled:
         maintenance = data["maintenance"] = MaintenanceSettings(hass, entry, display, data["web_manager"], controller)
         await maintenance.async_refresh()
+    if native_enabled:
+        schedules = data["native_schedules"] = NativeSchedules(hass, entry, display, controller, data["web_manager"])
+        await schedules.async_refresh()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await controller.async_start()
     return True

@@ -14,6 +14,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN, READ_STATUS, ENERGY_SAVING_MODES
 from .lg_display import LGDisplay
 from .system_settings import SystemSettingEntity
+from .hardware_settings import HardwareSettingEntity, HARDWARE_SETTINGS
 from .picture_settings import PictureSettingEntity, NATIVE_NUMBERS
 from .maintenance import MaintenanceEntity
 from .device_profile import ASPECT_RATIOS, PM_STATES, ism_methods, is_uh5f
@@ -63,10 +64,13 @@ async def async_setup_entry(
     if maintenance := data.get("maintenance"):
         entities.append(IsmStandbyNumber(maintenance))
 
-    if (picture := data.get("picture_settings")) and picture.web and is_uh5f(lg_display.model_name):
+    if (picture := data.get("picture_settings")) and picture.web and (lg_display.model_name is None or is_uh5f(lg_display.model_name)):
         entities.extend(PreferredColorNumber(picture, key) for key in NATIVE_NUMBERS)
     if picture := data.get("picture_settings"):
         entities.extend(BacklightRangeNumber(picture, key) for key in ("min_backlight", "max_backlight"))
+
+    if hardware := data.get("hardware_settings"):
+        entities.extend(HardwareNumber(hardware, key) for key, spec in HARDWARE_SETTINGS.items() if not spec.options)
 
     async_add_entities(entities)
 
@@ -486,3 +490,19 @@ class BacklightRangeNumber(PreferredColorNumber):
         if isinstance(value, bool) or not 0 <= value <= 100 or value % 5:
             raise HomeAssistantError("Automatic backlight range uses 0–100 in steps of 5")
         await self.coordinator.async_set(self.key, str(int(value)))
+
+
+class HardwareNumber(HardwareSettingEntity, NumberEntity):
+    _attr_native_min_value = 0
+    _attr_native_step = 1
+
+    def __init__(self, coordinator, key):
+        super().__init__(coordinator, key)
+        self._attr_native_max_value = HARDWARE_SETTINGS[key].maximum
+
+    @property
+    def native_value(self):
+        return (self.coordinator.data or {}).get(self.key)
+
+    async def async_set_native_value(self, value):
+        await self.coordinator.async_set(self.key, value)

@@ -77,3 +77,5 @@ For other model families, the generic selection additionally includes Inversion 
 A write requires an exact acknowledgement and a fresh matching `jp ff` readback. Rejected/unknown readings never become a made-up mode. The old, disabled-by-default **ISM Method Code** number is retained for existing automations but only accepts the same documented profile values; arbitrary bytes, including `255` (a read request), cannot be written as modes. For normal use, choose the named select.
 
 Smart Energy Saving now has its own configuration switch; see [system settings](SYSTEM-SETTINGS.md). It changes image-dependent illumination and is independent of the existing Energy Saving selector. Confirmed changes invalidate the shared picture-control cache so the manual-backlight status refreshes.
+
+See [the 2.30 native settings guide](NATIVE-SCHEDULES-AUDIO.md) for RGB calibration, audio controls, schedule entries and timezone/DST configuration.

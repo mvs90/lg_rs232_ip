@@ -49,6 +49,7 @@ SOUND_MODES = {
     "CINEMA": 0x03,
     "SPORTS": 0x04,
     "GAME": 0x05,
+    "NEWS": 0x07,
 }
 
 OSD_LANGUAGES = {

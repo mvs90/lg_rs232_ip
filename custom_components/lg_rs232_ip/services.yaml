@@ -331,3 +331,218 @@ prepare_ism_media:
       default: local
       selector:
         text:
+add_power_schedule:
+  name: Add native power schedule
+  description: Store an on/off time in the LG itself (display local time). Requires native web access and an awake UH5F. Does not switch a smart
+    plug or linked player. Matching duplicates are a no-op; at most seven entries per list.
+  fields:
+    kind:
+      name: Action
+      required: true
+      selector:
+        select:
+          options:
+          - power_on
+          - power_off
+    time:
+      name: Display local time (HH:MM)
+      required: true
+      example: 07:00
+      selector:
+        text: {}
+    repeat:
+      name: Repeat days
+      required: true
+      selector:
+        select:
+          options:
+          - daily
+          - weekdays
+          - monday_saturday
+          - weekends
+          - sun
+          - mon
+          - tue
+          - wed
+          - thu
+          - fri
+          - sat
+  target:
+    entity:
+      domain: media_player
+      integration: lg_rs232_ip
+add_brightness_schedule:
+  name: Add native brightness schedule
+  description: Store a daily backlight level in the LG (maximum six entries). Enable brightness scheduling first. Local display time; other entries
+    are preserved. To change an existing time, remove its entry first.
+  fields:
+    time:
+      name: Display local time (HH:MM)
+      required: true
+      example: 07:00
+      selector:
+        text: {}
+    backlight:
+      name: Backlight
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: '%'
+  target:
+    entity:
+      domain: media_player
+      integration: lg_rs232_ip
+remove_native_schedule:
+  name: Remove native schedule entry
+  description: Remove exactly one entry using its ID from the schedule sensor's entries attribute. The active list and serial slot are checked
+    again before deletion. Brightness scheduling must be enabled to edit it.
+  fields:
+    kind:
+      name: Schedule type
+      required: true
+      selector:
+        select:
+          options:
+          - power_on
+          - power_off
+          - brightness
+    schedule_id:
+      name: Entry ID from the schedule sensor
+      required: true
+      selector:
+        text: {}
+  target:
+    entity:
+      domain: media_player
+      integration: lg_rs232_ip
+set_timezone:
+  name: Set LG timezone
+  description: Select a timezone from the display's own catalog. Requires native web access, an awake UH5F and automatic time enabled. Existing
+    native schedules follow the new local time. Continent, country and timezone are verified in sequence.
+  fields:
+    continent:
+      name: LG continent
+      required: true
+      selector:
+        select:
+          options:
+          - Africa
+          - Asia
+          - CIS
+          - Europe
+          - MiddleEast
+          - NorthAmerica
+          - Oceania
+          - Pacific
+          - SouthAmerica
+    country:
+      name: Country code
+      required: true
+      example: DE
+      selector:
+        text: {}
+    timezone:
+      name: Timezone from get_timezones
+      required: true
+      example: Europe/Berlin
+      selector:
+        text: {}
+  target:
+    entity:
+      domain: media_player
+      integration: lg_rs232_ip
+get_timezones:
+  name: Read LG timezone catalog
+  description: Return the timezone identifiers supported by this display for a country. Requires native web access and an awake UH5F.
+  fields:
+    country:
+      name: Country code
+      required: true
+      example: DE
+      selector:
+        text: {}
+  target:
+    entity:
+      domain: media_player
+      integration: lg_rs232_ip
+configure_dst:
+  name: Configure manual daylight saving
+  description: Manual DST requires automatic time to be disabled before enabling it. Supply all eight rule fields together, or omit all to change
+    only enabled. Week 5 means last; weekday 0 means Sunday. Rule changes temporarily disable manual DST until both rules are verified.
+  fields:
+    enabled:
+      name: Enable manual DST
+      required: true
+      selector:
+        boolean: {}
+    start_month:
+      name: Start month
+      selector:
+        number:
+          min: 1
+          max: 12
+          mode: box
+          step: 1
+    start_week:
+      name: Start week
+      selector:
+        number:
+          min: 1
+          max: 5
+          mode: box
+          step: 1
+    start_weekday:
+      name: Start weekday
+      selector:
+        number:
+          min: 0
+          max: 6
+          mode: box
+          step: 1
+    start_hour:
+      name: Start hour
+      selector:
+        number:
+          min: 0
+          max: 23
+          mode: box
+          step: 1
+    end_month:
+      name: End month
+      selector:
+        number:
+          min: 1
+          max: 12
+          mode: box
+          step: 1
+    end_week:
+      name: End week
+      selector:
+        number:
+          min: 1
+          max: 5
+          mode: box
+          step: 1
+    end_weekday:
+      name: End weekday
+      selector:
+        number:
+          min: 0
+          max: 6
+          mode: box
+          step: 1
+    end_hour:
+      name: End hour
+      selector:
+        number:
+          min: 0
+          max: 23
+          mode: box
+          step: 1
+  target:
+    entity:
+      domain: media_player
+      integration: lg_rs232_ip

@@ -224,6 +224,7 @@ class LGDisplay:
         check_power: bool = False,
         query_suffix: str = "",
         use_cache: bool = True,
+        is_query: bool | None = None,
     ) -> Optional[str]:
         """Send raw LG RS232 command and get response.
 
@@ -247,7 +248,8 @@ class LGDisplay:
             if (delay := self._command_not_before - time.monotonic()) > 0:
                 await asyncio.sleep(delay)
             key = (cmd1, cmd2, value, query_suffix)
-            is_query = value == READ_STATUS or query_suffix.strip().lower().split()[-1:] == ["ff"]
+            if is_query is None:
+                is_query = value == READ_STATUS or query_suffix.strip().lower().split()[-1:] == ["ff"]
             if is_query:
                 if time.monotonic() < self._unsupported_until.get(key, 0):
                     return None
@@ -256,6 +258,10 @@ class LGDisplay:
                     return cached[1]
             else:
                 self._query_cache.clear()
+                # Schedule deletes end in FF FF but are mutations, not reads.
+                # An added/deleted slot must also clear previous empty-slot NGs.
+                if cmd1 + cmd2 in {"fd", "fe", "ss"}:
+                    self._unsupported_until = {k: v for k, v in self._unsupported_until.items() if k[:2] != (cmd1, cmd2)}
             if not self._connected or not self._writer or not self._reader:
                 if not await self.async_connect():
                     return None

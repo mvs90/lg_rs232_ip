@@ -116,7 +116,7 @@ class PictureSettings(DataUpdateCoordinator):
         return next((name for name, code in spec.options.items() if code == value), None)
 
     async def _native(self):
-        if not self.web or not is_uh5f(self.display.model_name):
+        if not self.web or not is_uh5f(await self.display.async_get_model_name()):
             return {}
         return await self.web.async_get_picture_options()
 

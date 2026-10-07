@@ -120,3 +120,5 @@ MP4 uploads, Play via URL websites without reboot, and tokenized HA-hosted HTML 
 ## Display Studio (2.6)
 
 The bundled [Layout Studio](DISPLAY-STUDIO.md) adds an automatically registered admin sidebar panel, five independent scene layouts, four templates, freely placed/resized HDMI, clock/weather/calendar/entity/text widgets and custom notification windows. Persistent scenes require the optional resident SI app; editor configuration alone never wakes or switches the display.
+
+See [the 2.30 native settings guide](NATIVE-SCHEDULES-AUDIO.md) for RGB calibration, audio controls, schedule entries and timezone/DST configuration.

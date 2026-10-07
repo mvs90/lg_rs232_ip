@@ -138,6 +138,9 @@ def normalize_settings(values, clock):
     zone = clock.get("timezone", {}).get("ZoneID")
     if isinstance(zone, str) and len(zone) <= 100:
         result["timezone"] = zone
+    from .clock_region import normalize_dst
+    if dst := normalize_dst(clock.get("dst", {})):
+        result["dst"] = dst
     raw = clock.get("clock", {})
     try:
         offset = re.search(r"GMT([+-])(\d{2})(\d{2})", raw.get("current", ""))
@@ -271,23 +274,159 @@ class MaintenanceSettings(DataUpdateCoordinator):
                 ) == target.get("ismEndTime"):
                     raise LGWebError("ISM start and end must be different")
                 after = before
-                if any(before.get(k) != v for k, v in changes.items()):
+                needs_dst_off = key == "clock_auto" and changes[key] and before.get("dst", {}).get("dstMode") == "on"
+
+                def matches(actual):
+                    return self._matches(changes, actual) and (not needs_dst_off or actual.get("dst", {}).get("dstMode") == "off")
+
+                if needs_dst_off or any(before.get(k) != v for k, v in changes.items()):
                     try:
-                        await self.web.async_write_maintenance_settings(changes)
+                        if needs_dst_off:
+                            await self.web.async_write_maintenance_settings(changes, manual_dst=before["dst"])
+                        else:
+                            await self.web.async_write_maintenance_settings(changes)
                     except LGWebError:
                         pass  # Only fresh readback resolves a lost ACK; never replay.
                     for attempt in range(3):
                         await asyncio.sleep(0.25)
                         after = await self._read()
-                        if self._matches(changes, after):
+                        if matches(after):
                             break
                 self.async_set_updated_data(after)
-                if not self._matches(changes, after):
+                if not matches(after):
                     raise LGWebError(
                         "Display did not confirm the requested clock/ISM setting"
                     )
             except LGWebError as err:
                 self.async_set_update_error(UpdateFailed(str(err)))
+                raise HomeAssistantError(str(err)) from None
+
+    async def async_get_timezones(self, country):
+        if not isinstance(country, str) or not re.fullmatch("[A-Z]{2}", country):
+            raise HomeAssistantError("Use a two-letter uppercase country code")
+        async with self._settings_lock:
+            try:
+                await self._region_ready()
+                async with self.web._lock:
+                    cities = await self.web._api("getCityList", "getCityList", country=country)
+                if not isinstance(cities, list):
+                    raise LGWebError("Cannot read the LG timezone catalog")
+                return {"country": country, "timezones": [{key: c.get(key) for key in ("ZoneID", "City", "Country", "offsetFromUTC", "supportsDST")} for c in cities if isinstance(c, dict) and c.get("CountryCode") == country]}
+            except LGWebError as err:
+                raise HomeAssistantError(str(err)) from None
+
+    async def async_set_timezone(self, continent, country, timezone):
+        from .clock_region import region_request
+
+        try:
+            region_request(continent, country, timezone)
+        except (ValueError, TypeError) as err:
+            raise HomeAssistantError(str(err)) from None
+        async with self._settings_lock, self.controller._control_lock:
+            try:
+                await self._region_ready()
+                before = await self._read()
+                if before.get("clock_auto") is not True:
+                    raise LGWebError("Enable automatic time before selecting an LG timezone")
+                async with self.web._lock:
+                    countries = await self.web._api("getCountryList", "getCountryList", continent=continent)
+                    if not isinstance(countries, list) or not any(isinstance(c, dict) and c.get("shortName") == country for c in countries):
+                        raise LGWebError("Country is not in this display's continent catalog")
+                    cities = await self.web._api("getCityList", "getCityList", country=country)
+                    matches = [c for c in cities if isinstance(c, dict) and c.get("ZoneID") == timezone and c.get("CountryCode") == country] if isinstance(cities, list) else []
+                    if len(matches) != 1:
+                        raise LGWebError("Timezone is not in this display's country catalog")
+                    # Match LG's own UI sequence. Verify each step; never replay a
+                    # setter after a missing ACK and never invent a timezone object.
+                    for command, event, params, read, field, expected in (
+                        ("setContinent", "setContinent", {"continent": continent}, "getlocaleContinent", "localeContinent", continent),
+                        ("setCountry", "setCountry", {"country": country}, "getlocaleCountry", "localeCountry", country),
+                        ("setCity", "setCity", {"timeZone": matches[0]}, "getTimeZone", "ZoneID", timezone),
+                    ):
+                        current = await self.web._api(read, read)
+                        if current.get(field) != expected:
+                            try:
+                                await self.web._api(command, event, **params)
+                            except LGWebError:
+                                pass
+                            current = await self.web._api(read, read)
+                            if current.get(field) != expected:
+                                raise LGWebError("LG timezone step was not verified; check the current region before retrying")
+                after = await self._read()
+                self.async_set_updated_data(after)
+                if after.get("timezone") != timezone:
+                    raise LGWebError("LG did not confirm the requested timezone")
+            except LGWebError as err:
+                await self._region_failed()
+                raise HomeAssistantError(str(err)) from None
+
+    async def _region_ready(self):
+        from .device_profile import is_uh5f
+
+        if self.display.is_intentionally_unpowered or await self.display.async_get_power_status(use_cache=False) is not True:
+            raise LGWebError("Display must be on to change clock region settings")
+        if not is_uh5f(await self.display.async_get_model_name()):
+            raise LGWebError("Native region settings are verified only for UH5F")
+
+    async def _region_failed(self):
+        try:
+            self.async_set_updated_data(await self._read())
+        except LGWebError:
+            self.async_set_update_error(UpdateFailed("Cannot read current LG clock region"))
+
+    async def async_configure_dst(self, enabled, **fields):
+        from .clock_region import dst_request, normalize_dst, DST_FIELDS
+
+        try:
+            changes = dst_request(enabled, fields)
+        except (ValueError, TypeError, OverflowError) as err:
+            raise HomeAssistantError(str(err)) from None
+        async with self._settings_lock, self.controller._control_lock:
+            try:
+                await self._region_ready()
+                before = await self._read()
+                previous = before.get("dst")
+                if previous is None:
+                    raise LGWebError("Manual DST settings are unavailable")
+                if enabled and before.get("clock_auto") is not False:
+                    raise LGWebError("Manual DST is available only with automatic time disabled")
+                target = {**previous, **changes}
+                if enabled and all(target["dstStart" + raw] == target["dstEnd" + raw] for _, _, raw in DST_FIELDS.values()):
+                    raise LGWebError("Configure distinct DST start and end rules before enabling")
+                async with self.web._lock:
+                    async def set_mode(mode):
+                        try:
+                            await self.web._api("setDstOnOff", "setDstOnOff", dstOnOff=mode)
+                        except LGWebError:
+                            pass
+                        actual = normalize_dst(await self.web._api("getDSTInfo", "getDSTInfo"))
+                        if actual is None or actual["dstMode"] != mode:
+                            raise LGWebError("LG did not confirm manual DST mode")
+                    rules_changed = any(target[k] != previous[k] for k in target if k != "dstMode")
+                    if rules_changed and previous["dstMode"] == "on":
+                        await set_mode("off")
+                    for side in ("Start", "End"):
+                        if not any(target["dst" + side + raw] != previous["dst" + side + raw] for _, _, raw in DST_FIELDS.values()):
+                            continue
+                        params = {("Weekday" if raw == "DayOfWeek" else raw): target["dst" + side + raw] for _, _, raw in DST_FIELDS.values()}
+                        try:
+                            await self.web._api("setDst" + side + "Time", None, **params)
+                        except LGWebError:
+                            pass
+                        actual = normalize_dst(await self.web._api("getDSTInfo", "getDSTInfo"))
+                        if actual is None or any(actual["dst" + side + raw] != target["dst" + side + raw] for _, _, raw in DST_FIELDS.values()):
+                            raise LGWebError("LG did not confirm DST rules; check current rules before enabling DST")
+                    actual = normalize_dst(await self.web._api("getDSTInfo", "getDSTInfo"))
+                    if actual is None:
+                        raise LGWebError("Cannot read final DST mode")
+                    if actual["dstMode"] != target["dstMode"]:
+                        await set_mode(target["dstMode"])
+                after = await self._read()
+                self.async_set_updated_data(after)
+                if after.get("dst") != target:
+                    raise LGWebError("LG did not confirm the complete DST configuration")
+            except LGWebError as err:
+                await self._region_failed()
                 raise HomeAssistantError(str(err)) from None
 
     @staticmethod

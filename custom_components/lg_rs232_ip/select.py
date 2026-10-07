@@ -22,6 +22,7 @@ from .const import (
 from .lg_display import LGDisplay
 from .system_settings import SystemSettingEntity
 from .maintenance import MaintenanceEntity, REPEATS, DURATIONS
+from .hardware_settings import HardwareSettingEntity, HARDWARE_SETTINGS
 from .picture_settings import PictureSettingEntity, NATIVE_OPTIONS
 from .power_settings import POWER_SETTINGS, PowerSettingEntity, remote_power_on_status
 from .layout_library import source_names
@@ -74,11 +75,6 @@ async def async_setup_entry(
             data["name"],
             config_entry.entry_id,
         ),
-        LGDisplaySoundModeSelect(
-            lg_display,
-            data["name"],
-            config_entry.entry_id,
-        ),
         LGDisplayOSDLanguageSelect(
             lg_display,
             data["name"],
@@ -95,6 +91,11 @@ async def async_setup_entry(
     entities.append(
         LGDisplayIsmMethodSelect(lg_display, data["name"], config_entry.entry_id, data.get("maintenance"))
     )
+    if hardware := data.get("hardware_settings"):
+        entities.extend(HardwareOptionSelect(hardware, key) for key, spec in HARDWARE_SETTINGS.items() if spec.options)
+    else:
+        entities.append(LGDisplaySoundModeSelect(lg_display, data["name"], config_entry.entry_id))
+
     if settings := data.get("system_settings"):
         entities.append(SystemTemperatureUnit(settings))
 
@@ -103,7 +104,7 @@ async def async_setup_entry(
 
     if picture := data.get("picture_settings"):
         entities.extend(PictureOptionSelect(picture, key) for key in ("gamma", "black_level", "hdr_picture_mode"))
-        if picture.web and is_uh5f(lg_display.model_name):
+        if picture.web and (lg_display.model_name is None or is_uh5f(lg_display.model_name)):
             entities.extend(PictureOptionSelect(picture, key) for key in NATIVE_OPTIONS)
 
     if power := data.get("power_settings"):
@@ -737,6 +738,19 @@ class PowerSettingsSelect(PowerSettingEntity, SelectEntity):
         if self.key == "pm_mode":
             return {"remote_power_on": remote_power_on_status(self.coordinator.data or {})}
         return None
+
+    async def async_select_option(self, option):
+        await self.coordinator.async_set(self.key, option)
+
+
+class HardwareOptionSelect(HardwareSettingEntity, SelectEntity):
+    @property
+    def options(self):
+        return list(HARDWARE_SETTINGS[self.key].options)
+
+    @property
+    def current_option(self):
+        return (self.coordinator.data or {}).get(self.key)
 
     async def async_select_option(self, option):
         await self.coordinator.async_set(self.key, option)

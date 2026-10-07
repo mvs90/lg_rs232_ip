@@ -225,9 +225,11 @@ class LGWebManager:
                                     return value
                             elif reply[0] == event + "1":
                                 value = reply[1]
-                                if event == "ntp" and value is True:
+                                if event in {"ntp", "setContinent", "setCountry", "setCity", "setDstOnOff"} and value is True:
                                     return {"returnValue": True}
                                 if event in {"capture", "signageName"} and isinstance(value, str):
+                                    return value
+                                if event in {"getCountryList", "getCityList"} and isinstance(value, list):
                                     return value
                                 if (
                                     not isinstance(value, dict)
@@ -277,12 +279,19 @@ class LGWebManager:
                 ("clock_auto", "getNTPStatus", "ntpStatus"),
                 ("clock", "getCurrentTime", "currentTime"),
                 ("timezone", "getTimeZone", "getTimeZone"),
+                ("dst", "getDSTInfo", "getDSTInfo"),
             ):
                 try:
                     clock[key] = await self._api(command, event)
                 except LGWebError:
                     pass
         return normalize_settings(values, clock)
+
+    async def async_get_native_schedules(self):
+        from .native_schedules import SCHEDULE_KEYS
+
+        async with self._lock:
+            return await self._api("getSystemSettings", "systemSettings", category="commercial", keys=SCHEDULE_KEYS)
 
     async def async_get_picture_options(self):
         """Read the active input/preset through LG's picture-specific API."""
@@ -305,13 +314,21 @@ class LGWebManager:
                 raw: value, "pictureSettingModified": {mode: True},
             }, **{"from": raw})
 
-    async def async_write_maintenance_settings(self, settings):
+    async def async_write_maintenance_settings(self, settings, *, manual_dst=None):
         """Allowlisted atomic commercial writes, or dedicated clock commands."""
         from .maintenance import validate_changes
 
         settings = validate_changes(settings)
         async with self._lock:
             if "clock_auto" in settings:
+                if settings["clock_auto"] and manual_dst is not None:
+                    if manual_dst.get("dstMode") == "on":
+                        try:
+                            await self._api("setDstOnOff", "setDstOnOff", dstOnOff="off")
+                        except LGWebError:
+                            pass
+                        if (await self._api("getDSTInfo", "getDSTInfo")).get("dstMode") != "off":
+                            raise LGWebError("Disable manual DST before enabling automatic time")
                 await self._api("setNTPStatus", "ntp", useNTP=settings["clock_auto"])
             elif "clock" in settings:
                 value = settings["clock"]

@@ -1,6 +1,10 @@
 # Settings audit and picture configuration
 
-Integration **2.29.0**; physical reference **75UH5F-HJ / 04.13.50 / webOS 4.0.1-136**. This audit combines the actual LG menu, authenticated firmware responses and the [official webOS 4 guide](https://gscs-b2c.lge.com/open/downloadFile?fileId=c1dJJrQEObZ7aWsYE0hHA). A menu item or protocol command does not establish support on every Signage model.
+Integration **2.30.0**; physical reference **75UH5F-HJ / 04.13.50 / webOS 4.0.1-136**. This audit combines the actual LG menu, authenticated firmware responses and the [official webOS 4 guide](https://gscs-b2c.lge.com/open/downloadFile?fileId=c1dJJrQEObZ7aWsYE0hHA). A menu item or protocol command does not establish support on every Signage model.
+
+## Further settings added in 2.30
+
+The [native schedule, clock-region and audio/calibration guide](NATIVE-SCHEDULES-AUDIO.md) covers six RGB gain/offset controls, the completed six-mode sound selector, LG audio output level and digital/analog input, stored power and brightness schedules, the device timezone catalog and manual DST rules. These were exercised through the existing HA container and the physical UH5F, with the original settings restored. Balance is conditionally implemented but rejected by this reference setup.
 
 ## Picture controls in Home Assistant
 
@@ -69,17 +73,17 @@ UH5F colour temperature now uses **Kelvin**, not the old protocol byte. For exam
 | Area | Already available / added | Remaining work or dependency |
 |---|---|---|
 | Picture and illumination | Presets, reset/copy, the table above, aspect ratio, backlight, energy saving, Smart Energy Saving | TruMotion's active mode was absent from the native read API despite appearing in the menu. Real Cinema was locked for the current 2160p60 signal. Neither is exposed as a guessed control. |
-| Expert calibration | Expert preset, gamma, temperature, gamut | Multi-point white balance, RGB gain/offset and six-axis colour management need verified ranges, context and readback. A calibration preset is not a replacement for a measurement workflow. |
+| Expert calibration | Expert preset, gamma, temperature, gamut, six RGB gain/offset registers | Multi-point white balance and six-axis colour management need verified ranges, context and readback. A calibration preset is not a replacement for a measurement workflow. |
 | Model-dependent illumination | Conditional min/max and HDR entities | This display rejects automatic backlight bounds in both the tested OFF and AUTO energy modes. Local dimming is not present in its observed menu. HDR changes need an actual HDR source before hardware acceptance can be claimed. |
 | Sleep and wake | No Signal / No IR, DPM delay and wake condition, PM mode, AC power-on state, WoL | Real wake reliability still depends on PM/network topology. See [power settings](POWER-SETTINGS.md). |
-| Clock and timers | Clock, automatic time, NTP, complete supported ISM timing | Timezone/DST rules and native on/off/holiday scheduler editing remain separate work. HA automations can schedule supported power actions. Brightness schedule on/off does not create or edit its entries. |
+| Clock and timers | Clock, automatic time, NTP, timezone/DST, complete supported ISM timing; add/remove native on/off and brightness entries | Holiday calendars and on-timer source/volume policies remain separate work. Native timers do not coordinate a smart plug or AV Companion. |
 | Protection and identity | ISM mode/timing, Set ID, Signage name, power-on delay, temperature unit, no-signal image, OSD/remote lock | ISM and boot images can be prepared in HA; installing into LG's special storage still needs USB. See [clock/ISM](CLOCK-ISM.md) and [system settings](SYSTEM-SETTINGS.md). |
 | Inputs and playback | Native/app sources, Studio views, media, URL, PiP, OSD-preserving switching | Native failover priorities, per-input PC labels and rotation require coordination with resident-app/source ownership. They are not silently enabled. Only one independent live HDMI image is confirmed. |
-| Sound | LG volume/mute and existing sound-mode entity; Sonos routing in AV Companion | Sound output, AV sync, digital input format, EQ and reset need their own model audit. LG sound processing is not Sonos/eARC soundbar processing; this installation uses the FeinTech extractor. |
+| Sound | LG volume/mute, all six sound modes, audio output level, digital/analog input and conditional balance; Sonos routing in AV Companion | Speaker routing, AV sync, EQ and sound reset still need active-schema/model verification. LG sound processing is not Sonos/eARC soundbar processing; this installation uses the FeinTech extractor. |
 | Network and administration | Local verified connection, certificate setup, SI provisioning, diagnostics | IP/Wi-Fi changes, password changes, factory reset and locks that could remove control need dedicated recovery workflows. No arbitrary settings-database write action is exposed. |
 | Fleet/hardware functions | Device diagnostics and existing app capabilities | Video-wall synchronisation, external sensors, fans and multi-display calibration are hardware-specific and cannot be established with this single panel. |
 
-These are explicit coverage limits, not claims that the menu functions do not exist. The next useful additions are native schedule editing and motion settings once their active values/dependencies can be verified. Automatic failover should first gain a clear ownership rule with the existing app and AV standby logic.
+These are explicit coverage limits, not claims that the menu functions do not exist. The next useful additions are holiday/on-timer policies and motion settings once their active values/dependencies can be verified. Automatic failover should first gain a clear ownership rule with the existing app and AV standby logic.
 
 ## Protocol and device evidence
 

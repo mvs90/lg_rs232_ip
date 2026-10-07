@@ -13,6 +13,7 @@ from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 
 from .const import DOMAIN, READ_STATUS
 from .lg_display import LGDisplay
+from .device_profile import is_uh5f
 from .system_settings import SystemSettingEntity
 from .power_settings import PowerSettingEntity
 from .maintenance import MaintenanceEntity, DAYS
@@ -64,6 +65,7 @@ async def async_setup_entry(
 
     if maintenance := data.get("maintenance"):
         entities.append(ClockAutomaticSwitch(maintenance))
+        entities.append(ManualDstSwitch(maintenance))
         entities.extend(IsmDaySwitch(maintenance, day) for day in DAYS)
 
     async_add_entities(entities)
@@ -621,3 +623,26 @@ class PowerSettingsSwitch(PowerSettingEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs):
         await self.coordinator.async_set(self.key, "off")
+
+
+class ManualDstSwitch(MaintenanceEntity, SwitchEntity):
+    def __init__(self, coordinator):
+        super().__init__(coordinator, "dst", "manual_dst", "mdi:weather-sunset-up")
+
+    @property
+    def available(self):
+        return super().available and is_uh5f(self.coordinator.display.model_name) and (self.coordinator.data or {}).get("clock_auto") is False
+
+    @property
+    def is_on(self):
+        return (self.coordinator.data or {}).get("dst", {}).get("dstMode") == "on"
+
+    @property
+    def extra_state_attributes(self):
+        return {"rules": (self.coordinator.data or {}).get("dst")}
+
+    async def async_turn_on(self, **kwargs):
+        await self.coordinator.async_configure_dst(True)
+
+    async def async_turn_off(self, **kwargs):
+        await self.coordinator.async_configure_dst(False)

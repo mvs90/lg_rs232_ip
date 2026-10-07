@@ -15,6 +15,7 @@ from .device_profile import ok_payload, PM_STATES, PM_MODES
 from .lg_display import LGDisplay
 from .power_settings import PowerSettingEntity, remote_power_on_status
 from .system_settings import SystemSettingEntity
+from .native_schedules import NativeScheduleEntity, KINDS, row_identity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -149,6 +150,8 @@ async def async_setup_entry(
         entities.append(RemotePowerOnSensor(power))
     if maintenance := data.get("maintenance"):
         entities.append(DisplayClockSensor(maintenance))
+    if schedules := data.get("native_schedules"):
+        entities.extend(NativeScheduleSensor(schedules, key) for key in KINDS)
     async_add_entities(entities)
 
 
@@ -166,7 +169,7 @@ class DisplayClockSensor(SystemSettingEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         data = self.coordinator.data or {}
-        return {"display_timezone": data.get("timezone"), "automatic": data.get("clock_auto"), "precision": "minute"}
+        return {"display_timezone": data.get("timezone"), "automatic": data.get("clock_auto"), "precision": "minute", "manual_dst": data.get("dst")}
 
 
 class LGDisplaySerialNumberSensor(LGDisplayBaseSensor):
@@ -772,3 +775,20 @@ class RemotePowerOnSensor(PowerSettingEntity, SensorEntity):
     def extra_state_attributes(self):
         values = self.coordinator.data or {}
         return {key: values.get(key) for key in ("pm_mode", "wake_on_lan", "wake_on_wlan")}
+
+
+class NativeScheduleSensor(NativeScheduleEntity, SensorEntity):
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def native_value(self):
+        rows = (self.coordinator.data or {}).get(self.key)
+        return len(rows) if rows is not None else None
+
+    @property
+    def extra_state_attributes(self):
+        rows = (self.coordinator.data or {}).get(self.key, [])
+        result = {"entries": [{"id": row_identity(self.key, row), "time": f'{int(row["hour"]):02d}:{int(row["minute"]):02d}', **({"backlight": row["backlight"]} if self.key == "brightness" else {"days": row["day"]})} for row in rows], "maximum_entries": KINDS[self.key][1], "time_basis": "display_local_time"}
+        if self.key == "brightness":
+            result["enabled"] = (self.coordinator.data or {}).get("brightness_enabled")
+        return result

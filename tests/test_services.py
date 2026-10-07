@@ -195,5 +195,25 @@ async def test_real_entity_services_target_registered_display(tmp_path):
         )
         assert response[player.entity_id]["import_method"] == "usb"
         player.async_prepare_ism_media.assert_awaited_once_with(media_ids=["media-source://media_source/local/photo.jpg"], media_type="image", media_directory="local")
+        schedules = SimpleNamespace(async_change=AsyncMock())
+        maintenance = SimpleNamespace(async_set_timezone=AsyncMock(), async_configure_dst=AsyncMock(), async_get_timezones=AsyncMock(return_value={"timezones": [{"ZoneID": "Europe/Berlin"}]}))
+        hass.data["lg_rs232_ip"]["display"].update(native_schedules=schedules, maintenance=maintenance)
+        for action, kwargs in (
+            ("add_power_schedule", {"kind": "power_on", "time": "07:00", "repeat": "weekdays"}),
+            ("add_brightness_schedule", {"time": "07:00", "backlight": 75}),
+            ("remove_native_schedule", {"kind": "power_on", "schedule_id": "mon@07:00"}),
+            ("set_timezone", {"continent": "Europe", "country": "DE", "timezone": "Europe/Berlin"}),
+            ("configure_dst", {"enabled": False}),
+        ):
+            await hass.services.async_call("lg_rs232_ip", action, {"entity_id": player.entity_id, **kwargs}, blocking=True)
+        assert schedules.async_change.await_count == 3
+        schedules.async_change.assert_awaited_with("power_on", schedule_id="mon@07:00")
+        maintenance.async_set_timezone.assert_awaited_once_with("Europe", "DE", "Europe/Berlin")
+        maintenance.async_configure_dst.assert_awaited_once_with(False)
+        response = await hass.services.async_call("lg_rs232_ip", "get_timezones", {"entity_id": player.entity_id, "country": "DE"}, blocking=True, return_response=True)
+        assert response[player.entity_id]["timezones"][0]["ZoneID"] == "Europe/Berlin"
+        for action, kwargs in (("add_brightness_schedule", {"time": "07:00", "backlight": 1.5}), ("configure_dst", {"enabled": True, "start_hour": 1.5})):
+            with pytest.raises(vol.Invalid):
+                await hass.services.async_call("lg_rs232_ip", action, {"entity_id": player.entity_id, **kwargs}, blocking=True)
     finally:
         await hass.async_stop(force=True)

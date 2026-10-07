@@ -12,6 +12,9 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 import voluptuous as vol
 from .const import DOMAIN, INPUT_SOURCES
+from .native_schedules import REPEAT_DAYS, KINDS
+from .maintenance import integer
+from .clock_region import CONTINENTS, DST_FIELDS
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -164,6 +167,14 @@ async def async_setup_entry(hass, entry, async_add_entities):
             "async_prepare_ism_media",
         ),
     }
+    services.update({
+        "add_power_schedule": ({vol.Required("kind"): vol.In(["power_on", "power_off"]), vol.Required("time"): cv.string, vol.Required("repeat"): vol.In(REPEAT_DAYS)}, "async_add_power_schedule"),
+        "add_brightness_schedule": ({vol.Required("time"): cv.string, vol.Required("backlight"): lambda v: integer(v, 0, 100)}, "async_add_brightness_schedule"),
+        "remove_native_schedule": ({vol.Required("kind"): vol.In(KINDS), vol.Required("schedule_id"): vol.All(cv.string, vol.Length(min=1, max=80))}, "async_remove_native_schedule"),
+        "set_timezone": ({vol.Required("continent"): vol.In(CONTINENTS), vol.Required("country"): vol.All(cv.string, vol.Match(r"^[A-Z]{2}$")), vol.Required("timezone"): cv.string}, "async_set_timezone"),
+        "get_timezones": ({vol.Required("country"): vol.All(cv.string, vol.Match(r"^[A-Z]{2}$"))}, "async_get_timezones"),
+        "configure_dst": ({vol.Required("enabled"): cv.boolean, **{vol.Optional(side + "_" + key): lambda v, lo=lo, hi=hi: integer(v, lo, hi) for side in ("start", "end") for key, (lo, hi, _) in DST_FIELDS.items()}}, "async_configure_dst"),
+    })
     platform = async_get_current_platform()
     for name, (schema, method) in services.items():
         platform.async_register_entity_service(
@@ -171,7 +182,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
             schema,
             method,
             supports_response=SupportsResponse.ONLY
-            if name in {"prepare_boot_image", "prepare_ism_media"}
+            if name in {"prepare_boot_image", "prepare_ism_media", "get_timezones"}
             else SupportsResponse.NONE,
         )
 
@@ -556,3 +567,28 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
 
     async def async_clear_content(self, **kwargs):
         return await self.controller.async_clear_content(**kwargs)
+
+
+    def _settings_manager(self, name):
+        manager = self.hass.data[DOMAIN][self.entry.entry_id].get(name)
+        if manager is None:
+            raise HomeAssistantError("This setting requires a supported LG display and native web access")
+        return manager
+
+    async def async_add_power_schedule(self, kind, time, repeat):
+        await self._settings_manager("native_schedules").async_change(kind, time=time, repeat=repeat)
+
+    async def async_add_brightness_schedule(self, time, backlight):
+        await self._settings_manager("native_schedules").async_change("brightness", time=time, backlight=backlight)
+
+    async def async_remove_native_schedule(self, kind, schedule_id):
+        await self._settings_manager("native_schedules").async_change(kind, schedule_id=schedule_id)
+
+    async def async_set_timezone(self, continent, country, timezone):
+        await self._settings_manager("maintenance").async_set_timezone(continent, country, timezone)
+
+    async def async_configure_dst(self, enabled, **fields):
+        await self._settings_manager("maintenance").async_configure_dst(enabled, **fields)
+
+    async def async_get_timezones(self, country):
+        return await self._settings_manager("maintenance").async_get_timezones(country)

@@ -1,5 +1,5 @@
 /* Local Home Assistant layout editor. The LG only runs the small ES5 renderer. */
-const VERSION = "2.29.0";
+const VERSION = "2.30.0";
 const clone = value => JSON.parse(JSON.stringify(value));
 const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 const THEME_FIELDS = ['background','color','accent','image_id','image_fit','image_dim','gradient_angle','media_background_enabled','media_background_entity','media_background_fit','media_background_color_source','media_background_dim'];

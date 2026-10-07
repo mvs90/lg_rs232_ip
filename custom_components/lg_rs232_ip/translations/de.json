@@ -194,6 +194,15 @@
       },
       "display_clock": {
         "name": "Display-Datum und -Uhrzeit"
+      },
+      "power_on_schedule": {
+        "name": "Einschaltzeitpläne"
+      },
+      "power_off_schedule": {
+        "name": "Ausschaltzeitpläne"
+      },
+      "brightness_schedule": {
+        "name": "Helligkeitszeitplaneinträge"
       }
     },
     "select": {
@@ -347,6 +356,24 @@
           "corporate": "Regierung / Unternehmen",
           "education": "Bildung"
         }
+      },
+      "sound_mode": {
+        "name": "Klangmodus"
+      },
+      "audio_out": {
+        "name": "LG-Audioausgangspegel",
+        "state": {
+          "off": "Aus",
+          "variable": "Variabel (folgt LG-Lautstärke)",
+          "fixed": "Fester Pegel"
+        }
+      },
+      "digital_audio_input": {
+        "name": "LG-Audioeingang",
+        "state": {
+          "digital": "Digital (HDMI/DP/OPS)",
+          "analog": "Analoger Audioeingang"
+        }
       }
     },
     "switch": {
@@ -409,6 +436,9 @@
       },
       "hdr_tone_mapping": {
         "name": "HDR Dynamic Tone Mapping"
+      },
+      "manual_dst": {
+        "name": "Manuelle Sommerzeit"
       }
     },
     "text": {
@@ -461,6 +491,27 @@
       },
       "max_backlight": {
         "name": "Automatische Hintergrundbeleuchtung Maximum"
+      },
+      "audio_balance": {
+        "name": "LG-Balance (50 = Mitte)"
+      },
+      "white_balance_red_gain": {
+        "name": "Weißabgleich Rot Verstärkung"
+      },
+      "white_balance_red_offset": {
+        "name": "Weißabgleich Rot Offset"
+      },
+      "white_balance_green_gain": {
+        "name": "Weißabgleich Grün Verstärkung"
+      },
+      "white_balance_green_offset": {
+        "name": "Weißabgleich Grün Offset"
+      },
+      "white_balance_blue_gain": {
+        "name": "Weißabgleich Blau Verstärkung"
+      },
+      "white_balance_blue_offset": {
+        "name": "Weißabgleich Blau Offset"
       }
     },
     "datetime": {
@@ -481,6 +532,104 @@
     "remote_power_on_restricted": {
       "title": "Netzwerk-Einschalten für {name} prüfen",
       "description": "Der zuletzt bestätigte PM-Modus oder die LAN-WoL-Einstellung kann das Einschalten über das Netzwerk nach dem Ausschalten verhindern. Für IP-Steuerung in den Geräteeinstellungen **Netzwerkbereit (Network Ready)** wählen und **Wake on LAN (LAN)** aktivieren. Andere PM-Modi können die Einschalttaste am Gerät oder eine IR-Fernbedienung erfordern; das Verhalten hängt vom Modell und der Art des Ausschaltens ab. Bei deaktiviertem LAN-WoL ist das Aufwecken über kabelgebundenes LAN abgeschaltet. Die Integration verwendet IP-Einschaltbefehle; der Schalter konfiguriert das Display und versendet kein Magic Packet. Der Diagnosesensor **Netzwerk-Einschalten** zeigt die zuletzt bestätigten Einstellungen. Es werden keine Einstellungen automatisch geändert."
+    }
+  },
+  "services": {
+    "add_power_schedule": {
+      "name": "Einschalt-/Ausschaltzeitplan hinzufügen",
+      "description": "Speichert eine Uhrzeit direkt im LG (lokale Displayzeit). Benötigt nativen Webzugriff und ein eingeschaltetes UH5F. Steuert weder Steckdose noch verknüpfte Player. Maximal sieben Einträge je Liste; identische Einträge werden nicht doppelt angelegt.",
+      "fields": {
+        "kind": {
+          "name": "Zeitplantyp"
+        },
+        "time": {
+          "name": "Lokale Displayzeit (HH:MM)"
+        },
+        "repeat": {
+          "name": "Wiederholung"
+        }
+      }
+    },
+    "add_brightness_schedule": {
+      "name": "Helligkeitszeitplan hinzufügen",
+      "description": "Speichert eine tägliche Hintergrundbeleuchtung im LG, maximal sechs Einträge. Helligkeitszeitplan zuerst einschalten. Bestehende Einträge bleiben erhalten; zum Ändern einer Uhrzeit zuerst deren Eintrag entfernen.",
+      "fields": {
+        "time": {
+          "name": "Lokale Displayzeit (HH:MM)"
+        },
+        "backlight": {
+          "name": "Hintergrundbeleuchtung"
+        }
+      }
+    },
+    "remove_native_schedule": {
+      "name": "Zeitplaneintrag entfernen",
+      "description": "Entfernt genau einen Eintrag anhand seiner ID im Attribut entries des Zeitplansensors. Liste und Speicherplatz werden vor dem Löschen erneut geprüft. Für Helligkeit muss die Zeitplanfunktion eingeschaltet sein.",
+      "fields": {
+        "kind": {
+          "name": "Zeitplantyp"
+        },
+        "schedule_id": {
+          "name": "Eintrags-ID aus dem Zeitplansensor"
+        }
+      }
+    },
+    "set_timezone": {
+      "name": "LG-Zeitzone einstellen",
+      "description": "Wählt eine Zeitzone aus dem Katalog des Displays. Benötigt nativen Webzugriff, ein eingeschaltetes UH5F und automatische Uhrzeit. Gespeicherte Zeitpläne folgen der neuen lokalen Uhrzeit. Kontinent, Land und Zeitzone werden schrittweise geprüft.",
+      "fields": {
+        "continent": {
+          "name": "LG-Kontinent"
+        },
+        "country": {
+          "name": "Ländercode"
+        },
+        "timezone": {
+          "name": "Zeitzone aus get_timezones"
+        }
+      }
+    },
+    "get_timezones": {
+      "name": "LG-Zeitzonenkatalog lesen",
+      "description": "Liefert die Zeitzonen des Displays für einen Ländercode. Benötigt nativen Webzugriff und ein eingeschaltetes UH5F.",
+      "fields": {
+        "country": {
+          "name": "Ländercode"
+        }
+      }
+    },
+    "configure_dst": {
+      "name": "Manuelle Sommerzeit einrichten",
+      "description": "Zum Aktivieren muss die automatische Uhrzeit ausgeschaltet sein. Alle acht Regelfelder gemeinsam angeben oder alle weglassen, um nur Ein/Aus zu ändern. Woche 5 bedeutet letzte, Wochentag 0 Sonntag. Beim Ändern bleibt die manuelle Sommerzeit bis zur Prüfung beider Regeln ausgeschaltet.",
+      "fields": {
+        "enabled": {
+          "name": "Manuelle Sommerzeit einschalten"
+        },
+        "start_month": {
+          "name": "Beginn: Monat"
+        },
+        "start_week": {
+          "name": "Beginn: Woche (5 = letzte)"
+        },
+        "start_weekday": {
+          "name": "Beginn: Wochentag (0 = Sonntag)"
+        },
+        "start_hour": {
+          "name": "Beginn: Stunde"
+        },
+        "end_month": {
+          "name": "Ende: Monat"
+        },
+        "end_week": {
+          "name": "Ende: Woche (5 = letzte)"
+        },
+        "end_weekday": {
+          "name": "Ende: Wochentag (0 = Sonntag)"
+        },
+        "end_hour": {
+          "name": "Ende: Stunde"
+        }
+      }
     }
   }
 }

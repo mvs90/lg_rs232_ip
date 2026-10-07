@@ -1,5 +1,19 @@
 # Release acceptance
 
+## LG 2.30.0: native schedules, clock region, audio and RGB — 2026-10-07
+
+**730 Python tests pass on each of HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 260 browser cases pass across Chromium/WebKit.** Official Hassfest reports zero invalid integrations; Ruff and whitespace checks pass. New regression coverage includes lost acknowledgements without replay, power/readback guards, malformed native lists, full/duplicate/overlapping schedules, externally moved slots, native ID regeneration, invalid ranges, catalog ownership, partial DST failures, actual HA service routing/response schemas and discovery after an initially powered-off start. The optional app remains **1.20.0**.
+
+Installed into the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container, using the physical **75UH5F-HJ / 04.13.50**. Real HA number actions changed each of the six RGB gain/offset registers by one step and restored it. Select actions confirmed all six sound modes, all three audio-output levels and both digital/analog audio inputs. Balance returned NG and stays unavailable. These tests confirm control persistence, not measured calibration quality or changes to the separate Sonos/FeinTech path.
+
+Real HA schedule actions added two power-on entries, two power-off entries and two brightness entries, confirmed duplicate additions are no-ops, removed one while preserving the other, then removed the remaining temporary entries. Brightness scheduling was restored to Off. LG refuses `ss` writes while brightness scheduling is disabled. It also regenerates every internal power timer `_id` after mutations, so HA identifiers are derived from schedule content. Before deletion, the selected serial slot is read again after the native list check. No delete-all command is exposed. The timers were configured and removed; actual timed power transitions were not exercised.
+
+HA actions changed **Europe/Berlin → Europe/London → Europe/Berlin**, prepared recurring DST rules, enabled manual DST with automatic time disabled, and confirmed that re-enabling automatic time turns manual DST off. Original DST rules and geographic settings were restored and compared exactly. The real response-producing `get_timezones` action returned the LG catalog. Actual seasonal boundary behaviour remains untested.
+
+Final native **picture, sound and commercial dictionaries** match the fresh pre-test backups exactly. Timezone, country, continent and DST rules also match. Studio configuration/revision/backgrounds/startup design are unchanged, and all **75 installed component files** match the release source. The display is back on native HDMI 1, General picture mode, 10000 K, with the optional app configured as before. All temporary schedule entries are gone. Private snapshots and credentials remain outside Git.
+
+See [native settings and automation examples](NATIVE-SCHEDULES-AUDIO.md) and [the remaining-settings audit](SETTINGS-AUDIT.md).
+
 ## LG 2.29.0: picture presets, actions and settings audit — 2026-10-07
 
 **667 Python tests pass on each of HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 260 browser cases pass across Chromium/WebKit.** Official Hassfest reports zero invalid integrations; Ruff and whitespace checks pass. New tests cover exact multi-operand frames, wrong-input acknowledgements, picture-only reset/copy, lost replies without command replay, cooldown after reset/copy, mode restrictions, crossed backlight bounds, preferred colours, Kelvin conversion, sharpness limits and availability during background reads. The optional display app remains 1.20.0.
