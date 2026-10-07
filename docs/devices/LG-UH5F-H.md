@@ -336,3 +336,10 @@ Confirmed actual IDs **1 → 2 → 1000 → 1** with fresh RS232 power queries a
 `commercial.smartEnergy`, `powerOnDelay`, `noSignalImage` and `temperatureUnit` accepted individual writes and fresh readback. With Energy Saving OFF, manual Backlight **75** remained writable with Smart Energy Saving both off and on; DPM and PM were unchanged. Switching the on-display temperature unit to Fahrenheit left the fresh RS232-backed HA sensor at **35 °C**, as before; Celsius was restored. This does not measure luminance or energy reduction, and toggling the no-signal image did not deliberately interrupt HDMI to test its visual artwork.
 
 The feature uses three bounded native requests per minute for all six entities, without depending on the resident app or adding a display rendering loop. See [system settings](../SYSTEM-SETTINGS.md) for setup, automation, unavailable-state and address-recovery behavior. Downloaded device HTML/JavaScript, response inventories, names, credentials and captures remain private and excluded from Git.
+
+
+## Power configuration acceptance (2.27.0, 2026-10-07)
+
+The physical 75UH5F-HJ accepted and freshly read back `fg` and `mn` on/off, wired `fw` and wireless `sn 90` on/off, PM `sn 0c` values 00–05, AC power-on `tr` values 00–02, and DPM wake `sn 0b` values 00–01 through the existing HA control connection. Native `getPmMode` independently confirmed all six PM names, including `screenOffBacklight`. No IR also maps to `commercial.noActivityOff=4hours`, wired WoL to `commercial.wolEnable=1`, and DPM wake to `commercial.dpmWakeUpControl`. Do not substitute similarly named shadow database keys such as `wolMagicPacket`, `wolWireless` or `acOn` for these documented control commands.
+
+The current restored DPM wake value is Clock + DATA; the earlier read-only baseline above recorded Clock on a different date. Tests preserve the setting found immediately before a run. Configuration confirmation does not prove actual WLAN wake, timer expiry or thermal behaviour. All power settings, the displayed app source and Studio data were restored/preserved. See [power settings](../POWER-SETTINGS.md) and [release tests](../RELEASE-TESTS.md).

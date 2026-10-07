@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.27.0
+
+- Rename Auto Sleep to Auto Sleep No Signal while preserving its entity identity; add independent four-hour Auto Sleep No IR.
+- Add verified PM mode, AC power-on status, wired/wireless Wake on LAN and DPM wake-up controls through RS232/IP, without a web login or display app dependency.
+- Show network wake prerequisites in a diagnostic sensor and a translated Home Assistant repair warning; clear the warning only after the recommended settings are confirmed.
+- Share configuration polling, reject unsupported/unknown values and reconcile delayed or lost responses with bounded fresh reads without replaying writes. Document PM/DPM/HDMI-extractor interactions and the distinction between a WoL setting and sending a magic packet.
+
 ## 2.26.0
 
 - Add shared, verified HA configuration entities for Smart Energy Saving, the actual Signage name, Set ID (1–1000), power-on delay, no-signal image and on-display temperature units. Native LG web access is required; the resident app is optional.

@@ -2,6 +2,10 @@
 
 Diese Integration steuert ausschließlich das LG-Display. Für Apple TV, Sonos, Steckdose und einen gemeinsamen HomeKit-TV gibt es die separate Erweiterung [AV Companion](https://github.com/mvs90/av_companion). Beide Pakete haben eigene HACS-Repositories und Releases. Es wird eine neue Einrichtung ohne Migration vorausgesetzt.
 
+## Energie und Aufwecken
+
+Auto Sleep No Signal (15 Minuten), Auto Sleep No IR (4 Stunden), PM-Modus, Einschaltstatus nach Netzversorgung, Wake on LAN und DPM Wake Up-Steuerung stehen direkt auf der Geräteseite bereit. Dafür ist kein Webzugriff nötig. Bei eingeschränktem Netzwerk-Einschalten zeigt HA einen Warnhinweis. [Bedienung und Zusammenhänge](POWER-SETTINGS.md).
+
 ## Installation
 
 1. In HACS `https://github.com/mvs90/lg_rs232_ip` als benutzerdefiniertes Repository, Kategorie **Integration**, hinzufügen.

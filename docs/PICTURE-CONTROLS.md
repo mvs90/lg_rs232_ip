@@ -47,6 +47,8 @@ Picture presets may have different stored backlight values. In the acceptance te
 
 In the verified installation, DPM stayed at **1 minute** and PM stayed at **Network Ready** throughout manual backlight changes. AUTO energy saving, not the configured DPM timeout, explained the unavailable backlight control. Tests did not deliberately trigger DPM standby or alter the Apple TV/extractor power topology.
 
+From 2.27.0 these power policies can be configured directly in HA; see [power and wake settings](POWER-SETTINGS.md). Changing PM mode invalidates the picture-control cache. The tests below describe the original picture-control acceptance, not a universal wake guarantee.
+
 ## Evidence and limits
 
 The [official LG webOS 4.0 guide](https://gscs-b2c.lge.com/open/downloadFile?fileId=c1dJJrQEObZ7aWsYE0hHA) documents power modes on pages 16–17, picture controls on pages 29–34, `kc` and `jq` on page 76, `mg` on page 81 and brightness scheduling on pages 87–88. The panel's authenticated Control Manager `/js/design/device.js`, `backlightCallback`, additionally gates its own slider on energy saving off/min/med, disabled `easyBrightnessMode`, and screen-on state. This internal implementation is firmware-specific and is not redistributed.

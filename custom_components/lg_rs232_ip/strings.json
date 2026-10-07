@@ -176,6 +176,15 @@
           "configured": "SI active",
           "ready": "Ready"
         }
+      },
+      "remote_power_on": {
+        "name": "Network power-on configuration",
+        "state": {
+          "network_ready": "Network ready, wired WoL enabled",
+          "pm_mode_restricted": "PM mode: IP power-on not guaranteed",
+          "wake_on_lan_disabled": "Wired Wake on LAN disabled",
+          "unknown": "Configuration not fully known"
+        }
       }
     },
     "select": {
@@ -198,6 +207,32 @@
           "celsius": "Celsius (°C)",
           "fahrenheit": "Fahrenheit (°F)"
         }
+      },
+      "pm_mode": {
+        "name": "PM mode",
+        "state": {
+          "power_off": "Power off",
+          "sustain_aspect_ratio": "Sustain aspect ratio (EDID)",
+          "screen_off": "Screen off",
+          "screen_off_always": "Screen off always",
+          "screen_off_backlight": "Screen off and backlight on",
+          "network_ready": "Network ready"
+        }
+      },
+      "power_on_status": {
+        "name": "Power on status (after AC power)",
+        "state": {
+          "last_status": "Last status (LST)",
+          "standby": "Standby (STD)",
+          "power_on": "Power on (PWR)"
+        }
+      },
+      "dpm_wake_up": {
+        "name": "DPM wake up control",
+        "state": {
+          "clock": "Clock",
+          "clock_and_data": "Clock + DATA"
+        }
       }
     },
     "switch": {
@@ -206,6 +241,18 @@
       },
       "no_signal_image": {
         "name": "No signal image"
+      },
+      "auto_sleep": {
+        "name": "Auto Sleep No Signal"
+      },
+      "auto_sleep_no_ir": {
+        "name": "Auto Sleep No IR"
+      },
+      "wake_on_lan": {
+        "name": "Wake on LAN (wired)"
+      },
+      "wake_on_wlan": {
+        "name": "Wake on LAN (wireless)"
       }
     },
     "text": {
@@ -220,6 +267,12 @@
       "power_on_delay": {
         "name": "Power-on delay"
       }
+    }
+  },
+  "issues": {
+    "remote_power_on_restricted": {
+      "title": "Check network power-on for {name}",
+      "description": "The last confirmed PM mode or wired Wake on LAN setting can prevent network power-on after shutdown. For IP control, select **Network ready** and enable **Wake on LAN (wired)** in the device settings. Other PM modes can require the physical power button or an IR remote; wake support depends on the model and the type of shutdown. With wired Wake on LAN disabled, waking through wired LAN is disabled. The integration uses IP power commands; this switch configures the display and does not send a magic packet. The diagnostic sensor **Network power-on configuration** shows the last confirmed settings. No settings are changed automatically."
     }
   }
 }

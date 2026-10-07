@@ -13,6 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN, READ_STATUS, OSD_LANGUAGES, ENERGY_SAVING_MODES
 from .device_profile import ok_payload, PM_STATES, PM_MODES
 from .lg_display import LGDisplay
+from .power_settings import PowerSettingEntity, remote_power_on_status
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -143,6 +144,8 @@ async def async_setup_entry(
 
     if manager := data.get("display_app"):
         entities.append(LGDisplayAppSensor(manager, config_entry))
+    if power := data.get("power_settings"):
+        entities.append(RemotePowerOnSensor(power))
     async_add_entities(entities)
 
 
@@ -725,3 +728,27 @@ class LGDisplayBacklightControlSensor(LGDisplayBaseSensor):
             "panel_state": PM_STATES.get(status["panel_state"]),
             "picture_mode_code": status["picture_mode"],
         }
+
+
+class RemotePowerOnSensor(PowerSettingEntity, SensorEntity):
+    """Last confirmed wake configuration, also visible while the panel is off."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = ["network_ready", "pm_mode_restricted", "wake_on_lan_disabled", "unknown"]
+
+    def __init__(self, coordinator):
+        super().__init__(coordinator, "remote_power_on", "mdi:power-plug-outline")
+
+    @property
+    def available(self):
+        return self.coordinator.last_update_success and bool(self.coordinator.data)
+
+    @property
+    def native_value(self):
+        return remote_power_on_status(self.coordinator.data or {})
+
+    @property
+    def extra_state_attributes(self):
+        values = self.coordinator.data or {}
+        return {key: values.get(key) for key in ("pm_mode", "wake_on_lan", "wake_on_wlan")}

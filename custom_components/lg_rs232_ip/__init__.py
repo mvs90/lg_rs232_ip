@@ -10,6 +10,7 @@ from .web_manager import LGWebManager
 from .controller import DisplayController
 from .alerts import LGDisplayAlertState
 from .system_settings import SystemSettings, validate_setting
+from .power_settings import PowerSettings
 
 _LOGGER = logging.getLogger(__name__)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -136,6 +137,8 @@ async def async_setup_entry(hass, entry):
     if await display.async_connect() and await display.async_get_power_status() is True:
         await display.async_get_model_name()
         await display.async_get_software_version()
+    power_settings = data["power_settings"] = PowerSettings(hass, entry, display, controller)
+    await power_settings.async_refresh()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await controller.async_start()
     return True

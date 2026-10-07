@@ -1,5 +1,16 @@
 # Release acceptance
 
+## LG 2.27.0: power, sleep and network-wake configuration — 2026-10-07
+
+Backend regression covers the existing supported HA versions plus 32 focused power-setting cases: exact documented frames and subcommand echoes, no-signal entity identity, partial support, enum rejection, controller locking, offline/unknown power guards, dropped preflight queries, bounded readback, no write replay, shared polling, and warning creation/clearing. Actual network I/O tests require local socket permissions.
+
+Installed **LG 2.27.0 / app 1.20.0** in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container. Standard HA switch/select actions on the physical **75UH5F-HJ / 04.13.50** confirmed both values of No Signal, No IR, wired WoL, wireless WoL and DPM Wake Up, all six PM values and all three AC power-on states. Writes were verified by fresh RS232 reads. The independent native API additionally confirmed all PM names, No IR (`noActivityOff: off/4hours`), wired WoL (`wolEnable: 0/1`) and DPM Wake Up (`dpmWakeUpControl`). Some similarly named commercial database fields did not change and were not used as writable APIs or evidence for the remaining controls.
+
+Intermittent missing power/preflight replies occurred during the first rapid sequence; bounded **query** retries resolved the final full acceptance run. The Screen Off & Backlight On PM value was confirmed on this firmware; an initial failed preflight was not mistaken for permanent lack of support. No mutation retries or extra display connections were added. The real HA repair registry contained the warning in restricted PM configurations and removed it after Network Ready + wired WoL were restored. The device browser shows the new translated configuration and diagnostic entities.
+
+Original values restored: No Signal on, No IR off, wired WoL on, wireless WoL off, PM Network Ready, AC power-on PWR, DPM wake Clock + DATA. The optional WLAN entity is disabled again after testing. App source and saved Studio configuration remain unchanged. No mains interruption, 15-minute/4-hour timer expiry, WLAN magic-packet wake, thermal/backlight effect of Screen Off & Backlight On, or complete wake matrix across all PM modes is claimed. These are verified settings, not a guarantee of every standby/wake combination. Private hardware snapshots and credentials remain excluded from Git.
+
+
 ## LG 2.26.0: verified physical system settings — 2026-10-07
 
 **521 Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 260 browser cases pass across Chromium/WebKit.** Added coverage includes allowed fields/types, name limits/control characters, actual vendor endpoints rather than shadow settings, missing optional capabilities, fresh power/readback requirements, failed/lost/cancelled writes, external ID changes, locked RS232 handover, extended/padded ID framing, durable address/delay state, firmware-dependent delay changes and bounded wake deadlines. Existing frontend checks cover Studio and remote regressions.

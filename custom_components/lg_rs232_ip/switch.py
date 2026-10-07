@@ -14,6 +14,7 @@ from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from .const import DOMAIN, READ_STATUS
 from .lg_display import LGDisplay
 from .system_settings import SystemSettingEntity
+from .power_settings import PowerSettingEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,7 +44,6 @@ async def async_setup_entry(
         [
             LGDisplayPowerSwitch(lg_display, data["name"], config_entry.entry_id),
             LGDisplayMuteSwitch(lg_display, data["name"], config_entry.entry_id),
-            LGDisplayAutoSleepSwitch(lg_display, data["name"], config_entry.entry_id),
             LGDisplayDpmSwitch(lg_display, data["name"], config_entry.entry_id),
             LGDisplayScreenMuteSwitch(lg_display, data["name"], config_entry.entry_id),
             LGDisplayRemoteLockSwitch(lg_display, data["name"], config_entry.entry_id),
@@ -55,6 +55,10 @@ async def async_setup_entry(
     if settings := data.get("system_settings"):
         entities.extend([SystemSettingsSwitch(settings, "smartEnergy", "smart_energy_saving", "mdi:leaf"),
                          SystemSettingsSwitch(settings, "noSignalImage", "no_signal_image", "mdi:image-off-outline")])
+
+    if power := data.get("power_settings"):
+        entities.extend(PowerSettingsSwitch(power, key) for key in (
+            "auto_sleep", "auto_sleep_no_ir", "wake_on_lan", "wake_on_wlan"))
 
     async_add_entities(entities)
 
@@ -241,67 +245,6 @@ class LGDisplayMuteSwitch(LGDisplayBaseSwitch):
         result = await self._lg_display.async_send_command("k", "e", READ_STATUS)
         if result is not None:
             self._is_on = result == 0x00
-
-
-class LGDisplayAutoSleepSwitch(LGDisplayBaseSwitch):
-    """Auto sleep switch for LG Display."""
-
-    def __init__(self, lg_display: LGDisplay, name: str, unique_id: str) -> None:
-        self._lg_display = lg_display
-        self._name = name
-        self._unique_id = unique_id
-        self._is_on = False
-
-    @property
-    def unique_id(self) -> str:
-        return f"{self._unique_id}_auto_sleep"
-
-    @property
-    def name(self) -> str:
-        return "Auto Sleep"
-
-    @property
-    def is_on(self) -> bool:
-        return self._is_on
-
-    @property
-    def available(self) -> bool:
-        return not self._lg_display.is_intentionally_unpowered
-
-    @property
-    def scan_interval(self) -> int:
-        return 30
-
-    @property
-    def icon(self) -> str:
-        return "mdi:sleep"
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return {
-            "identifiers": {(DOMAIN, self._unique_id)},
-            "name": self._name,
-            "manufacturer": "LG",
-        }
-
-    async def async_turn_on(self, **kwargs: Any) -> None:
-        if await self._lg_display.async_set_auto_sleep(True):
-            self._is_on = True
-            self.async_write_ha_state()
-
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        if await self._lg_display.async_set_auto_sleep(False):
-            self._is_on = False
-            self.async_write_ha_state()
-
-    async def async_update(self) -> None:
-        power_status = await self._lg_display.async_get_power_status()
-        if power_status is False:
-            return
-
-        result = await self._lg_display.async_get_auto_sleep()
-        if result is not None:
-            self._is_on = result
 
 
 class LGDisplayDpmSwitch(LGDisplayBaseSwitch):
@@ -596,6 +539,28 @@ class SystemSettingsSwitch(SystemSettingEntity, SwitchEntity):
     def is_on(self):
         value = (self.coordinator.data or {}).get(self.key)
         return value == "on" if value is not None else None
+
+    async def async_turn_on(self, **kwargs):
+        await self.coordinator.async_set(self.key, "on")
+
+    async def async_turn_off(self, **kwargs):
+        await self.coordinator.async_set(self.key, "off")
+
+
+class PowerSettingsSwitch(PowerSettingEntity, SwitchEntity):
+    def __init__(self, coordinator, key):
+        super().__init__(coordinator, key, "mdi:lan-connect" if key.startswith("wake") else "mdi:sleep")
+        self._attr_entity_registry_enabled_default = key != "wake_on_wlan"
+
+    @property
+    def is_on(self):
+        value = (self.coordinator.data or {}).get(self.key)
+        return None if value is None else value == "on"
+
+    @property
+    def extra_state_attributes(self):
+        seconds = {"auto_sleep": 900, "auto_sleep_no_ir": 14400}.get(self.key)
+        return {"delay_seconds": seconds} if seconds else None
 
     async def async_turn_on(self, **kwargs):
         await self.coordinator.async_set(self.key, "on")

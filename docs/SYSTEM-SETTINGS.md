@@ -13,6 +13,8 @@ Ab Version **2.26.0** erscheinen bei eingerichtetem **nativen LG-Webzugriff** au
 
 Die Entitätsnamen können je nach HA-Sprache oder bereits vergebenen Namen abweichen. Alle Einstellungen sind über die normalen HA-Aktionen `switch.turn_on/off`, `text.set_value`, `number.set_value` und `select.select_option` automatisierbar. Die Änderungen wecken das Display nicht; zum Schreiben muss es eingeschaltet und erreichbar sein.
 
+Die Energie- und Aufweckeinstellungen ab 2.27.0 benötigen keinen Webzugriff; siehe [Auto Sleep, PM, Einschaltstatus, WoL und DPM Wake Up](POWER-SETTINGS.md).
+
 ## Verifikation und Ressourcen
 
 Alle sechs Entitäten teilen sich eine Abfrage pro Minute. Pro Abfrage werden nur die vier benötigten kommerziellen Werte, die tatsächliche Set ID und der tatsächliche Signage-Name gelesen. Es gibt keinen zusätzlichen App-Timer, Videodecoder oder Screenshot-Abruf. Bei abgeschalteter Stromversorgung oder bestätigtem Standby erfolgt kein Webabruf. Ein explizites `homeassistant.update_entity` aktualisiert die Gruppe bei Bedarf.

@@ -176,6 +176,15 @@
           "configured": "SI aktiv",
           "ready": "Bereit"
         }
+      },
+      "remote_power_on": {
+        "name": "Netzwerk-Einschalten",
+        "state": {
+          "network_ready": "Netzwerkbereit, LAN-WoL aktiv",
+          "pm_mode_restricted": "PM-Modus: IP-Einschalten nicht gesichert",
+          "wake_on_lan_disabled": "Wake on LAN (LAN) deaktiviert",
+          "unknown": "Konfiguration nicht vollständig bekannt"
+        }
       }
     },
     "select": {
@@ -198,6 +207,32 @@
           "celsius": "Celsius (°C)",
           "fahrenheit": "Fahrenheit (°F)"
         }
+      },
+      "pm_mode": {
+        "name": "PM-Modus",
+        "state": {
+          "power_off": "Ausschalten",
+          "sustain_aspect_ratio": "Seitenverhältnis beibehalten (EDID)",
+          "screen_off": "Bildschirm aus",
+          "screen_off_always": "Bildschirm immer aus",
+          "screen_off_backlight": "Bildschirm aus, Hintergrundbeleuchtung an",
+          "network_ready": "Netzwerkbereit (Network Ready)"
+        }
+      },
+      "power_on_status": {
+        "name": "Einschaltstatus (nach Netzversorgung)",
+        "state": {
+          "last_status": "Letzter Zustand (LST)",
+          "standby": "Standby (STD)",
+          "power_on": "Einschalten (PWR)"
+        }
+      },
+      "dpm_wake_up": {
+        "name": "DPM Wake Up-Steuerung",
+        "state": {
+          "clock": "Clock (Taktsignal)",
+          "clock_and_data": "Clock + DATA (Takt und Daten)"
+        }
       }
     },
     "switch": {
@@ -206,6 +241,18 @@
       },
       "no_signal_image": {
         "name": "Kein-Signal-Bild"
+      },
+      "auto_sleep": {
+        "name": "Auto Sleep No Signal"
+      },
+      "auto_sleep_no_ir": {
+        "name": "Auto Sleep No IR"
+      },
+      "wake_on_lan": {
+        "name": "Wake on LAN (LAN)"
+      },
+      "wake_on_wlan": {
+        "name": "Wake on LAN (WLAN)"
       }
     },
     "text": {
@@ -220,6 +267,12 @@
       "power_on_delay": {
         "name": "Einschaltverzögerung"
       }
+    }
+  },
+  "issues": {
+    "remote_power_on_restricted": {
+      "title": "Netzwerk-Einschalten für {name} prüfen",
+      "description": "Der zuletzt bestätigte PM-Modus oder die LAN-WoL-Einstellung kann das Einschalten über das Netzwerk nach dem Ausschalten verhindern. Für IP-Steuerung in den Geräteeinstellungen **Netzwerkbereit (Network Ready)** wählen und **Wake on LAN (LAN)** aktivieren. Andere PM-Modi können die Einschalttaste am Gerät oder eine IR-Fernbedienung erfordern; das Verhalten hängt vom Modell und der Art des Ausschaltens ab. Bei deaktiviertem LAN-WoL ist das Aufwecken über kabelgebundenes LAN abgeschaltet. Die Integration verwendet IP-Einschaltbefehle; der Schalter konfiguriert das Display und versendet kein Magic Packet. Der Diagnosesensor **Netzwerk-Einschalten** zeigt die zuletzt bestätigten Einstellungen. Es werden keine Einstellungen automatisch geändert."
     }
   }
 }

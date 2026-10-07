@@ -2,6 +2,10 @@
 
 All actions here belong to the standalone LG integration. Configure these under **LG Professional Display → Configure**. Apple TV, Sonos, external sockets and combined HomeKit control are documented in [AV Companion](https://github.com/mvs90/av_companion).
 
+## Power and wake settings
+
+Version 2.27.0 adds shared RS232/IP configuration for no-signal/no-IR sleep, PM mode, power-on status, wired/wireless WoL and DPM wake-up control. These controls work without the native web login or app. The diagnostic sensor and repair warning explain network wake limitations. See [power settings](POWER-SETTINGS.md).
+
 ## Native LG text overlays and fullscreen images (v1.4)
 
 Verified on **75UH5F-HJ, software 04.13.50, webOS 4.0.1-136**. These optional actions use the display's internal Content/Control Manager interface. Other Signage models or firmware versions need their own acceptance test; consumer webOS TV integrations are a different protocol.

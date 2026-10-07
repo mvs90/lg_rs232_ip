@@ -20,6 +20,7 @@ from .const import (
 )
 from .lg_display import LGDisplay
 from .system_settings import SystemSettingEntity
+from .power_settings import POWER_SETTINGS, PowerSettingEntity, remote_power_on_status
 from .layout_library import source_names
 from .device_profile import (
     ASPECT_RATIOS,
@@ -92,6 +93,10 @@ async def async_setup_entry(
     )
     if settings := data.get("system_settings"):
         entities.append(SystemTemperatureUnit(settings))
+
+    if power := data.get("power_settings"):
+        entities.extend(PowerSettingsSelect(power, key) for key in (
+            "pm_mode", "power_on_status", "dpm_wake_up"))
 
     async_add_entities(entities)
 
@@ -656,6 +661,25 @@ class SystemTemperatureUnit(SystemSettingEntity, SelectEntity):
     @property
     def current_option(self):
         return (self.coordinator.data or {}).get(self.key)
+
+    async def async_select_option(self, option):
+        await self.coordinator.async_set(self.key, option)
+
+
+class PowerSettingsSelect(PowerSettingEntity, SelectEntity):
+    def __init__(self, coordinator, key):
+        super().__init__(coordinator, key, "mdi:power-settings")
+        self._attr_options = list(POWER_SETTINGS[key].options)
+
+    @property
+    def current_option(self):
+        return (self.coordinator.data or {}).get(self.key)
+
+    @property
+    def extra_state_attributes(self):
+        if self.key == "pm_mode":
+            return {"remote_power_on": remote_power_on_status(self.coordinator.data or {})}
+        return None
 
     async def async_select_option(self, option):
         await self.coordinator.async_set(self.key, option)
