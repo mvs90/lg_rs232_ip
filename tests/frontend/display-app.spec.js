@@ -1317,7 +1317,11 @@ test('custom clock composition survives offline startup and malformed local over
   const design=offlineDesign(),clock=design.scene.elements.find(i=>i.kind==='clock');clock.parts={time:{visible:false},date:{x:5,y:10,width:90,height:70,font:'mono',font_size:20}};clock.clock_date_format='iso';
   const state={content:null,idle_hdmi:'ext://hdmi:1',startupDesign:design,startup:{id:'widget-start',view:'media_view',remaining:90}};
   await mount(page,state);await expect(page.locator('#startup-canvas .lg-clock .lg-value')).toBeHidden();await expect(page.locator('#startup-canvas .lg-clock .lg-detail')).toHaveText(/\d{4}-\d{2}-\d{2}/);
-  state.offline=true;await page.reload();await page.evaluate(()=>LGStartup.apply({id:'offline-parts',view:'media_view',remaining:90},null));
+  state.offline=true;await page.reload();
+  // The real offline response clears startup. Wait for it before supplying
+  // the synthetic intent used to exercise the cached widget renderer.
+  await expect(page.locator('#startup-notice')).toBeVisible();
+  await page.evaluate(()=>LGStartup.apply({id:'offline-parts',view:'media_view',remaining:90},null));
   await expect(page.locator('#startup-canvas .lg-clock .lg-detail')).toHaveCSS('font-family','monospace');
   expect(await page.evaluate(()=>LGStartupDesign.status().cached)).toBe(true);
   expect(await page.evaluate(()=>LGWidgetParts.valid({kind:'clock',parts:{time:{x:101,y:0,width:20,height:20}}}))).toBe(false);
