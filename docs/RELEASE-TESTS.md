@@ -1,5 +1,15 @@
 # Release acceptance
 
+## LG 2.30.2: configuration and failure-path audit — 2026-10-08
+
+**904 Python tests pass on each of HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 262 browser cases pass across Chromium/WebKit.** The AV Companion suite passes **103 cases per HA version** against current LG. Official Hassfest reports zero invalid integrations; Ruff and whitespace checks pass. Combined Python statement/branch coverage rises from **79.2% to 83.7%** (statement coverage 86.1%, branch coverage 76.4%). CI now prints coverage reports.
+
+New cases cover five supported feature compositions, ten platform factories, partial setup/unload/cancellation, two-display isolation, unloaded/reloaded public API contracts, private cookie sessions, malformed/oversized/expired native responses, late replies on an abandoned TCP connection, device-scoped query backoff, 98 app-source transition cases and final-native-read races. The audit found and fixed stale picture publication after external context/supply changes and incomplete cleanup after setup/close failures. The AV manual harness now refuses unrelated or ambiguously named entries; AV runtime code is unchanged.
+
+The existing **unifi-air-quality-ha-dev / HA 2026.9.4** passed **14 scenarios** with a temporary LG TCP simulator and fixture player/sound/socket, including real stale-idle timers, source guards, shutdown order, explicit wake, service/HomeKit-event routing, duplicate ownership, unload/reload and entity rename. Temporary entries/component were removed and the simulator stopped. After restart, the original entries and UniFi integration remained loaded. Physical **75UH5F-HJ / 04.13.50** native picture/sound/commercial settings and Studio persistent fields matched fresh baselines exactly. The display remained in the connected **Mediaplayer** app view, and all **76 installed component files** matched source. This audit did not change physical settings or power-cycle the display; app version remains **1.20.0**.
+
+See the [scenario matrix and remaining hardware checks](TEST-MATRIX.md). Simulation does not certify actual HomeKit pairing, new tvOS/Sonos firmware, dual HDMI, arbitrary video streams or physical offline cold boot.
+
 ## LG 2.30.1: responsive settings commands — 2026-10-08
 
 **746 Python tests pass on each of HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 260 browser cases pass across Chromium/WebKit.** Official Hassfest reports zero invalid integrations; Ruff and whitespace checks pass. The added cases cover action/poll ordering and fairness, lock cancellation and reserved handoff recovery, task-scoped priority, mutual exclusion, silent-query retry and explicit recovery, interrupted-scan consistency, retained capability caches, mode completion without a full scan, independent native/serial system writes, and a real WebSocket peer withholding its close reply. The address-change tests were repeated after adding retry-cache invalidation on Set ID adoption.

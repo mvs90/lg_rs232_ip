@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.30.2
+
+- Extend the regression suite to 904 LG cases, including all directed app-source transitions, real HTTP/WebSocket failure handling, two-display isolation, optional-feature composition and reload/cancellation paths. Add a two-card browser isolation test and collect branch coverage in CI.
+- Reject late native picture results after external context/power changes, including a supply-off/on cycle during a pending read.
+- Clean up resources after failed or cancelled entry setup. Continue closing remaining resources when one close fails or is cancelled.
+- Verify 14 LG/AV scenarios in the existing HA test container and preserve the real display's settings and connected Mediaplayer view. Document covered configurations and remaining hardware acceptance in the [test matrix](docs/TEST-MATRIX.md). Display app remains 1.20.0.
+
 ## 2.30.1
 
 - Prioritize settings actions over queued background reads, preserving FIFO order within each priority, bounded fairness, atomic in-flight requests and verified readback.

@@ -2304,3 +2304,68 @@ async def test_native_source_wake_is_not_undone_by_a_delayed_resident_power_poll
     await app.async_maintain_resident(power=False)
     await app.async_maintain_resident(power=True)
     assert not app.saved.get('paused')
+
+
+# Every directed transition, including idempotent selection. HDMI 2 is simulated;
+# this does not claim that a second physical input has an active signal.
+VIEW_TARGETS = ("hdmi1", "hdmi2", "hdmi3", "dashboard", "pip_view", "media_view", "view_extra")
+
+
+@pytest.mark.parametrize("previous", VIEW_TARGETS)
+@pytest.mark.parametrize("target", VIEW_TARGETS)
+@pytest.mark.parametrize("confirmed", [True, False])
+async def test_source_transition_matrix_preserves_hdmi_and_rolls_back(app, previous, target, confirmed):
+    from custom_components.lg_rs232_ip.api import get_display_api
+    from copy import deepcopy
+    layouts = await configure_dashboard(app)
+    library = deepcopy(layouts.library)
+    custom = deepcopy(library["views"][0])
+    custom.update(id="view_extra", name="Extra")
+    library["views"].append(custom)
+    await layouts.async_save(layouts.config, layouts.revision, library)
+
+    async def select(value):
+        if value.startswith("hdmi"):
+            return await app.async_select_hdmi(0x90 + int(value[-1]) - 1)
+        return await app.async_select_view(value)
+
+    async def acknowledged(awaitable, timeout):
+        app.event({"type": "input_applied", "id": app._input_request})
+        return await awaitable
+
+    async def rejected(awaitable, timeout):
+        awaitable.close()
+        raise TimeoutError
+
+    try:
+        with patch("custom_components.lg_rs232_ip.resident_app.asyncio.wait_for", acknowledged):
+            await select(previous)
+        original_input = app.selected_input
+        disk_before = await app.store.async_load()
+        app.web.reset_mock()
+        app.controller._lg_display.async_set_input.reset_mock()
+        with patch("custom_components.lg_rs232_ip.resident_app.asyncio.wait_for", acknowledged if confirmed else rejected):
+            if confirmed or previous == target:
+                await select(target)
+            else:
+                with pytest.raises(HomeAssistantError, match="confirm"):
+                    await select(target)
+        selected = target if confirmed else previous
+        expected_view = None if selected.startswith("hdmi") else selected
+        assert app.selected_view == expected_view
+        assert app.selected_input == (0x90 + int(selected[-1]) - 1 if selected.startswith("hdmi") else original_input)
+        assert not app._input_request and app._input_transition == "none"
+        assert (await app.store.async_load()) == (app.saved if confirmed else disk_before)
+        api = get_display_api(app.hass, "test")
+        app.controller.power = True
+        assert api.presentation_active is (expected_view is not None)
+        if expected_view:
+            assert await api.async_get_input() is None
+            assert await api.async_get_signal_status() is None
+        else:
+            assert await api.async_get_input() == app.selected_input
+        app.web.async_launch_app.assert_not_awaited()
+        app.web.async_set_si_settings.assert_not_awaited()
+        app.controller._lg_display.async_set_input.assert_not_awaited()
+    finally:
+        await layouts.async_close()

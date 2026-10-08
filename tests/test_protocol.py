@@ -168,3 +168,64 @@ async def test_silent_optional_background_query_backs_off_but_can_recover(monkey
         display._query_retry_after[("s", "n", 0xC4, " ff")] = time.monotonic() - 1
     assert await display.async_get_subcommand("sn", 0xC4, background_query=retry == "expired") == 1
     assert display._query_retry_after == {}
+
+
+async def test_timeout_reply_on_old_connection_cannot_satisfy_next_request(monkeypatch):
+    from custom_components.lg_rs232_ip import lg_display as module
+    monkeypatch.setattr(module, "COMMAND_TIMEOUT", .05)
+    late = asyncio.Event()
+    connections = []
+    handlers = set()
+
+    async def handle(reader, writer):
+        task = asyncio.current_task()
+        handlers.add(task)
+        number = len(connections)
+        connections.append(writer)
+        try:
+            while (await reader.readuntil(b"\r")).strip() == b"":
+                pass
+            if number == 0:
+                await late.wait()
+                writer.write(b"f 01 OK11x")
+            else:
+                writer.write(b"f 01 OK22x")
+            await writer.drain()
+        except (asyncio.IncompleteReadError, ConnectionError):
+            pass
+        finally:
+            writer.close()
+            await writer.wait_closed()
+            handlers.discard(task)
+
+    server = await asyncio.start_server(handle, "127.0.0.1", 0)
+    display = LGDisplay("127.0.0.1", server.sockets[0].getsockname()[1])
+    try:
+        assert await display.async_get_volume() is None
+        late.set()
+        assert await display.async_get_volume() == 0x22
+        assert len(connections) == 2
+    finally:
+        late.set()
+        await display.async_disconnect()
+        server.close()
+        await server.wait_closed()
+        if handlers:
+            await asyncio.gather(*handlers)
+
+
+async def test_optional_timeout_backoff_is_per_device_and_does_not_suppress_writes(monkeypatch):
+    import time
+    from unittest.mock import Mock
+    first, second = LGDisplay("first.invalid"), LGDisplay("second.invalid")
+    first._query_retry_after[("s", "n", 0xAD, " ff")] = time.monotonic() + 60
+    for display in (first, second):
+        reader = asyncio.StreamReader()
+        writer = Mock(drain=AsyncMock())
+        writer.write.side_effect = lambda _, r=reader: r.feed_data(b"n 01 OKad01x")
+        display._reader, display._writer, display._connected = reader, writer, True
+    assert await first.async_get_subcommand("sn", 0xAD, background_query=True) is None
+    first._writer.write.assert_not_called()
+    assert await second.async_get_subcommand("sn", 0xAD, background_query=True) == 1
+    assert await first.async_send_raw_command("s", "n", 0xAD, query_suffix=" 01") == "n 01 OKad01x"
+    first._writer.write.assert_called_once()

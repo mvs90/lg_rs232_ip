@@ -150,18 +150,28 @@ class PictureSettings(DataUpdateCoordinator):
         values = {}
         for key in PICTURE_OPTIONS:
             async with self._settings_lock:
-                if revision != (self.display.picture_context_revision, self._write_revision):
-                    return dict(self.data or {})
+                if not self._scan_current(revision):
+                    return dict(self.data or {}) if self.awake else {}
                 if (value := await self._read_one(key, background=True)) is not None:
                     values[key] = value
         async with self._settings_lock:
-            if revision != (self.display.picture_context_revision, self._write_revision):
-                return dict(self.data or {})
+            if not self._scan_current(revision):
+                return dict(self.data or {}) if self.awake else {}
             try:
                 values.update(native_options(await self._native()))
             except LGWebError:
                 pass
+            # Native I/O yields to independent power/source/energy controls.
+            # Their final state must also invalidate the last response.
+            if not self._scan_current(revision):
+                return dict(self.data or {}) if self.awake else {}
         return values
+
+    def _scan_current(self, revision):
+        if self.display.is_intentionally_unpowered or self.display._last_power_status is False:
+            self.awake = False
+            return False
+        return revision == (self.display.picture_context_revision, self._write_revision)
 
     async def _write_one(self, key, value):
         spec = PICTURE_OPTIONS[key]

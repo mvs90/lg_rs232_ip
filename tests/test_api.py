@@ -144,3 +144,35 @@ async def test_alert_state_recovers_without_foreign_device_knowledge(player):
     player._lg_display.async_get_power_status.return_value = True
     await player.async_refresh()
     assert alerts.state == "OK"
+
+
+@pytest.mark.parametrize("method,args", [
+    ("async_power_on",()), ("async_power_off",()), ("async_set_input",(0x90,)),
+    ("async_set_volume",(20,)), ("async_set_mute_raw",(0,)),
+    ("async_volume_up_step",()), ("async_volume_down_step",()),
+    ("async_send_remote_key",(0x40,)), ("async_clear_content",()),
+    ("async_select_view",("dashboard",)), ("async_select_media_view",()),
+    ("async_select_dashboard",()), ("async_select_pip",()),
+])
+async def test_all_adapter_writes_fail_explicitly_while_unloaded(player, method, args):
+    api = api_for(player)
+    player.hass.data["lg_rs232_ip"].pop("test")
+    with pytest.raises(HomeAssistantError):
+        await getattr(api, method)(*args)
+    player._lg_display.async_power_on.assert_not_awaited()
+    player._lg_display.async_set_input.assert_not_awaited()
+
+
+async def test_adapter_read_contract_and_stale_lease_after_reload(player):
+    api = api_for(player)
+    token = await api.async_begin_external_presentation()
+    player.hass.data["lg_rs232_ip"].pop("test")
+    for method in ["async_get_power_status", "async_get_input", "async_get_signal_status", "async_get_volume", "async_get_mute_raw"]:
+        assert await getattr(api, method)() is None
+    assert api.view_sources == {} and api.active_view is None
+    assert not api.presentation_active and not api.is_available
+    assert api.model_name is None and api.software_version is None
+    replacement = Mock(_ha_stopping=False, external_owner="new-owner")
+    player.hass.data["lg_rs232_ip"]["test"] = {"controller": replacement}
+    await api.async_end_external_presentation(token)
+    assert replacement.external_owner == "new-owner"

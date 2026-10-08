@@ -127,6 +127,8 @@ class LGDisplay:
 
     def set_power_supply_state(self, is_on: bool | None) -> None:
         """False suspends I/O; True or None allows fresh device verification."""
+        if self._power_supply_expected_off != (is_on is False):
+            self.picture_context_revision += 1
         self._query_cache.clear()
         self._power_supply_expected_off = is_on is False
         if is_on is not False:

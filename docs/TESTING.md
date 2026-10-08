@@ -1,5 +1,7 @@
 # Test coverage and hardware acceptance
 
+Start with the [current scenario matrix, measured coverage and remaining hardware limits](TEST-MATRIX.md). The 2026-10-08 audit runs 904 LG tests on both supported HA versions, 103 AV tests per version, 262 browser cases and 14 scenarios in the existing HA container. It distinguishes controlled regression tests from physical device acceptance and includes reproduction commands.
+
 The historical combined-system checklist below now requires **AV Companion** for linked devices, standby, socket, sound and combined HomeKit checks. Native LG cases remain in this repository. See [2.0 split results](RELEASE-TESTS.md).
 
 Record panel model/firmware, HA version and release version. Tests below deliberately change device power; run them when the display is not needed. Do not publish private addresses or raw diagnostic recordings.

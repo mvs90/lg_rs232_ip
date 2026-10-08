@@ -16,3 +16,8 @@ lg_display_test_results_*.json
 node_modules/
 test-results/
 playwright-report/
+
+# Generated test coverage
+.coverage*
+coverage.xml
+htmlcov/

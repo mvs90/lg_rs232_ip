@@ -1,5 +1,6 @@
 """Independent LG Professional Display integration."""
 
+import asyncio
 import logging
 from homeassistant.const import Platform
 from homeassistant.helpers import config_validation as cv
@@ -71,6 +72,24 @@ async def _async_update_listener(hass, entry):
 
 
 async def async_setup_entry(hass, entry):
+    try:
+        return await _async_setup_entry(hass, entry)
+    except (Exception, asyncio.CancelledError):
+        # Platform setup can fail after sessions, subscriptions and stores exist.
+        # HA runs entry unload callbacks; release our own resources as well.
+        try:
+            await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+        except Exception:
+            _LOGGER.warning("Could not unload partial LG platforms")
+        data = hass.data.get(DOMAIN, {}).get(entry.entry_id, {})
+        try:
+            await _async_close_resources(data)
+        finally:
+            hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
+        raise
+
+
+async def _async_setup_entry(hass, entry):
     hass.data.setdefault(DOMAIN, {})
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     address_store = SystemSettings.address_store(hass, entry)
@@ -170,14 +189,30 @@ async def async_setup_entry(hass, entry):
 async def async_unload_entry(hass, entry):
     data = hass.data[DOMAIN][entry.entry_id]
     if await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        await data["controller"].async_close()
-        if app := data.get("display_app"):
-            await app.async_close()
-        await data["layouts"].async_close()
-        if web := data.get("web_manager") or data.get("recovery_web"):
-            await web.async_close()
-        await data["lg_display"].async_disconnect()
-        hass.data[DOMAIN].pop(entry.entry_id)
-        hass.bus.async_fire("lg_rs232_ip_status", {"entry_id": entry.entry_id})
+        try:
+            await _async_close_resources(data)
+        finally:
+            hass.data[DOMAIN].pop(entry.entry_id, None)
+            hass.bus.async_fire("lg_rs232_ip_status", {"entry_id": entry.entry_id})
         return True
     return False
+
+
+async def _async_close_resources(data):
+    """One failed close must not strand the remaining sessions or timers."""
+    cancelled = False
+    for key in ("controller", "display_app", "layouts", "web_manager", "recovery_web", "lg_display"):
+        resource = data.get(key)
+        if resource is None:
+            continue
+        try:
+            if key == "lg_display":
+                await resource.async_disconnect()
+            else:
+                await resource.async_close()
+        except asyncio.CancelledError:
+            cancelled = True
+        except Exception:
+            _LOGGER.warning("Could not close LG resource: %s", key)
+    if cancelled:
+        raise asyncio.CancelledError

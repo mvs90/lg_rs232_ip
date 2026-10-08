@@ -755,3 +755,43 @@ test('failed source wake leaves the selector available for a new explicit retry'
   expect((await calls(page)).length).toBe(2);
   await expect(page.locator('#feedback')).toHaveText('Befehl gesendet');
 });
+
+
+test('two display remotes isolate pending actions, state changes and targets', async ({page}) => {
+  await mount(page);
+  await page.evaluate(() => {
+    window.finishFirst = null;
+    window.firstPending = new Promise(resolve => { window.finishFirst = resolve; });
+    hass.states['media_player.second'] = {
+      ...hass.states['media_player.display'], entity_id:'media_player.second',
+      attributes:{...hass.states['media_player.display'].attributes,friendly_name:'Second display'}
+    };
+    hass.entities['media_player.second'] = {platform:'lg_rs232_ip',device_id:'second'};
+    hass.callService = async (...args) => {
+      calls.push(args);
+      if (args[2].entity_id === 'media_player.display') await firstPending;
+    };
+    window.secondCard = document.createElement('lg-display-remote');
+    secondCard.setConfig({entity:'media_player.second'});
+    secondCard.hass = hass;
+    document.body.append(secondCard);
+  });
+  const first = page.locator('lg-display-remote').nth(0);
+  const second = page.locator('lg-display-remote').nth(1);
+  await first.getByRole('button',{name:'Oben',exact:true}).click();
+  await expect(first.getByRole('button',{name:'OK',exact:true})).toBeDisabled();
+  await expect(second.getByRole('button',{name:'OK',exact:true})).toBeEnabled();
+  await second.getByRole('button',{name:'OK',exact:true}).click();
+  expect(await calls(page)).toEqual([
+    ['lg_rs232_ip','send_remote_command',{command:'up',entity_id:'media_player.display'}],
+    ['lg_rs232_ip','send_remote_command',{command:'select',entity_id:'media_player.second'}]
+  ]);
+  await page.evaluate(() => {
+    hass.states['media_player.display'] = {...hass.states['media_player.display'],state:'off'};
+    card.hass = {...hass}; secondCard.hass = {...hass}; finishFirst();
+  });
+  await expect(first.getByRole('button',{name:'OK',exact:true})).toBeDisabled();
+  await expect(second.getByRole('button',{name:'OK',exact:true})).toBeEnabled();
+  await second.getByRole('combobox',{name:'Eingang',exact:true}).selectOption('HDMI 3');
+  expect((await calls(page)).at(-1)).toEqual(['media_player','select_source',{source:'HDMI 3',entity_id:'media_player.second'}]);
+});

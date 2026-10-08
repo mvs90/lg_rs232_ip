@@ -328,3 +328,76 @@ async def test_action_interrupts_background_scan_and_old_scan_cannot_overwrite(p
     assert calls == ["gamma", "gamma"]
     assert result == {"gamma": "medium"}
     picture.web.async_get_picture_options.assert_not_awaited()
+
+
+@pytest.mark.parametrize("change", ["context", "supply_off", "supply_cycle"])
+async def test_final_native_reply_cannot_publish_old_context_or_unpowered_values(picture, change):
+    picture.async_set_updated_data({"gamma": "medium"})
+
+    async def native():
+        # Source/energy controls do not acquire the picture coordinator lock.
+        if change == "context":
+            picture.display._picture_settings_changed()
+        else:
+            picture.display.set_power_supply_state(False)
+            if change == "supply_cycle":
+                picture.display.set_power_supply_state(True)
+        return {"pictureMode": "normal", "pictureModeSettingsActive": "true",
+                "pictureControlLimitation": "false", "dynamicContrast": "high"}
+
+    picture._native = native
+    result = await picture._async_update_data()
+    assert result == ({} if change == "supply_off" else {"gamma": "medium"})
+    if change == "supply_off":
+        assert not picture.awake
+
+
+@pytest.mark.parametrize("power", [False, None])
+async def test_background_poll_rejects_off_or_unknown_before_optional_queries(picture, power):
+    from homeassistant.helpers.update_coordinator import UpdateFailed
+    picture.display.async_get_power_status.return_value = power
+    if power is False:
+        assert await picture._async_update_data() == {}
+    else:
+        with pytest.raises(UpdateFailed):
+            await picture._async_update_data()
+    picture.display.async_send_raw_command.assert_not_awaited()
+    picture.web.async_get_picture_options.assert_not_awaited()
+
+
+async def test_setting_cancellation_releases_locks_without_mutation_replay(picture):
+    started = asyncio.Event()
+    calls = 0
+
+    async def read(key, **kwargs):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return "low"
+        started.set()
+        await asyncio.Event().wait()
+
+    picture._read_one = read
+    task = asyncio.create_task(picture.async_set("gamma", "medium"))
+    await started.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert not picture._settings_lock.locked() and not picture.controller._control_lock.locked()
+    picture.display.async_send_raw_command.assert_awaited_once_with("s", "n", 0xAD, query_suffix=" 01", use_cache=False)
+
+
+@pytest.mark.parametrize("hint", [True, None])
+async def test_repeated_available_supply_hint_does_not_starve_picture_scan(picture, hint):
+    # Attribute updates from a socket may repeat the same on-state frequently.
+    picture.display.set_power_supply_state(hint)
+    picture.async_set_updated_data({"gamma": "medium"})
+
+    async def native():
+        picture.display.set_power_supply_state(hint)
+        return {"pictureMode": "normal", "pictureModeSettingsActive": "true",
+                "pictureControlLimitation": "false", "dynamicContrast": "high"}
+
+    picture._native = native
+    result = await picture._async_update_data()
+    assert result.get("dynamic_contrast") == "high"
