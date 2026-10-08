@@ -1,5 +1,15 @@
 # Release acceptance
 
+## LG 2.31.0: LG groups on the device page and verified Local Dimming — 2026-10-08
+
+The device **Configuration** card now follows the physical LG menu, including its subgroups. It reuses native HA controls and provides the original alphabetical view. No settings page was added to Display Studio. An inventory of 87 qualified configuration keys is checked against all five setup compositions; hidden/disabled entries and renamed IDs keep their native behavior. Runtime app version remains **1.20.0**.
+
+**916 Python tests pass on each of HA 2025.3.4 and HA 2026.9.4; 334 browser cases pass across Chromium/WebKit**, including 42 new device-settings cases covering both verified frontend contracts. The final menu-only adjustments were checked again with those 42 cases. Ruff and whitespace checks pass. No HA core/frontend files are modified. The customization relies on native frontend internals, so future HA frontend changes require compatibility checks; fallback behavior is explicit.
+
+Installed in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container and checked on its real LG device page. All five physical LG top-level menus were inspected; detailed scope and open functions are listed in [the menu audit](DEVICE-MENU.md). The walkthrough found **LED Local Dimming**, correcting an earlier documentation omission. Real HA switch actions confirmed on/off through `sn c1`; independent native readback changed `tconLocalDimming` while the misleading `commercialLocalDimming` shadow value did not follow. The original on state was restored, with an exactly equal commercial dictionary. The check does not measure brightness or certify the four-level `sn c6` variant.
+
+Fresh full picture/sound/commercial dictionaries and persistent Studio fields matched their pre-test snapshots. The original on/Mediaplayer view was restored and visually checked after menu navigation; LG closes settings after inactivity and some full-screen menu pages can temporarily replace the SI foreground. No picture resets, factory reset, network/password/lock changes, fleet modes or Sonos playback commands were used in this audit. Private screenshots, credentials and firmware-source research are excluded from Git.
+
 ## LG 2.30.3: responsive remote with latest-command buffering — 2026-10-08
 
 **292 browser cases pass across Chromium/WebKit**, including 74 remote-card cases. Added checks cover rapid/repeated keys, a 500-input burst, subsequent bursts while the next request is active, failed requests without replay, source-only wake, latest slider/source values, mixed commands with captured message text, queued standby, unavailable/off/missing/foreign entities, detach/rebind and two-display isolation. A running command no longer disables the card; each attached card context has one active request and one replaceable pending command. Leaving the card or changing its display discards queued work and ignores old results; HA may still complete an already sent request.

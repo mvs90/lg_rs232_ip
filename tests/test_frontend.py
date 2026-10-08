@@ -10,7 +10,7 @@ import yaml
 from homeassistant.components.frontend import DATA_EXTRA_MODULE_URL
 
 from custom_components.lg_rs232_ip import async_setup
-from custom_components.lg_rs232_ip.frontend import CARD_PATH, CARD_URL, CARD_VERSION
+from custom_components.lg_rs232_ip.frontend import CARD_PATH, CARD_URL, CARD_VERSION, SETTINGS_URL
 from custom_components.lg_rs232_ip.media_player import LGDisplayMediaPlayer
 
 
@@ -27,11 +27,12 @@ async def test_bundled_module_registered_without_dashboard_mutation(tmp_path):
     )
     assert await async_setup(hass, {})
     paths = hass.http.async_register_static_paths.await_args.args[0]
-    assert len(paths) == 8
+    assert len(paths) == 10
     assert paths[0].url_path == CARD_PATH
     assert Path(paths[0].path).is_file()
     assert paths[0].cache_headers is False
-    assert hass.data[DATA_EXTRA_MODULE_URL] == {CARD_URL}
+    assert hass.data[DATA_EXTRA_MODULE_URL] == {CARD_URL, SETTINGS_URL}
+    assert all(Path(item.path).is_file() and not item.cache_headers for item in paths)
     manifest = json.loads(
         (Path(paths[0].path).parents[1] / "manifest.json").read_text()
     )
@@ -41,6 +42,27 @@ async def test_bundled_module_registered_without_dashboard_mutation(tmp_path):
 
     panel = hass.data[DATA_PANELS]["lg-display-studio"]
     assert panel.require_admin and panel.sidebar_title == "LG Display Studio"
+
+
+def test_device_menu_catalog_unique_and_ordered():
+    catalog = json.loads((Path(__file__).parents[1] /
+        "custom_components/lg_rs232_ip/www/device-menu.json").read_text())
+    assert catalog["version"] == 1
+    groups = catalog["groups"]
+    assert [g["id"] for g in groups] == ["ez", "general", "display", "sound", "admin", "integration"]
+    identities, keys = set(), []
+    for group in groups:
+        assert set(group["title"]) == {"de", "en"}
+        for section in group["sections"]:
+            identity = (group["id"], section["id"])
+            assert identity not in identities
+            identities.add(identity)
+            assert set(section["title"]) == {"de", "en"}
+            keys.extend(section["entities"])
+    assert len(keys) == len(set(keys))
+    power = next(s for s in groups[1]["sections"] if s["id"] == "power")["entities"]
+    assert power.index("switch:auto_sleep") < power.index("switch:auto_sleep_no_ir")
+    assert power.index("select:dpm_delay") < power.index("select:pm_mode") < power.index("select:power_on_status")
 
 
 def test_remote_discovery_and_web_capability_follow_entry_options(player):

@@ -1,0 +1,344 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "ez",
+      "title": {
+        "de": "Ez-Einstellungen",
+        "en": "Ez Setting"
+      },
+      "sections": [
+        {
+          "id": "white-balance",
+          "title": {
+            "de": "Videowand · Weißabgleich",
+            "en": "Video Wall · White Balance"
+          },
+          "entities": [
+            "number:white_balance_red_gain",
+            "number:white_balance_green_gain",
+            "number:white_balance_blue_gain",
+            "number:white_balance_red_offset",
+            "number:white_balance_green_offset",
+            "number:white_balance_blue_offset"
+          ]
+        },
+        {
+          "id": "si",
+          "title": {
+            "de": "SI-Servereinstellungen",
+            "en": "SI Server Setting"
+          },
+          "entities": [
+            "button:restore_si"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "general",
+      "title": {
+        "de": "Allgemein",
+        "en": "General"
+      },
+      "sections": [
+        {
+          "id": "language",
+          "title": {
+            "de": "Sprache (Language)",
+            "en": "Language"
+          },
+          "entities": [
+            "select:osd_language"
+          ]
+        },
+        {
+          "id": "system",
+          "title": {
+            "de": "Systeminformationen",
+            "en": "System Information"
+          },
+          "entities": [
+            "text:signage_name",
+            "switch:smart_energy_saving"
+          ]
+        },
+        {
+          "id": "id",
+          "title": {
+            "de": "ID festlegen",
+            "en": "Set ID"
+          },
+          "entities": [
+            "number:set_id"
+          ]
+        },
+        {
+          "id": "time",
+          "title": {
+            "de": "Zeit & Datum",
+            "en": "Time & Date"
+          },
+          "entities": [
+            "switch:clock_auto",
+            "datetime:display_datetime",
+            "switch:manual_dst",
+            "text:ntp_server"
+          ]
+        },
+        {
+          "id": "power",
+          "title": {
+            "de": "Ein/Aus",
+            "en": "Power"
+          },
+          "entities": [
+            "switch:auto_sleep",
+            "switch:auto_sleep_no_ir",
+            "select:dpm_delay",
+            "switch:dpm",
+            "select:dpm_wake_up",
+            "select:pm_mode",
+            "number:power_on_delay",
+            "select:power_on_status",
+            "switch:wake_on_lan",
+            "switch:wake_on_wlan"
+          ]
+        },
+        {
+          "id": "ism",
+          "title": {
+            "de": "Sicherheitsmodus · ISM-Methode",
+            "en": "Safety Mode · ISM Method"
+          },
+          "entities": [
+            "select:ism_method",
+            "number:ism_method",
+            "select:ism_repeat",
+            "number:ism_standby",
+            "select:ism_duration",
+            "time:ism_start",
+            "time:ism_end",
+            "switch:ism_mon",
+            "switch:ism_tue",
+            "switch:ism_wed",
+            "switch:ism_thu",
+            "switch:ism_fri",
+            "switch:ism_sat",
+            "switch:ism_sun"
+          ]
+        },
+        {
+          "id": "background",
+          "title": {
+            "de": "Erweiterte Einstellungen · Hintergrundbild",
+            "en": "Advanced Setting · Background Image"
+          },
+          "entities": [
+            "switch:boot_logo",
+            "switch:no_signal_image"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "display",
+      "title": {
+        "de": "Bildschirm",
+        "en": "Display"
+      },
+      "sections": [
+        {
+          "id": "picture",
+          "title": {
+            "de": "Bildmodus",
+            "en": "Picture Mode"
+          },
+          "entities": [
+            "select:picture_mode",
+            "select:hdr_picture_mode",
+            "number:backlight",
+            "number:contrast",
+            "number:brightness",
+            "number:sharpness",
+            "number:color",
+            "number:tint",
+            "number:color_temperature"
+          ]
+        },
+        {
+          "id": "advanced-picture",
+          "title": {
+            "de": "Bildmodus · Erweiterte Steuerung",
+            "en": "Picture Mode · Advanced Controls"
+          },
+          "entities": [
+            "select:dynamic_contrast",
+            "switch:hdr_tone_mapping",
+            "select:dynamic_color",
+            "number:skin_color",
+            "number:sky_color",
+            "number:grass_color",
+            "select:color_gamut",
+            "select:super_resolution",
+            "select:gamma"
+          ]
+        },
+        {
+          "id": "picture-options",
+          "title": {
+            "de": "Bildmodus · Bildoptionen",
+            "en": "Picture Mode · Picture Options"
+          },
+          "entities": [
+            "select:noise_reduction",
+            "select:mpeg_noise_reduction",
+            "select:black_level"
+          ]
+        },
+        {
+          "id": "picture-actions",
+          "title": {
+            "de": "Bildmodus · Anwenden / Zurücksetzen",
+            "en": "Picture Mode · Apply / Reset"
+          },
+          "entities": [
+            "button:picture_apply_all_inputs",
+            "button:picture_reset"
+          ]
+        },
+        {
+          "id": "aspect",
+          "title": {
+            "de": "Format",
+            "en": "Aspect Ratio"
+          },
+          "entities": [
+            "select:aspect_ratio",
+            "number:aspect_ratio"
+          ]
+        },
+        {
+          "id": "display-advanced",
+          "title": {
+            "de": "Erweiterte Einstellungen",
+            "en": "Advanced Setting"
+          },
+          "entities": [
+            "switch:deep_color_hdmi1",
+            "switch:deep_color_hdmi2",
+            "switch:deep_color_hdmi3",
+            "select:energy_saving",
+            "number:min_backlight",
+            "number:max_backlight",
+            "switch:brightness_schedule",
+            "switch:hdmi_it_content",
+            "switch:local_dimming"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sound",
+      "title": {
+        "de": "Ton",
+        "en": "Sound"
+      },
+      "sections": [
+        {
+          "id": "volume",
+          "title": {
+            "de": "Lautstärke",
+            "en": "Volume"
+          },
+          "entities": [
+            "number:volume",
+            "switch:mute"
+          ]
+        },
+        {
+          "id": "sound-mode",
+          "title": {
+            "de": "Klangmodus",
+            "en": "Sound Mode"
+          },
+          "entities": [
+            "select:sound_mode",
+            "number:audio_balance"
+          ]
+        },
+        {
+          "id": "audio-out",
+          "title": {
+            "de": "Audioausgang",
+            "en": "Audio Out"
+          },
+          "entities": [
+            "select:audio_out"
+          ]
+        },
+        {
+          "id": "audio-input",
+          "title": {
+            "de": "Digitaler Audioeingang",
+            "en": "Digital Audio Input"
+          },
+          "entities": [
+            "select:digital_audio_input"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "title": {
+        "de": "Admin",
+        "en": "Admin"
+      },
+      "sections": [
+        {
+          "id": "lock",
+          "title": {
+            "de": "Sperrmodus / OSD",
+            "en": "Lock Mode / OSD"
+          },
+          "entities": [
+            "switch:remote_lock",
+            "switch:osd_select"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "integration",
+      "title": {
+        "de": "Home Assistant",
+        "en": "Home Assistant"
+      },
+      "sections": [
+        {
+          "id": "controls",
+          "title": {
+            "de": "Bedienung",
+            "en": "Controls"
+          },
+          "entities": [
+            "switch:power",
+            "select:input",
+            "switch:screen_mute"
+          ]
+        },
+        {
+          "id": "temperature",
+          "title": {
+            "de": "Weitere Geräteeinstellungen",
+            "en": "Additional device settings"
+          },
+          "entities": [
+            "select:display_temperature_unit"
+          ]
+        }
+      ]
+    }
+  ]
+}

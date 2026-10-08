@@ -439,6 +439,9 @@
       },
       "manual_dst": {
         "name": "Manual daylight saving"
+      },
+      "local_dimming": {
+        "name": "LED Local Dimming"
       }
     },
     "text": {

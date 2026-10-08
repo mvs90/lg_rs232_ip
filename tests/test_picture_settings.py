@@ -45,6 +45,8 @@ async def picture(tmp_path):
     ("gamma", "high2", ("s", "n", 0xAD), {"query_suffix": " 03", "use_cache": False}),
     ("black_level", "high", ("s", "n", 0xAE), {"query_suffix": " 01", "use_cache": False}),
     ("hdmi_it_content", "on", ("s", "n", 0x99), {"query_suffix": " 01", "use_cache": False}),
+    ("local_dimming", "on", ("s", "n", 0xC1), {"query_suffix": " 01", "use_cache": False}),
+    ("local_dimming", "off", ("s", "n", 0xC1), {"query_suffix": " 00", "use_cache": False}),
     ("deep_color_hdmi1", "on", ("s", "n", 0xAF), {"query_suffix": " 90 01", "use_cache": False}),
     ("deep_color_hdmi2", "off", ("s", "n", 0xAF), {"query_suffix": " 91 00", "use_cache": False}),
     ("deep_color_hdmi3", "on", ("s", "n", 0xAF), {"query_suffix": " 92 01", "use_cache": False}),
@@ -401,3 +403,35 @@ async def test_repeated_available_supply_hint_does_not_starve_picture_scan(pictu
     picture._native = native
     result = await picture._async_update_data()
     assert result.get("dynamic_contrast") == "high"
+
+
+@pytest.mark.parametrize('raw, expected', [(0, 'off'), (1, 'on'), (2, None), (None, None)])
+async def test_local_dimming_read_uses_boolean_command_not_four_level_setting(picture, raw, expected):
+    picture.display.async_get_subcommand.return_value = raw
+    assert await picture._read_one('local_dimming') == expected
+    picture.display.async_get_subcommand.assert_awaited_once_with('sn', 0xC1, use_cache=False)
+
+
+@pytest.mark.parametrize('power', [None, False])
+async def test_local_dimming_never_wakes_display(picture, power):
+    picture.display.async_get_power_status.return_value = power
+    picture._write_one = AsyncMock()
+    with pytest.raises(HomeAssistantError, match='must be on'):
+        await picture.async_set('local_dimming', 'off')
+    picture._write_one.assert_not_awaited()
+
+
+async def test_local_dimming_rejected_query_prevents_write(picture):
+    picture._read_one = AsyncMock(return_value=None)
+    picture._write_one = AsyncMock()
+    with pytest.raises(HomeAssistantError):
+        await picture.async_set('local_dimming', 'on')
+    picture._write_one.assert_not_awaited()
+
+
+async def test_local_dimming_failed_ack_uses_readback_without_write_replay(picture):
+    picture._read_one = AsyncMock(side_effect=['on', None, 'off'])
+    picture._write_one = AsyncMock(return_value=False)
+    await picture.async_set('local_dimming', 'off')
+    picture._write_one.assert_awaited_once_with('local_dimming', 'off')
+    assert picture.data['local_dimming'] == 'off'

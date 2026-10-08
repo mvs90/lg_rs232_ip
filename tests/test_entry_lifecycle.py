@@ -2,6 +2,8 @@
 
 from importlib import import_module
 from inspect import isawaitable
+import json
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -118,6 +120,8 @@ async def test_setup_platform_composition_and_unload(lifecycle, native, app, pre
     assert ("native_schedules" in data) is native
     assert ("display_app" in data) is native
     entities = {}
+    menu = json.loads((Path(integration.__file__).parent / "www/device-menu.json").read_text())
+    menu_keys = {key for group in menu["groups"] for section in group["sections"] for key in section["entities"]}
     with patch(
         "custom_components.lg_rs232_ip.media_player.async_get_current_platform",
         return_value=Mock(),
@@ -134,6 +138,9 @@ async def test_setup_platform_composition_and_unload(lifecycle, native, app, pre
                 assert entity.device_info["identifiers"] == {
                     ("lg_rs232_ip", entry.entry_id)
                 }
+                if entity.entity_category == "config":
+                    key = f"{domain}:{entity.unique_id.removeprefix(entry.entry_id + '_')}"
+                    assert key in menu_keys, f"Unmapped device setting: {key}"
     assert bool(entities["camera"]) is (native and preview)
     assert bool(entities["text"]) is native
     assert bool(entities["datetime"]) is native

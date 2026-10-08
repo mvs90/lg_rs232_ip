@@ -439,6 +439,9 @@
       },
       "manual_dst": {
         "name": "Manuelle Sommerzeit"
+      },
+      "local_dimming": {
+        "name": "LED Lok. Dimming"
       }
     },
     "text": {

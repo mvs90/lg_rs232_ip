@@ -2,6 +2,12 @@
 
 Diese Integration steuert ausschließlich das LG-Display. Für Apple TV, Sonos, Steckdose und einen gemeinsamen HomeKit-TV gibt es die separate Erweiterung [AV Companion](https://github.com/mvs90/av_companion). Beide Pakete haben eigene HACS-Repositories und Releases. Es wird eine neue Einrichtung ohne Migration vorausgesetzt.
 
+## Geräteeinstellungen wie im LG-Menü
+
+Ab **2.31.0** sind die Einstellungen direkt unter **Einstellungen → Geräte & Dienste → LG Professional Display → Gerät → Konfiguration** in **Ez-Einstellungen, Allgemein, Bildschirm, Ton und Admin** gruppiert. Die Unterpunkte folgen der Menüfolge am geprüften UH5F. Zusätzliche HA-Bedienfunktionen stehen am Ende. Über **Alphabetische Liste** lässt sich die ursprüngliche HA-Darstellung aufrufen. Entitäts-IDs, eigene Namen und deaktivierte Entitäten bleiben erhalten. Nach dem Update die Browserseite neu laden.
+
+Neu ist außerdem **LED Lok. Dimming** als geprüfter Ein/Aus-Schalter unter Bildschirm → Erweiterte Einstellungen. [Menüabgleich, Testumfang und offene Funktionen](DEVICE-MENU.md).
+
 ## Bild und weitere Einstellungen
 
 Ab **2.29.0** stehen die neun Bildmodi, **aktuellen Bildmodus zurücksetzen** und **auf alle Eingänge anwenden** auf der Geräteseite bereit. Ergänzt sind Gamma, Schwarzwert, dynamischer Kontrast/Farbe, Super Resolution, Rauschunterdrückung, Farbumfang und bevorzugte Haut-/Blau-/Grüntöne. Weitere HDMI- und HDR-Einstellungen erscheinen entsprechend der Geräteunterstützung.

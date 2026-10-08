@@ -32,6 +32,7 @@ PICTURE_OPTIONS = {
     "hdr_picture_mode": PictureOption({"mall": 0, "general": 1, "corporate": 2, "education": 4}, 0xC4),
     "hdr_tone_mapping": PictureOption({"off": 0, "on": 1}, 0xC5),
     "hdmi_it_content": PictureOption({"off": 0, "on": 1}, 0x99),
+    "local_dimming": PictureOption({"off": 0, "on": 1}, 0xC1),
     "brightness_schedule": PictureOption({"off": 0, "on": 1}, command="sm"),
     **{f"deep_color_hdmi{n}": PictureOption({"off": 0, "on": 1}, 0xAF, input_code=0x8F+n) for n in range(1, 4)},
     "min_backlight": PictureOption({str(v): v for v in range(0, 101, 5)}, 0xAB, input_code=0),

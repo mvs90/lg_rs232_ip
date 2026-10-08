@@ -8,9 +8,10 @@ from homeassistant.components.frontend import (
 )
 from homeassistant.components.http import StaticPathConfig
 
-CARD_VERSION = "2.30.3"
+CARD_VERSION = "2.31.0"
 CARD_PATH = "/lg_rs232_ip/lg-display-remote.js"
 CARD_URL = f"{CARD_PATH}?v={CARD_VERSION}"
+SETTINGS_URL = f"/lg_rs232_ip/device-settings.js?v={CARD_VERSION}"
 
 
 async def async_register_card(hass):
@@ -48,10 +49,17 @@ async def async_register_card(hass):
                 str(root / "display-app" / "layout.css"),
                 False,
             ),
+            StaticPathConfig(
+                "/lg_rs232_ip/device-settings.js", str(root / "device-settings.js"), False
+            ),
+            StaticPathConfig(
+                "/lg_rs232_ip/device-menu.json", str(root / "device-menu.json"), False
+            ),
         ]
     )
     # Works with both storage and YAML dashboards, without editing their resources.
     add_extra_js_url(hass, CARD_URL)
+    add_extra_js_url(hass, SETTINGS_URL)
     async_register_built_in_panel(
         hass,
         "custom",

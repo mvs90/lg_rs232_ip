@@ -72,7 +72,7 @@ async def async_setup_entry(
 
     if picture := data.get("picture_settings"):
         async_add_entities([PictureOptionSwitch(picture, key) for key in (
-            "hdmi_it_content", "brightness_schedule", "deep_color_hdmi1", "deep_color_hdmi2", "deep_color_hdmi3", "hdr_tone_mapping",
+            "hdmi_it_content", "brightness_schedule", "deep_color_hdmi1", "deep_color_hdmi2", "deep_color_hdmi3", "hdr_tone_mapping", "local_dimming",
         )])
 
 
