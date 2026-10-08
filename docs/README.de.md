@@ -32,7 +32,7 @@ Ab **2.1.0** wird eine Fernbedienungskarte automatisch mitgeliefert: Nach HA-Neu
 
 ## Layout-Dashboard
 
-Ab **2.6.0** erscheint für Administratoren automatisch **LG Display Studio** in der Seitenleiste. Vier anpassbare Vorlagen, getrennte Ansichten mit/ohne HDMI sowie gestaltbare Overlay-, PiP- und Vollbildmeldungen werden mitgeliefert. HDMI, Uhr, Wetter, Kalender, Texte und HA-Zustandsfelder lassen sich frei verschieben und skalieren. Ab **2.7.0** gibt es zusätzlich **Dashboard** als eigene Quelle, Tages-/Stundenwetter mit animierten Symbolen, Sonnenstand-Farbverläufe und eigene JPEG-/PNG-Hintergründe. Jedes Widget einschließlich Meldungsfenster kann entfernt oder in einen anderen Typ geändert werden. Für dauerhafte Ansichten die optionale SI-App im Dauerbetrieb aktivieren. **[Einrichtung und Bedienung](DISPLAY-STUDIO.md)**.
+Ab **2.32.0** ist **[Display Studio](https://github.com/mvs90/display_studio)** eine eigene optionale HACS-Erweiterung. Nach separater Installation eine Studio-Anzeige mit dem vorhandenen LG-Gerät verknüpfen. Vorhandene Ansichten und Hintergründe werden einmalig übernommen; die Originaldateien bleiben erhalten. Die Erweiterung stellt Editor, Widgets, Themes und eigene Quellen bereit und kann außerdem Browser-/Kiosk-Displays ohne LG verwenden. LG behält HDMI, SI-App, OSD-Schutz und Screenshots. **[Umstellung und Bedienung](DISPLAY-STUDIO.md)**.
 
 ## Displayfunktionen
 

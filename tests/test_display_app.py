@@ -1041,7 +1041,7 @@ async def test_layout_heartbeat_reports_only_supported_scene_and_revision(app):
 
 
 async def configure_dashboard(app):
-    from custom_components.lg_rs232_ip.layouts import DisplayLayouts
+    from custom_components.display_studio.layouts import DisplayLayouts
 
     await resident_app(app)
     manager = DisplayLayouts(app.hass, app.entry)
@@ -1196,8 +1196,8 @@ async def test_dashboard_source_does_not_hide_a_custom_hdmi_label(app):
 
 
 async def test_paired_media_artwork_only_exposes_selected_saved_players(app):
-    from custom_components.lg_rs232_ip.layout_config import element
-    from custom_components.lg_rs232_ip.layout_api import (
+    from custom_components.display_studio.layout_config import element
+    from custom_components.display_studio.layout_api import (
         LayoutMediaView,
         LayoutSuggestionsView,
     )
@@ -1205,6 +1205,7 @@ async def test_paired_media_artwork_only_exposes_selected_saved_players(app):
 
     layouts = await configure_dashboard(app)
     app.hass.data["lg_rs232_ip"]["test"]["layouts"] = layouts
+    app.hass.data["display_studio"] = {"test": {"layouts": layouts}}
     app.hass.states.async_set(
         "media_player.sonos",
         "playing",
@@ -1231,19 +1232,19 @@ async def test_paired_media_artwork_only_exposes_selected_saved_players(app):
     url = f"/api/lg_rs232_ip/display_app/test/{app.token}/cover.jpg?entity=media_player.sonos&v={layouts.media.key('media_player.sonos')}"
     try:
         async with TestClient(TestServer(http)) as client:
-            editor = "/api/lg_rs232_ip/layout_media/test/media_player.sonos"
+            editor = "/api/display_studio/layout_media/test/media_player.sonos"
             assert (await client.get(editor)).status == 401
             assert (await client.get(editor, headers={"X-Auth": "yes"})).status == 403
             assert (
                 await client.get(editor, headers={"X-Auth": "yes", "X-Admin": "yes"})
             ).status == 200
-            for endpoint in (editor, "/api/lg_rs232_ip/layout_suggestions/test"):
+            for endpoint in (editor, "/api/display_studio/layout_suggestions/test"):
                 assert (
                     await client.post(
                         endpoint, headers={"X-Auth": "yes", "X-Admin": "yes"}
                     )
                 ).status == 405
-            suggestions = "/api/lg_rs232_ip/layout_suggestions/test"
+            suggestions = "/api/display_studio/layout_suggestions/test"
             assert (await client.get(suggestions)).status == 401
             assert (
                 await client.get(suggestions, headers={"X-Auth": "yes"})
@@ -1761,7 +1762,7 @@ async def test_temporary_view_never_overrides_manual_power_or_other_owner(
 
 
 async def test_camera_routes_are_paired_and_saved_widget_scoped(app):
-    from custom_components.lg_rs232_ip.layout_config import element
+    from custom_components.display_studio.layout_config import element
 
     layouts = await configure_dashboard(app)
     item = element("camera", 60, 5, 35, 35)
@@ -2368,4 +2369,43 @@ async def test_source_transition_matrix_preserves_hdmi_and_rolls_back(app, previ
         app.web.async_set_si_settings.assert_not_awaited()
         app.controller._lg_display.async_set_input.assert_not_awaited()
     finally:
+        await layouts.async_close()
+
+async def test_optional_studio_binding_reload_and_release_keeps_lg_independent(app):
+    from custom_components.lg_rs232_ip.api import get_display_api
+    from custom_components.display_studio.providers import LGProvider
+    from custom_components.display_studio.layouts import DisplayLayouts
+    from custom_components.display_studio.const import VERSION
+
+    app.controller._ha_stopping = False
+    app.hass.data['lg_rs232_ip']['test']['controller'] = app.controller
+    app.hass.data['lg_rs232_ip']['test']['display_app'] = app
+    entry = SimpleNamespace(entry_id='studio', options={}, data={'lg_entry_id':'test'})
+    layouts = DisplayLayouts(app.hass, entry)
+    await layouts.async_start()
+    provider = LGProvider(app.hass, entry, layouts)
+    try:
+        assert app.layouts is None
+        assert app.assets['layout.js'] == b''
+        await provider.async_start()
+        assert app.layouts is layouts
+        assert app.state()['studio_version'] == VERSION
+        assert b'DisplayStudioRuntimeVersion' in app.assets['layout.js']
+        api = get_display_api(app.hass, 'test')
+        with pytest.raises(HomeAssistantError, match='Another'):
+            await api.async_bind_studio('other', layouts, {}, VERSION)
+        await api.async_unbind_studio('other')
+        assert app.layouts is layouts
+        # The LG entry may be recreated while Studio remains loaded.
+        app.unbind_studio('studio')
+        app.hass.data['lg_rs232_ip']['test'].pop('studio_owner', None)
+        app.hass.bus.async_fire('lg_rs232_ip_status', {'entry_id':'test'})
+        await app.hass.async_block_till_done()
+        assert app.layouts is layouts
+        await provider.async_close()
+        assert app.layouts is None and app.assets['layout.js'] == b''
+        assert app.state()['studio_version'] is None
+        assert not layouts._closed  # Studio, never LG, owns this lifetime.
+    finally:
+        await provider.async_close()
         await layouts.async_close()

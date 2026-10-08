@@ -25,7 +25,7 @@ from .resident_app import ResidentApp, SI_APP_ID
 from .platform_diagnostics import PlatformDiagnostics
 from .web_manager import LGWebError
 
-APP_VERSION = "1.20.0"
+APP_VERSION = "1.21.0"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -73,6 +73,8 @@ class DisplayAppManager(ResidentApp):
         self.token = None
         self.assets = {}
         self.asset_digest = ""
+        self.studio_version = None
+        self.studio_owner = None
         self.content = None
         self.last_seen = 0.0
         self.client_version = None
@@ -101,6 +103,30 @@ class DisplayAppManager(ResidentApp):
         self.layouts = hass.data.get(DOMAIN, {}).get(entry.entry_id, {}).get("layouts")
         if self.layouts:
             self.layouts.changed = self._layouts_changed
+
+    def bind_studio(self, owner, layouts, assets, version):
+        if self.studio_owner not in (None, owner):
+            raise HomeAssistantError("Another Display Studio entry owns this display")
+        if self.layouts is layouts and self.studio_version == version:
+            return
+        self.studio_owner, self.studio_version, self.layouts = owner, version, layouts
+        self.assets.update(assets)
+        self.asset_digest = hashlib.sha256(b"".join(self.assets[key] for key in sorted(self.assets))).hexdigest()[:16]
+        layouts.changed = self._layouts_changed
+        self._layouts_changed()
+
+    def unbind_studio(self, owner):
+        if self.studio_owner != owner:
+            return
+        if self.layouts:
+            self.layouts.changed = lambda: None
+        self.layouts = self.studio_owner = self.studio_version = None
+        for name in ("layout.js", "weather.js", "cards.js", "layout.css", "camera.js", "startup-design.js"):
+            self.assets[name] = b""
+        self.assets.pop("grain.png", None)
+        self.asset_digest = hashlib.sha256(b"".join(self.assets[key] for key in sorted(self.assets))).hexdigest()[:16]
+        self.changed()
+        self._notify()
 
     def _layouts_changed(self):
         if (
@@ -132,15 +158,8 @@ class DisplayAppManager(ResidentApp):
                         "index.html",
                         "app.js",
                         "app.css",
-                        "layout.js",
-                        "weather.js",
-                        "cards.js",
-                        "layout.css",
-                        "grain.png",
-                        "camera.js",
                         "offline.js",
                         "startup.js",
-                        "startup-design.js",
                         "platform.js",
                         "wall.js",
                         "test-stream.m3u8",
@@ -148,6 +167,10 @@ class DisplayAppManager(ResidentApp):
                     )
                 }
             )
+            # Optional Studio files are served from its registered bundle. Empty
+            # scripts keep the independent native HDMI/notification app usable.
+            for name in ("layout.js", "weather.js", "cards.js", "layout.css", "camera.js", "startup-design.js"):
+                self.assets[name] = b""
             self.asset_digest = hashlib.sha256(
                 b"".join(self.assets[name] for name in sorted(self.assets))
             ).hexdigest()[:16]
@@ -487,6 +510,7 @@ class DisplayAppManager(ResidentApp):
     def state(self):
         base = {
             "version": APP_VERSION,
+            "studio_version": self.studio_version,
             "revision": self._revision,
             "idle_hdmi": self.idle_hdmi(),
             "hdmi_fit": "fill"
@@ -739,81 +763,8 @@ class DisplayAppView(HomeAssistantView):
             return web.json_response(
                 await manager.async_state(request.query.get("since")), headers=headers
             )
-        if resource in ("camera.json", "camera.jpg") and manager.layouts:
-            from .layout_config import active_scenes
-
-            scene = active_scenes(manager.layouts.config).get(
-                request.query.get("view"), {}
-            )
-            item = next(
-                (
-                    item
-                    for item in scene.get("elements", [])
-                    if item["id"] == request.query.get("id")
-                    and item["kind"] == "camera"
-                ),
-                None,
-            )
-            if (
-                not manager.layouts.config["enabled"]
-                or not item
-                or item["camera_source"] != "entity"
-            ):
-                raise web.HTTPNotFound()
-            if resource == "camera.json":
-                url = None
-                if item["camera_mode"] != "snapshot":
-                    url = await manager.layouts.cameras.async_get(
-                        item["entity_id"], "stream"
-                    )
-                return web.json_response({"stream": url}, headers=headers)
-            data = await manager.layouts.cameras.async_get(item["entity_id"], "image")
-            return web.Response(
-                body=data,
-                status=200 if data else 204,
-                content_type="image/jpeg",
-                headers=headers,
-            )
-        if resource == "cover.jpg" and manager.layouts:
-            entity = request.query.get("entity", "")
-            if (
-                not manager.layouts.config["enabled"]
-                or entity not in manager.layouts.media_entities()
-            ):
-                raise web.HTTPNotFound()
-            from .layout_media import artwork_size
-
-            try:
-                size = artwork_size(request.query.get("size", "640"))
-            except ValueError as err:
-                raise web.HTTPBadRequest(text=str(err)) from None
-            data = await manager.layouts.media.async_image(
-                entity, request.query.get("v"), size
-            )
-            return web.Response(
-                body=data,
-                status=200 if data else 204,
-                content_type="image/jpeg",
-                headers=headers,
-            )
-        if resource == "background.jpg" and manager.layouts:
-            from .layout_config import active_scenes
-
-            identifier = request.query.get("id", "")
-            if not any(
-                scene.get("image_id") == identifier and identifier
-                for scene in active_scenes(manager.layouts.config).values()
-            ):
-                raise web.HTTPNotFound()
-            try:
-                data = await manager.layouts.backgrounds.async_read(identifier)
-            except (ValueError, FileNotFoundError):
-                raise web.HTTPNotFound() from None
-            return web.Response(
-                body=data,
-                content_type="image/jpeg",
-                headers={**headers, "Cache-Control": "private, max-age=86400"},
-            )
+        if manager.layouts and resource in ("camera.json", "camera.jpg", "cover.jpg", "background.jpg"):
+            return await manager.layouts.async_resource(resource, request.query, headers)
         mime = {
             "index.html": "text/html",
             "app.js": "application/javascript",
@@ -833,6 +784,8 @@ class DisplayAppView(HomeAssistantView):
             "test-stream.ts": "video/mp2t",
         }
         if resource not in mime:
+            raise web.HTTPNotFound()
+        if resource not in manager.assets:
             raise web.HTTPNotFound()
         body = manager.assets[resource]
         if (

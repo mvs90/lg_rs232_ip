@@ -282,7 +282,7 @@ class LGDisplayMediaPlayer(MediaPlayerEntity):
 
     @property
     def app_view_sources(self):
-        from .layout_library import SOURCE_VIEWS, source_names
+        from .app_sources import SOURCE_VIEWS, source_names
 
         views = getattr(self.display_app, "view_sources", None)
         if not isinstance(views, dict):

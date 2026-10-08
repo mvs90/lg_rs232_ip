@@ -1,7 +1,7 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.20.0", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.21.0", video = null, sourceNode = null, videoSource = null;
   var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
   var hdmiFit = "contain";
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
@@ -200,7 +200,7 @@
       if (stopped) { return; }
       startupConnection(!!data);
       if (data) {
-        if (data.version !== VERSION || (window.LGOffline && window.LGOffline.status().enabled !== (data.offline_enabled===true))) { if(window.LGOffline){window.LGOffline.update();}else{window.location.reload();} pollTimer=window.setTimeout(poll,2000); return; }
+        if ((data.studio_version !== undefined && (data.studio_version || null) !== (window.DisplayStudioRuntimeVersion || null)) || data.version !== VERSION || (window.LGOffline && window.LGOffline.status().enabled !== (data.offline_enabled===true))) { if(window.LGOffline){window.LGOffline.update();}else{window.location.reload();} pollTimer=window.setTimeout(poll,2000); return; }
         if(window.LGStartupDesign){window.LGStartupDesign.sync(data.startup_design_version);}
         text("connection", "Mit Home Assistant verbunden");
         var first = revision === null;

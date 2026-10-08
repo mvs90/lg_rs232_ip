@@ -2,11 +2,14 @@ const { test, expect } = require('@playwright/test');
 const fs = require('node:fs');
 const path = require('node:path');
 const assets = path.resolve('custom_components/lg_rs232_ip/www/display-app');
+const studioAssets = path.resolve(process.env.STUDIO_REPO || 'local/repositories/display_studio', 'custom_components/display_studio/www/runtime');
+const assetPath = name => fs.existsSync(path.join(assets,name)) ? path.join(assets,name) : path.join(studioAssets,name);
 const content = () => ({id: 'test', title: 'Welcome <script>window.injected=true</script>', message: 'Your home', duration: 30, remaining: 30, rendered: false, layout: 'fullscreen', hdmi: 'ext://hdmi:1', cards: [{name: 'Temperature', value: '21', unit: '°C'}]});
 async function mount(page, state) {
   const events = [];
   await page.route('http://display-app.test/**', async route => {
     const name = new URL(route.request().url()).pathname.split('/').pop();
+    if(state.noStudio&&['layout.js','layout.css','weather.js','cards.js','camera.js','startup-design.js'].includes(name))return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:''});
     if (state.offline && ['state','event','startup','startup-design'].includes(name)) return route.fulfill({status:503,body:''});
     if(name === 'camera.json')return route.fulfill({contentType:'application/json',body:JSON.stringify({stream:state.cameraStream || null})});
     if(name === 'camera.jpg'){state.cameraFrames=(state.cameraFrames || 0)+1;return route.fulfill({contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});}
@@ -24,7 +27,7 @@ async function mount(page, state) {
     }
     if (name === 'state') {
       if (state.delayState) await new Promise(resolve => setTimeout(resolve,state.delayState));
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.20.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.21.0', revision: 1, offline_enabled:state.cacheEnabled || false, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -32,7 +35,7 @@ async function mount(page, state) {
       if (event.type === 'rendered' && state.content) state.content.rendered = true;
       return route.fulfill({contentType: 'application/json', body: '{"ok":true}'});
     }
-    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: name==='index.html' && state.cacheEnabled ? fs.readFileSync(path.join(assets,name),'utf8').replace('<html lang="de">','<html lang="de" manifest="offline.appcache" data-offline-hdmi="ext://hdmi:1">') : fs.readFileSync(path.join(assets, name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'"}});
+    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: name==='index.html' && state.cacheEnabled ? fs.readFileSync(path.join(assets,name),'utf8').replace('<html lang="de">','<html lang="de" manifest="offline.appcache" data-offline-hdmi="ext://hdmi:1">') : fs.readFileSync(assetPath(name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'"}});
   });
   await page.goto('http://display-app.test/index.html');
   return events;
@@ -1340,4 +1343,17 @@ test('message and status parts are independently editable without replacing live
   expect(await page.evaluate(()=>LGWidgetParts.catalog({kind:'status'}).map(p=>p.id))).toEqual(['label','value','detail','icon','badge']);
   expect(await page.evaluate(()=>LGWidgetParts.catalog({kind:'camera'}).map(p=>p.id))).toEqual(['label','picture','detail']);
   expect(await page.evaluate(()=>LGWidgetParts.catalog({kind:'text'}).map(p=>p.id))).toEqual(['label','text']);
+});
+
+
+test('LG resident HDMI and basic notification work without Display Studio installed',async({page})=>{
+  const errors=[];page.on('pageerror',err=>errors.push(err.message));
+  const state={noStudio:true,idle_hdmi:'ext://hdmi:1',content:null};
+  await mount(page,state);
+  await expect(page.locator('#hdmi-slot source')).toHaveAttribute('src','ext://hdmi:1');
+  expect(await page.evaluate(()=>window.LGLayoutRenderer)).toBeUndefined();
+  state.content={...content(),layout:'overlay'};
+  await expect(page.locator('#title')).toHaveText(state.content.title);
+  await expect(page.locator('#hdmi-slot source')).toHaveAttribute('src','ext://hdmi:1');
+  expect(errors).toEqual([]);
 });

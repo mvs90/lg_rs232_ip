@@ -47,23 +47,6 @@ async def async_setup(hass, config):
     from .display_app import DisplayAppView
 
     hass.http.register_view(DisplayAppView(hass))
-    from .layout_api import (
-        LayoutBackgroundView,
-        LayoutSuggestionsView,
-        LayoutMediaView,
-        LayoutLibraryView,
-        LayoutEditorView,
-        LayoutListView,
-        LayoutValidateView,
-    )
-
-    hass.http.register_view(LayoutListView(hass))
-    hass.http.register_view(LayoutEditorView(hass))
-    hass.http.register_view(LayoutValidateView())
-    hass.http.register_view(LayoutBackgroundView(hass))
-    hass.http.register_view(LayoutSuggestionsView(hass))
-    hass.http.register_view(LayoutMediaView(hass))
-    hass.http.register_view(LayoutLibraryView(hass))
     return True
 
 
@@ -117,10 +100,6 @@ async def _async_setup_entry(hass, entry):
         "controller": controller,
         "alert_state": LGDisplayAlertState(entry.entry_id),
     }
-    from .layouts import DisplayLayouts
-
-    layouts = data["layouts"] = DisplayLayouts(hass, entry)
-    await layouts.async_start()
     recovery = await Store(
         hass, 1, f"{DOMAIN}.{entry.entry_id}.display_app"
     ).async_load()
@@ -183,6 +162,7 @@ async def _async_setup_entry(hass, entry):
         await schedules.async_refresh()
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await controller.async_start()
+    hass.bus.async_fire("lg_rs232_ip_status", {"entry_id": entry.entry_id})
     return True
 
 
@@ -201,7 +181,7 @@ async def async_unload_entry(hass, entry):
 async def _async_close_resources(data):
     """One failed close must not strand the remaining sessions or timers."""
     cancelled = False
-    for key in ("controller", "display_app", "layouts", "web_manager", "recovery_web", "lg_display"):
+    for key in ("controller", "display_app", "web_manager", "recovery_web", "lg_display"):
         resource = data.get(key)
         if resource is None:
             continue

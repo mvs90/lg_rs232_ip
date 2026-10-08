@@ -13,12 +13,19 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: mvs90/display_studio
+          ref: v1.0.0
+          path: .test-dependencies/studio
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
       - run: npm ci
       - run: npm test
+        env:
+          STUDIO_REPO: .test-dependencies/studio
   tests:
     runs-on: ubuntu-latest
     strategy:
@@ -35,7 +42,14 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: pip install "homeassistant==${{ matrix.homeassistant }}" "pytest>=8,<10" "pytest-asyncio>=0.25,<2" "ruff>=0.9,<1" "numpy>=2.2,<3" "PyTurboJPEG>=1.7.5,<2" "coverage>=7,<8"
+      - uses: actions/checkout@v7
+        with:
+          repository: mvs90/display_studio
+          ref: v1.0.0
+          path: .test-dependencies/studio
       - run: python -m coverage run -m pytest -q
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/.test-dependencies/studio
       - name: Report branch coverage
         if: always()
         run: python -m coverage report

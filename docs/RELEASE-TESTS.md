@@ -1,5 +1,14 @@
 # Release acceptance
 
+## 2.32.0 — independent Display Studio
+
+The editor, layouts, themes, widget data and generic renderer now live in [Display Studio 1.0.0](https://github.com/mvs90/display_studio). LG retains native hardware control and the SI app; public Studio API v1 binds optional resources without a runtime import. AV API v1 is unchanged.
+
+Local verification: **805 LG Python tests on both HA 2025.3.4 and 2026.9.4**, plus the independent Studio suite on both versions. **262 existing LG browser tests** remain green; additional no-Studio resident HDMI/basic notification coverage runs in Chromium and WebKit. The Studio editor and standalone browser renderer have **78 browser cases**.
+
+On the existing HA 2026.9.4 Docker instance, nine views and revision 124 were copied exactly. The LG app reports version 1.21.0 and confirms dashboard, PiP, HDMI-fullscreen and media scenes. A notification was confirmed by the rendered-scene report and preview screenshot. LG reload automatically restores Studio binding; Studio reload keeps the library. Apple TV and AV Companion remain loaded with Studio sources and existing Sonos routing.
+
+
 ## LG 2.31.0: LG groups on the device page and verified Local Dimming — 2026-10-08
 
 The device **Configuration** card now follows the physical LG menu, including its subgroups. It reuses native HA controls and provides the original alphabetical view. No settings page was added to Display Studio. An inventory of 87 qualified configuration keys is checked against all five setup compositions; hidden/disabled entries and renamed IDs keep their native behavior. Runtime app version remains **1.20.0**.

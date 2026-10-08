@@ -1,6 +1,6 @@
 # LG Professional Display
 
-Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.31.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
+Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.32.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
 
 **Device settings follow the LG menu order** directly on the Home Assistant device page, with collapsible groups and a standard alphabetical fallback. LED Local Dimming is now available as a verified on/off switch. [Menu inventory, dependencies and remaining limits](docs/DEVICE-MENU.md).
 
@@ -25,13 +25,9 @@ Requires Home Assistant 2025.3 or later; tested on 2025.3.4 and 2026.9.4. Availa
 
 ## Design your display
 
-**LG Display Studio** appears automatically in the HA sidebar for administrators. Its first section contains fixed and custom views, starting with the editable **Nur HDMI** (HDMI only) view, followed by **Dashboard**, **Dashboard PiP**, **Mediaplayer** and custom sources. A separate **Mitteilungen** section below contains **Mitteilung**, **Mitteilung PiP**, and **Mitteilung Vollbild**. Each fixed view has a **Restore default** action and cannot be deleted. Additional views created from Cinema, Aurora, Sonnenstand or Paper & Sand automatically become sources when saved; rename, duplicate or delete them independently. There is no separate assignment step. Existing designs and bindings are preserved. Deleting the active custom view returns to Dashboard.
+[Display Studio](https://github.com/mvs90/display_studio) is now an **independent optional HACS integration**. Install it separately and add a Studio entry linked to this LG display to use saved dashboards, themes, media/weather/calendar widgets, custom notification designs and Studio sources. Existing LG Studio designs/backgrounds are copied once without overwriting originals. The Studio sidebar is registered by the extension. See the [setup and split guide](docs/DISPLAY-STUDIO.md).
 
-Physical HDMI selections use the shared editable **Nur HDMI** view; its default is full-screen video. The editor offers context buttons above the preview and colour themes on the left that preserve content and geometry. Arrange media, weather, calendar and status widgets freely. **Sonnenstand** follows live solar colour/position updates every 30 seconds. Upload backgrounds up to 4K, export/import the library, or use a playing-media background with adjustable cover fitting and edge colours. Seven fixed views plus up to 24 custom views share the existing 32-entity limit. See the [Studio guide](docs/DISPLAY-STUDIO.md).
-
-**Media and room cards:** add a Sonos or other HA media player with album artwork, title, artist, playback state and optional progress/volume, in compact or large-cover form. Room-based suggestions use HA entity/device areas to propose media, weather/calendar and styled status cards. Add or remove each card individually; changes apply only after saving.
-
-Persistent dashboards need the optional SI resident app. One HDMI video element is retained through layout changes, and selected data is prepared on HA. The editor uses a video placeholder; it does not start another camera stream. **[Studio setup, controls and limits](docs/DISPLAY-STUDIO.md)**.
+LG retains hardware control, OSD suppression, resident SI app startup, native HDMI/video planes and screenshots. The app accepts Studio's renderer through a public, owner-checked adapter API and rebinds after LG reload. Without Studio, the LG device integration and basic resident HDMI/notifications remain usable. Studio also offers a browser/kiosk output for other displays.
 
 ## What belongs to this integration
 

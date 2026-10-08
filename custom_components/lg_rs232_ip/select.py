@@ -26,7 +26,7 @@ from .maintenance import MaintenanceEntity, REPEATS, DURATIONS
 from .hardware_settings import HardwareSettingEntity, HARDWARE_SETTINGS
 from .picture_settings import PictureSettingEntity, NATIVE_OPTIONS
 from .power_settings import POWER_SETTINGS, PowerSettingEntity, remote_power_on_status
-from .layout_library import source_names
+from .app_sources import source_names
 from .device_profile import (
     ASPECT_RATIOS,
     DPM_DELAYS,

@@ -98,8 +98,6 @@ class DisplayController(TemporaryView, NativeControls):
             data = self.hass.data.get(DOMAIN, {}).get(self._config_entry.entry_id, {})
             if app := data.get("display_app"):
                 await app.async_close()
-            if layouts := data.get("layouts"):
-                await layouts.async_close()
 
         self._stop_unsub = self.hass.bus.async_listen_once(
             EVENT_HOMEASSISTANT_STOP, stopping
@@ -229,7 +227,7 @@ class DisplayController(TemporaryView, NativeControls):
 
     @property
     def app_view_sources(self):
-        from .layout_library import SOURCE_VIEWS, source_names
+        from .app_sources import SOURCE_VIEWS, source_names
 
         app = (
             self.hass.data.get(DOMAIN, {})
@@ -316,7 +314,7 @@ class DisplayController(TemporaryView, NativeControls):
         )
         if not app or not app.dashboard_available:
             raise HomeAssistantError(
-                "Enable custom layouts and resident SI mode in LG settings first"
+                "Configure Display Studio and enable layouts and LG resident SI mode first"
             )
         if self.external_owner:
             raise HomeAssistantError("An external presentation owns the display")

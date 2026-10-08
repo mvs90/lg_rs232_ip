@@ -5,6 +5,7 @@ from homeassistant.exceptions import HomeAssistantError
 from .const import DOMAIN
 
 API_VERSION = 1
+STUDIO_API_VERSION = 1
 
 
 class DisplayAPI:
@@ -18,6 +19,52 @@ class DisplayAPI:
         return (
             data.get("controller") is not None and not data["controller"]._ha_stopping
         )
+
+    @property
+    def studio_api_version(self):
+        return STUDIO_API_VERSION
+
+    @property
+    def studio_status(self):
+        app = self.hass.data.get(DOMAIN, {}).get(self.entry_id, {}).get("display_app")
+        return {
+            "app_enabled": bool(app and app.enabled),
+            "resident_enabled": bool(app and app.resident),
+            "connected": bool(app and app.resident_connected),
+            "client_startup_design": dict(app.client_startup_design) if app else {},
+            "capabilities": {
+                "hdmi": True,
+                "pip": True,
+                "overlay": True,
+                "startup": True,
+                "screenshot": True,
+            },
+        }
+
+    async def async_bind_studio(self, owner, layouts, assets, version):
+        data = self.hass.data.get(DOMAIN, {}).get(self.entry_id, {})
+        if not self.ready:
+            return False
+        current = data.get("studio_owner")
+        if current not in (None, owner):
+            raise HomeAssistantError("Another Display Studio entry owns this display")
+        data["studio_owner"], data["layouts"] = owner, layouts
+        app = data.get("display_app")
+        if app:
+            app.bind_studio(owner, layouts, assets, version)
+        return True
+
+    async def async_unbind_studio(self, owner):
+        data = self.hass.data.get(DOMAIN, {}).get(self.entry_id, {})
+        if data.get("studio_owner") != owner:
+            return
+        if app := data.get("display_app"):
+            app.unbind_studio(owner)
+        data.pop("layouts", None)
+        data.pop("studio_owner", None)
+
+    async def async_show_studio_view(self, view, **kwargs):
+        await self.controller.async_select_app_view(view, **kwargs)
 
     @property
     def controller(self):

@@ -27,7 +27,7 @@ async def test_bundled_module_registered_without_dashboard_mutation(tmp_path):
     )
     assert await async_setup(hass, {})
     paths = hass.http.async_register_static_paths.await_args.args[0]
-    assert len(paths) == 10
+    assert len(paths) == 3
     assert paths[0].url_path == CARD_PATH
     assert Path(paths[0].path).is_file()
     assert paths[0].cache_headers is False
@@ -40,8 +40,8 @@ async def test_bundled_module_registered_without_dashboard_mutation(tmp_path):
     assert "frontend" in manifest["dependencies"]
     from homeassistant.components.frontend import DATA_PANELS
 
-    panel = hass.data[DATA_PANELS]["lg-display-studio"]
-    assert panel.require_admin and panel.sidebar_title == "LG Display Studio"
+    assert "lg-display-studio" not in hass.data.get(DATA_PANELS, {})
+
 
 
 def test_device_menu_catalog_unique_and_ordered():

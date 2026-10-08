@@ -207,7 +207,7 @@ async def test_one_cleanup_failure_does_not_leak_other_resources(lifecycle):
     entry = env.entry(native=True)
     await integration.async_setup_entry(env.hass, entry)
     data = env.hass.data["lg_rs232_ip"][entry.entry_id]
-    data["layouts"].async_close = AsyncMock(side_effect=RuntimeError("cleanup failed"))
+    data["display_app"].async_close = AsyncMock(side_effect=RuntimeError("cleanup failed"))
     assert await integration.async_unload_entry(env.hass, entry)
     assert entry.entry_id not in env.hass.data["lg_rs232_ip"]
     env.devices[0].async_disconnect.assert_awaited()
@@ -349,13 +349,13 @@ async def test_unload_cancellation_still_closes_remaining_resources(lifecycle):
     entry = env.entry(native=True)
     await integration.async_setup_entry(env.hass, entry)
     data = env.hass.data["lg_rs232_ip"][entry.entry_id]
-    close_layouts = data["layouts"].async_close
+    close_layouts = data["display_app"].async_close
 
     async def cancelled_close():
         await close_layouts()
         raise asyncio.CancelledError
 
-    data["layouts"].async_close = cancelled_close
+    data["display_app"].async_close = cancelled_close
     with pytest.raises(asyncio.CancelledError):
         await integration.async_unload_entry(env.hass, entry)
     assert entry.entry_id not in env.hass.data["lg_rs232_ip"]

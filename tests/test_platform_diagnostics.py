@@ -8,7 +8,7 @@ import pytest
 from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.lg_rs232_ip.platform_diagnostics import PlatformDiagnostics
-from custom_components.lg_rs232_ip.layout_config import validate_multicast_url
+from custom_components.display_studio.layout_config import validate_multicast_url
 
 
 def platform():
