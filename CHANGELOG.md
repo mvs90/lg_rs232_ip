@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.30.1
+
+- Prioritize settings actions over queued background reads, preserving FIFO order within each priority, bounded fairness, atomic in-flight requests and verified readback.
+- Split background picture scans into individual steps. Discard an interrupted scan after a mode/setting change so old data cannot overwrite the new state; pause silent optional queries for 60 seconds without suppressing explicit checks.
+- Return picture-mode actions after their own confirmation. Avoid full capability rescans for individual picture sliders and native colour adjustments; refresh dependent controls after actual context changes.
+- Bound native-web socket cleanup after a reply to 250 ms. Keep the existing response deadline, certificate checks, one-shot writes and reset/apply settling period. Only Set ID changes hold the serial transport throughout native-web reconciliation.
+- Verified against the existing HA container and physical UH5F display; see [command latency measurements](docs/COMMAND-LATENCY.md). Display app remains 1.20.0.
+
 ## 2.29.0
 
 - Enable and attach the picture-mode select to its display, with nine translated Signage presets; add current-preset reset and apply-to-all-inputs buttons. Use exact picture-only commands, single-write acknowledgements and a shared settling period.

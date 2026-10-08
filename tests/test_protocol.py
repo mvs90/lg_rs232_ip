@@ -141,3 +141,30 @@ async def test_x_command_letter_is_not_the_frame_terminator():
     display._reader, display._writer, display._connected = reader, writer, True
     assert await display.async_get_picture_mode() == 1
     writer.write.assert_called_once_with(b"dx 01 ff\r")
+
+
+@pytest.mark.parametrize("retry", ["foreground", "expired"])
+async def test_silent_optional_background_query_backs_off_but_can_recover(monkeypatch, retry):
+    import time
+    from unittest.mock import Mock
+    from custom_components.lg_rs232_ip import lg_display as module
+
+    display = LGDisplay("example.invalid")
+    writer = Mock(drain=AsyncMock(), wait_closed=AsyncMock())
+    display._reader = asyncio.StreamReader()
+    display._writer, display._connected = writer, True
+    monkeypatch.setattr(module, "COMMAND_TIMEOUT", .01)
+    assert await display.async_get_subcommand("sn", 0xC4, background_query=True) is None
+    assert not display.is_connected
+    assert await display.async_get_subcommand("sn", 0xC4, background_query=True) is None
+    writer.write.assert_called_once()
+    # Mode changes must not immediately repeat a command that timed out.
+    display._picture_settings_changed()
+    assert await display.async_get_subcommand("sn", 0xC4, background_query=True) is None
+    reader = asyncio.StreamReader()
+    writer.write.side_effect = lambda _: reader.feed_data(b"n 01 OKc401x")
+    display._reader, display._writer, display._connected = reader, writer, True
+    if retry == "expired":
+        display._query_retry_after[("s", "n", 0xC4, " ff")] = time.monotonic() - 1
+    assert await display.async_get_subcommand("sn", 0xC4, background_query=retry == "expired") == 1
+    assert display._query_retry_after == {}

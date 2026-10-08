@@ -10,6 +10,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, DataUpdateCoordinator, UpdateFailed
 
+from .command_queue import PriorityLock, interactive_command
 from .const import DOMAIN, PICTURE_MODES
 from .device_profile import is_uh5f, ok_payload
 from .web_manager import LGWebError
@@ -79,9 +80,10 @@ class PictureSettings(DataUpdateCoordinator):
     def __init__(self, hass, entry, display, controller, web=None):
         super().__init__(hass, _LOGGER, name="LG picture settings", update_interval=timedelta(seconds=60), config_entry=entry, always_update=False)
         self.entry, self.display, self.controller, self.web = entry, display, controller, web
-        self._settings_lock = asyncio.Lock()
+        self._settings_lock = PriorityLock()
         self.awake = False
         self.last_action = None
+        self._write_revision = 0
 
     def options_for(self, key):
         options = list(PICTURE_OPTIONS[key].options if key in PICTURE_OPTIONS else NATIVE_OPTIONS[key][1])
@@ -102,14 +104,15 @@ class PictureSettings(DataUpdateCoordinator):
                 await asyncio.sleep(.25)
         return None
 
-    async def _read_one(self, key):
+    async def _read_one(self, key, *, background=False):
         spec = PICTURE_OPTIONS[key]
+        polling = {"background_query": True} if background else {}
         if spec.parameter is None:
-            value = await self.display.async_send_command(*spec.command, 0xFF, use_cache=False)
+            value = await self.display.async_send_command(*spec.command, 0xFF, use_cache=False, **polling)
         elif spec.input_code is None:
-            value = await self.display.async_get_subcommand(spec.command, spec.parameter, use_cache=False)
+            value = await self.display.async_get_subcommand(spec.command, spec.parameter, use_cache=False, **polling)
         else:
-            response = await self.display.async_send_raw_command(*spec.command, spec.parameter, query_suffix=f" {spec.input_code:02x} ff", use_cache=False)
+            response = await self.display.async_send_raw_command(*spec.command, spec.parameter, query_suffix=f" {spec.input_code:02x} ff", use_cache=False, **polling)
             payload = (ok_payload(response) or "").lower()
             prefix = f"{spec.parameter:02x}{spec.input_code:02x}"
             value = int(payload[-2:], 16) if len(payload) == 6 and payload.startswith(prefix) and re.fullmatch("[0-9a-f]{2}", payload[-2:]) else None
@@ -141,7 +144,24 @@ class PictureSettings(DataUpdateCoordinator):
                 self.awake = False
                 raise UpdateFailed("Cannot read display power state")
             self.awake = True
-            return await self._read_all()
+            revision = (self.display.picture_context_revision, self._write_revision)
+        # Release between queries so a mode change does not queue behind every
+        # optional command timeout. Never publish a scan from an older context.
+        values = {}
+        for key in PICTURE_OPTIONS:
+            async with self._settings_lock:
+                if revision != (self.display.picture_context_revision, self._write_revision):
+                    return dict(self.data or {})
+                if (value := await self._read_one(key, background=True)) is not None:
+                    values[key] = value
+        async with self._settings_lock:
+            if revision != (self.display.picture_context_revision, self._write_revision):
+                return dict(self.data or {})
+            try:
+                values.update(native_options(await self._native()))
+            except LGWebError:
+                pass
+        return values
 
     async def _write_one(self, key, value):
         spec = PICTURE_OPTIONS[key]
@@ -152,12 +172,14 @@ class PictureSettings(DataUpdateCoordinator):
             suffix = f" {code:02x}" if spec.input_code is None else f" {spec.input_code:02x} {code:02x}"
             await self.display.async_send_raw_command(*spec.command, spec.parameter, query_suffix=suffix, use_cache=False)
 
+    @interactive_command
     async def async_set(self, key, value):
         options = (self.options_for(key) if key in PICTURE_OPTIONS or key in NATIVE_OPTIONS else
                    tuple(str(n) for n in range(-5, 6)) if key in NATIVE_NUMBERS else ())
         if value not in options:
             raise HomeAssistantError("Unsupported LG picture option")
         async with self._settings_lock, self.controller._control_lock:
+            self._write_revision += 1
             if await self._power() is not True:
                 self.awake = False
                 raise HomeAssistantError("Display must be on to change picture settings")
@@ -196,16 +218,19 @@ class PictureSettings(DataUpdateCoordinator):
                 else:
                     values[key] = actual
                 self.async_set_updated_data(values)
-                self.display._picture_settings_changed()
+                if key in {"deep_color_hdmi1", "deep_color_hdmi2", "deep_color_hdmi3", "hdmi_it_content", "brightness_schedule", "hdr_picture_mode"}:
+                    self.display._picture_settings_changed()
                 if actual != value:
                     raise LGWebError("Display did not confirm the requested picture option")
             except LGWebError as err:
                 raise HomeAssistantError(str(err)) from None
 
+    @interactive_command
     async def async_action(self, action):
         if action not in PICTURE_ACTIONS:
             raise HomeAssistantError("Unsupported picture action")
         async with self._settings_lock, self.controller._control_lock:
+            self._write_revision += 1
             if await self._power() is not True:
                 raise HomeAssistantError("Display must be on to change picture settings")
             mode = await self.display.async_get_picture_mode(use_cache=False)

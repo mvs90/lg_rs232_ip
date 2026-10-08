@@ -281,3 +281,50 @@ async def test_uh5f_black_level_limits_follow_confirmed_context(picture):
     assert picture.options_for("black_level") == ["auto"]
     picture.display.model_name = "Other signage"
     assert picture.options_for("black_level") == ["low", "high", "auto"]
+
+
+async def test_picture_mode_returns_after_verified_write_without_full_scan(picture):
+    from custom_components.lg_rs232_ip.select import LGDisplayPictureModeSelect
+
+    entity = LGDisplayPictureModeSelect(picture.display, "LG", "test", picture=picture)
+    entity.async_write_ha_state = Mock()
+    picture.display.async_set_picture_mode = AsyncMock(return_value=True)
+    picture.async_request_refresh = AsyncMock(side_effect=AssertionError("Do not wait for all optional settings"))
+    await entity.async_select_option("general")
+    assert entity.current_option == "general"
+    picture.display.async_set_picture_mode.assert_awaited_once_with(1)
+
+
+async def test_single_picture_number_does_not_invalidate_unrelated_capabilities():
+    display = LGDisplay("example.invalid")
+    display.async_send_command = AsyncMock(side_effect=[50, 51, 51])
+    listener = Mock()
+    display.subscribe_picture_settings(listener)
+    display._unsupported_until[("s", "n", 0xC4, " ff")] = 12345
+    assert await display.async_write_picture_number("contrast", 51)
+    assert display._unsupported_until[("s", "n", 0xC4, " ff")] == 12345
+    listener.assert_not_called()
+
+
+async def test_action_interrupts_background_scan_and_old_scan_cannot_overwrite(picture):
+    started, release = asyncio.Event(), asyncio.Event()
+    calls = []
+
+    async def read(key, **kw):
+        calls.append(key)
+        if len(calls) == 1:
+            started.set()
+            await release.wait()
+        return "medium"
+
+    picture._read_one = AsyncMock(side_effect=read)
+    scan = asyncio.create_task(picture._async_update_data())
+    await started.wait()
+    action = asyncio.create_task(picture.async_set("gamma", "medium"))
+    await asyncio.sleep(0)
+    release.set()
+    await action
+    result = await scan
+    assert calls == ["gamma", "gamma"]
+    assert result == {"gamma": "medium"}
+    picture.web.async_get_picture_options.assert_not_awaited()

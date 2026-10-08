@@ -6,6 +6,7 @@ import logging
 import re
 import time
 
+from .command_queue import PriorityLock
 from .device_profile import (
     ASPECT_RATIOS,
     decode_model,
@@ -70,7 +71,7 @@ class LGDisplay:
         self._writer: Optional[asyncio.StreamWriter] = None
         self._connected = False
         self._last_successful_response: Optional[float] = None
-        self._command_lock = asyncio.Lock()  # Lock to synchronize command sending
+        self._command_lock = PriorityLock()  # Exactly one request/reply in flight.
         self._command_not_before = 0.0
         self._next_connect_attempt_at: float = 0.0
         self._last_connect_error_log_at: float = 0.0
@@ -82,6 +83,8 @@ class LGDisplay:
         self.software_version: str | None = None
         self._query_cache = {}
         self._unsupported_until = {}
+        self._query_retry_after = {}
+        self.picture_context_revision = 0
         self._picture_listeners = set()
         self._aspect_listeners = set()
         self.aspect_ratio = None
@@ -101,6 +104,7 @@ class LGDisplay:
         return lambda: self._aspect_listeners.discard(listener)
 
     def _picture_settings_changed(self):
+        self.picture_context_revision += 1
         # NG may mean temporarily locked by a mode, not unsupported hardware.
         affected = {
             ("m", "g"),
@@ -225,6 +229,7 @@ class LGDisplay:
         query_suffix: str = "",
         use_cache: bool = True,
         is_query: bool | None = None,
+        background_query: bool = False,
     ) -> Optional[str]:
         """Send raw LG RS232 command and get response.
 
@@ -251,6 +256,8 @@ class LGDisplay:
             if is_query is None:
                 is_query = value == READ_STATUS or query_suffix.strip().lower().split()[-1:] == ["ff"]
             if is_query:
+                if background_query and time.monotonic() < self._query_retry_after.get(key, 0):
+                    return None
                 if time.monotonic() < self._unsupported_until.get(key, 0):
                     return None
                 cached = self._query_cache.get(key)
@@ -306,6 +313,7 @@ class LGDisplay:
                             re.IGNORECASE,
                         )
                         if match and int(match.group(1), 16) == self.device_id:
+                            self._query_retry_after.pop(key, None)
                             self._last_successful_response = time.monotonic()
                             if is_query:
                                 if re.search(r"\sNG", response_str, re.IGNORECASE) and (
@@ -333,6 +341,10 @@ class LGDisplay:
                 await self.async_disconnect()
                 raise
             except asyncio.TimeoutError:
+                if is_query and background_query:
+                    # A silent optional query is not proof of non-support.
+                    # Retry later; interactive checks always bypass this pause.
+                    self._query_retry_after[key] = time.monotonic() + 60
                 # Discard delayed replies so they cannot satisfy a later query.
                 await self.async_disconnect()
                 _LOGGER.debug("No response for command %s%s", cmd1, cmd2)
@@ -397,6 +409,7 @@ class LGDisplay:
         *,
         check_power: bool = False,
         use_cache: bool = True,
+        background_query: bool = False,
     ) -> Optional[int]:
         """Send a command to the LG Display.
 
@@ -414,6 +427,7 @@ class LGDisplay:
             value,
             check_power=check_power,
             use_cache=use_cache,
+            **({"background_query": True} if background_query else {}),
         )
         if response is None:
             return None
@@ -566,11 +580,12 @@ class LGDisplay:
         return version
 
     async def async_get_subcommand(
-        self, command: str, parameter: int, *, use_cache: bool = True
+        self, command: str, parameter: int, *, use_cache: bool = True, background_query: bool = False
     ) -> int | None:
         """Read an sv/sn subcommand and validate its echoed parameter."""
         response = await self.async_send_raw_command(
-            command[0], command[1], parameter, query_suffix=" ff", use_cache=use_cache
+            command[0], command[1], parameter, query_suffix=" ff", use_cache=use_cache,
+            **({"background_query": True} if background_query else {}),
         )
         payload = ok_payload(response)
         if not payload or not re.fullmatch(r"[0-9a-fA-F]{4,}", payload):
@@ -631,7 +646,6 @@ class LGDisplay:
         await self.async_send_command(*command, value)
         for attempt in range(3):
             if await self.async_read_picture_number(key) == value:
-                self._picture_settings_changed()
                 return True
             if attempt < 2:
                 await asyncio.sleep(.25)

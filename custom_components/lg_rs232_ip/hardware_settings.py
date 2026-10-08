@@ -8,6 +8,7 @@ import logging
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .command_queue import PriorityLock, interactive_command
 from .const import SOUND_MODES
 from .maintenance import integer
 from .picture_settings import PictureSettingEntity
@@ -59,7 +60,7 @@ class HardwareSettings(DataUpdateCoordinator):
         )
         self.entry, self.display, self.controller = entry, display, controller
         self.awake = False
-        self._settings_lock = asyncio.Lock()
+        self._settings_lock = PriorityLock()
 
     async def _read_one(self, key):
         spec = HARDWARE_SETTINGS[key]
@@ -93,6 +94,7 @@ class HardwareSettings(DataUpdateCoordinator):
                     result[key] = value
             return result
 
+    @interactive_command
     async def async_set(self, key, value):
         spec = HARDWARE_SETTINGS.get(key)
         try:

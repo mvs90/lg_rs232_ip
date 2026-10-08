@@ -1,5 +1,13 @@
 # Release acceptance
 
+## LG 2.30.1: responsive settings commands — 2026-10-08
+
+**746 Python tests pass on each of HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 260 browser cases pass across Chromium/WebKit.** Official Hassfest reports zero invalid integrations; Ruff and whitespace checks pass. The added cases cover action/poll ordering and fairness, lock cancellation and reserved handoff recovery, task-scoped priority, mutual exclusion, silent-query retry and explicit recovery, interrupted-scan consistency, retained capability caches, mode completion without a full scan, independent native/serial system writes, and a real WebSocket peer withholding its close reply. The address-change tests were repeated after adding retry-cache invalidation on Set ID adoption.
+
+Installed and tested in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container. Physical **75UH5F-HJ / 04.13.50** measurements reproduced 12–14 second delays and identified four silent optional serial queries in full picture scans. The final short run measured picture-mode actions at **0.631–1.164 s**, contrast at **0.276–0.397 s** and native dynamic contrast at **0.377–0.441 s**. A longer 18-action sequence spanning background polls independently confirmed every changed value; its remaining contrast outlier was **4.739 s**. This is service-completion timing, not a visual latency or universal device guarantee.
+
+Original picture values, profile modification flags and mode side effects on energy settings were restored. Native picture/sound/commercial dictionaries match the fresh pre-test backups; Studio persistent fields are unchanged. The display remains in the connected **App-Mediaplayer** view. The app stays at **1.20.0**. See [latency evidence and limits](COMMAND-LATENCY.md).
+
 ## LG 2.30.0: native schedules, clock region, audio and RGB — 2026-10-07
 
 **730 Python tests pass on each of HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 260 browser cases pass across Chromium/WebKit.** Official Hassfest reports zero invalid integrations; Ruff and whitespace checks pass. New regression coverage includes lost acknowledgements without replay, power/readback guards, malformed native lists, full/duplicate/overlapping schedules, externally moved slots, native ID regeneration, invalid ranges, catalog ownership, partial DST failures, actual HA service routing/response schemas and discovery after an initially powered-off start. The optional app remains **1.20.0**.

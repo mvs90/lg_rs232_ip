@@ -9,6 +9,7 @@ import re
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .command_queue import PriorityLock, interactive_command
 from .system_settings import SystemSettingEntity
 from .web_manager import LGWebError
 
@@ -209,7 +210,7 @@ class MaintenanceSettings(DataUpdateCoordinator):
             web,
             controller,
         )
-        self._settings_lock = asyncio.Lock()
+        self._settings_lock = PriorityLock()
 
     async def _read(self):
         return await self.web.async_get_maintenance_settings()
@@ -231,6 +232,7 @@ class MaintenanceSettings(DataUpdateCoordinator):
             raise HomeAssistantError("Invalid ISM weekday")
         await self.async_set("ismDays", [], day_change=(day, enabled))
 
+    @interactive_command
     async def async_set(self, key, value, *, day_change=None):
         try:
             changes = (
@@ -315,6 +317,7 @@ class MaintenanceSettings(DataUpdateCoordinator):
             except LGWebError as err:
                 raise HomeAssistantError(str(err)) from None
 
+    @interactive_command
     async def async_set_timezone(self, continent, country, timezone):
         from .clock_region import region_request
 
@@ -374,6 +377,7 @@ class MaintenanceSettings(DataUpdateCoordinator):
         except LGWebError:
             self.async_set_update_error(UpdateFailed("Cannot read current LG clock region"))
 
+    @interactive_command
     async def async_configure_dst(self, enabled, **fields):
         from .clock_region import dst_request, normalize_dst, DST_FIELDS
 

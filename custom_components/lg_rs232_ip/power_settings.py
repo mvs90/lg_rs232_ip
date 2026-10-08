@@ -12,6 +12,7 @@ from homeassistant.helpers.update_coordinator import (
     CoordinatorEntity, DataUpdateCoordinator, UpdateFailed,
 )
 
+from .command_queue import PriorityLock, interactive_command
 from .const import DOMAIN, READ_STATUS
 from .device_profile import ok_payload
 
@@ -60,7 +61,7 @@ class PowerSettings(DataUpdateCoordinator):
                          update_interval=timedelta(seconds=60),
                          config_entry=entry)
         self.entry, self.display, self.controller = entry, display, controller
-        self._settings_lock = asyncio.Lock()
+        self._settings_lock = PriorityLock()
         self.awake = False
         self.issue_id = f"{entry.entry_id}_remote_power_on"
 
@@ -125,6 +126,7 @@ class PowerSettings(DataUpdateCoordinator):
                 await asyncio.sleep(0.25)
         return None
 
+    @interactive_command
     async def async_set(self, key, value):
         if key not in POWER_SETTINGS or value not in POWER_SETTINGS[key].options:
             raise HomeAssistantError("Invalid LG power setting")

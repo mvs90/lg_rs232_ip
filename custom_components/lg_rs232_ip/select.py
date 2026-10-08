@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .command_queue import interactive_command
 from .const import (
     DOMAIN,
     ENERGY_SAVING_MODES,
@@ -128,6 +129,7 @@ class IsmSettingSelect(MaintenanceEntity, SelectEntity):
         value = (self.coordinator.data or {}).get(self.key)
         return next((k for k, v in self._choices.items() if v == value), None)
 
+    @interactive_command
     async def async_select_option(self, option):
         if option not in self._choices:
             raise HomeAssistantError("Unsupported ISM option")
@@ -143,6 +145,7 @@ class PictureOptionSelect(PictureSettingEntity, SelectEntity):
     def current_option(self):
         return (self.coordinator.data or {}).get(self.key)
 
+    @interactive_command
     async def async_select_option(self, option):
         await self.coordinator.async_set(self.key, option)
 
@@ -230,6 +233,7 @@ class LGDisplayInputSelect(LGDisplayBaseSelect):
         if await self._lg_display.async_get_power_status() is True:
             self._input_id = await self._lg_display.async_get_input()
 
+    @interactive_command
     async def async_select_option(self, option: str) -> None:
         source = self._sources.get(option)
         if source is None:
@@ -294,6 +298,7 @@ class LGDisplayIsmMethodSelect(LGDisplayBaseSelect):
         if await self._lg_display.async_get_power_status() is True:
             self._value = await self._lg_display.async_get_ism_method()
 
+    @interactive_command
     async def async_select_option(self, option):
         async with self._maintenance._settings_lock if self._maintenance else nullcontext():
             async with self._maintenance.controller._control_lock if self._maintenance else nullcontext():
@@ -374,12 +379,11 @@ class LGDisplayPictureModeSelect(LGDisplayBaseSelect):
             (name for name, value in self._modes.items() if value == mode_value), None
         )
 
+    @interactive_command
     async def async_select_option(self, option: str) -> None:
         async with self._picture._settings_lock if self._picture else nullcontext():
             async with self._picture.controller._control_lock if self._picture else nullcontext():
                 await self._async_select_picture_mode(option)
-        if self._picture:
-            await self._picture.async_request_refresh()
 
     async def _async_select_picture_mode(self, option):
         if option not in self._modes:
@@ -456,6 +460,7 @@ class LGDisplayEnergySavingSelect(LGDisplayBaseSelect):
 
         self._current_mode = f"0x{mode_value:02x}"
 
+    @interactive_command
     async def async_select_option(self, option: str) -> None:
         if option not in ENERGY_SAVING_MODES:
             raise HomeAssistantError("Unsupported energy saving")
@@ -533,6 +538,7 @@ class LGDisplaySoundModeSelect(LGDisplayBaseSelect):
 
         self._current_mode = f"0x{mode_value:02x}"
 
+    @interactive_command
     async def async_select_option(self, option: str) -> None:
         if option not in SOUND_MODES:
             _LOGGER.warning("Attempted to select unsupported sound mode: %s", option)
@@ -608,6 +614,7 @@ class LGDisplayOSDLanguageSelect(LGDisplayBaseSelect):
             language_code, f"0x{language_code:02x}"
         )
 
+    @interactive_command
     async def async_select_option(self, option: str) -> None:
         if option not in self._language_to_code:
             _LOGGER.warning("Attempted to select unsupported OSD language: %s", option)
@@ -648,6 +655,7 @@ class LGDisplayDpmDelaySelect(LGDisplayBaseSelect):
             (k for k, v in DPM_DELAYS.items() if v == result), None
         )
 
+    @interactive_command
     async def async_select_option(self, option):
         if option not in DPM_DELAYS:
             raise HomeAssistantError("Unsupported DPM timeout")
@@ -693,6 +701,7 @@ class LGDisplayAspectRatioSelect(LGDisplayBaseSelect):
             (k for k, v in ASPECT_RATIOS.items() if v == value), None
         )
 
+    @interactive_command
     async def async_select_option(self, option):
         if option not in ASPECT_RATIOS:
             raise HomeAssistantError("Unsupported aspect ratio")
@@ -720,6 +729,7 @@ class SystemTemperatureUnit(SystemSettingEntity, SelectEntity):
     def current_option(self):
         return (self.coordinator.data or {}).get(self.key)
 
+    @interactive_command
     async def async_select_option(self, option):
         await self.coordinator.async_set(self.key, option)
 
@@ -739,6 +749,7 @@ class PowerSettingsSelect(PowerSettingEntity, SelectEntity):
             return {"remote_power_on": remote_power_on_status(self.coordinator.data or {})}
         return None
 
+    @interactive_command
     async def async_select_option(self, option):
         await self.coordinator.async_set(self.key, option)
 
@@ -752,5 +763,6 @@ class HardwareOptionSelect(HardwareSettingEntity, SelectEntity):
     def current_option(self):
         return (self.coordinator.data or {}).get(self.key)
 
+    @interactive_command
     async def async_select_option(self, option):
         await self.coordinator.async_set(self.key, option)

@@ -10,6 +10,7 @@ import re
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from .command_queue import PriorityLock, interactive_command
 from .device_profile import ok_payload, is_uh5f
 from .maintenance import integer
 from .picture_settings import PictureSettingEntity
@@ -130,7 +131,7 @@ class NativeSchedules(DataUpdateCoordinator):
             web,
         )
         self.awake = False
-        self._settings_lock = asyncio.Lock()
+        self._settings_lock = PriorityLock()
 
     async def _read(self):
         if not is_uh5f(await self.display.async_get_model_name()):
@@ -180,6 +181,7 @@ class NativeSchedules(DataUpdateCoordinator):
         except ValueError:
             return False
 
+    @interactive_command
     async def async_change(
         self, kind, *, time=None, repeat=None, backlight=None, schedule_id=None
     ):

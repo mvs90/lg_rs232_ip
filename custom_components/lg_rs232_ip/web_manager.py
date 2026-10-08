@@ -16,6 +16,8 @@ import uuid
 import aiohttp
 from yarl import URL
 
+from .command_queue import PriorityLock
+
 
 class LGWebError(Exception):
     """Sanitized LG web-manager failure."""
@@ -83,7 +85,7 @@ class LGWebManager:
             else False
         )
         self._session = None
-        self._lock = asyncio.Lock()
+        self._lock = PriorityLock()
         self._authenticated = False
 
     def _url(self, port: int, path: str) -> URL:
@@ -179,6 +181,9 @@ class LGWebManager:
                     ),
                     ssl=self._ssl,
                     max_msg_size=262144,
+                    # Bound cleanup even if the peer does not echo the closing
+                    # frame; keep the request/response deadline unchanged.
+                    timeout=aiohttp.ClientWSTimeout(ws_close=0.25),
                 ) as ws:
                     opened = False
                     while True:

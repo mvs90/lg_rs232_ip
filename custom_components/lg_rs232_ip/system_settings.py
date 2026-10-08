@@ -15,6 +15,7 @@ from homeassistant.helpers.update_coordinator import (
     UpdateFailed,
 )
 
+from .command_queue import PriorityLock, interactive_command
 from .const import DOMAIN
 from .web_manager import LGWebError
 
@@ -88,7 +89,7 @@ class SystemSettings(DataUpdateCoordinator):
         )
         self.entry, self.display, self.web = entry, display, web
         self.controller, self.store = controller, store
-        self._settings_lock = asyncio.Lock()
+        self._settings_lock = PriorityLock()
         try:
             self.power_on_delay = int(
                 validate_setting(
@@ -113,6 +114,7 @@ class SystemSettings(DataUpdateCoordinator):
             await self.display.async_disconnect()
             self.display.device_id = address
             self.display._unsupported_until.clear()
+            self.display._query_retry_after.clear()
             self.display._last_power_status = None
 
     async def _read(self, *, locked=False):
@@ -141,6 +143,7 @@ class SystemSettings(DataUpdateCoordinator):
             except LGWebError as err:
                 raise UpdateFailed("Cannot read LG system settings") from err
 
+    @interactive_command
     async def async_set(self, key, value):
         try:
             value = validate_setting(key, value)
@@ -162,14 +165,15 @@ class SystemSettings(DataUpdateCoordinator):
                 if before[key] != value:
                     # Keep the RS232 lock until the actual new address is known.
                     # Even cancellation/lost ACK must reconcile a possible write.
-                    async with self.display._command_lock:
+                    address_change = key == "signageSetId"
+                    async with self.display._command_lock if address_change else nullcontext():
                         try:
                             await self.web.async_write_display_setting(key, value)
                         except LGWebError:
                             pass
                         finally:
                             for attempt in range(3):
-                                values = await self._read(locked=True)
+                                values = await self._read(locked=address_change)
                                 if values.get(key) == value:
                                     break
                                 if attempt < 2:

@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .command_queue import interactive_command
 from .const import DOMAIN, READ_STATUS, ENERGY_SAVING_MODES
 from .lg_display import LGDisplay
 from .system_settings import SystemSettingEntity
@@ -88,6 +89,7 @@ class IsmStandbyNumber(MaintenanceEntity, NumberEntity):
     def native_value(self):
         return (self.coordinator.data or {}).get(self.key)
 
+    @interactive_command
     async def async_set_native_value(self, value):
         await self.coordinator.async_set(self.key, value)
 
@@ -139,6 +141,7 @@ class BasicPictureNumber(LGDisplayBaseNumber):
         else:
             self._attr_native_value = None
 
+    @interactive_command
     async def async_set_native_value(self, value):
         if isinstance(value, bool) or not self.native_min_value <= value <= self.native_max_value or (value - self.native_min_value) % self.native_step:
             raise HomeAssistantError("Picture value is outside this model's range or step")
@@ -198,6 +201,7 @@ class LGDisplayVolumeNumber(LGDisplayBaseNumber):
             "manufacturer": "LG",
         }
 
+    @interactive_command
     async def async_set_native_value(self, value: float) -> None:
         """Set the volume value."""
         power_status = await self._lg_display.async_get_power_status()
@@ -285,6 +289,7 @@ class LGDisplayBacklightNumber(LGDisplayBaseNumber):
         )
         await self.async_update()
 
+    @interactive_command
     async def async_set_native_value(self, value: float) -> None:
         if not 0 <= value <= 100 or value != int(value):
             raise HomeAssistantError(
@@ -359,6 +364,7 @@ class LGDisplayIsmMethodNumber(LGDisplayBaseNumber):
             "manufacturer": "LG",
         }
 
+    @interactive_command
     async def async_set_native_value(self, value: float) -> None:
         if (
             isinstance(value, bool)
@@ -420,6 +426,7 @@ class LGDisplayAspectRatioNumber(LGDisplayBaseNumber):
         )
         await self.async_update()
 
+    @interactive_command
     async def async_set_native_value(self, value: float) -> None:
         if value not in ASPECT_RATIOS.values():
             raise HomeAssistantError(
@@ -460,6 +467,7 @@ class SystemSettingsNumber(SystemSettingEntity, NumberEntity):
         value = (self.coordinator.data or {}).get(self.key)
         return int(value) if value is not None else None
 
+    @interactive_command
     async def async_set_native_value(self, value):
         await self.coordinator.async_set(self.key, value)
 
@@ -474,6 +482,7 @@ class PreferredColorNumber(PictureSettingEntity, NumberEntity):
         value = (self.coordinator.data or {}).get(self.key)
         return int(value) if value is not None else None
 
+    @interactive_command
     async def async_set_native_value(self, value):
         if isinstance(value, bool) or not -5 <= value <= 5 or int(value) != value:
             raise HomeAssistantError("Preferred color must be a whole number from -5 to 5")
@@ -486,6 +495,7 @@ class BacklightRangeNumber(PreferredColorNumber):
     _attr_native_step = 5
     _attr_native_unit_of_measurement = "%"
 
+    @interactive_command
     async def async_set_native_value(self, value):
         if isinstance(value, bool) or not 0 <= value <= 100 or value % 5:
             raise HomeAssistantError("Automatic backlight range uses 0–100 in steps of 5")
@@ -504,5 +514,6 @@ class HardwareNumber(HardwareSettingEntity, NumberEntity):
     def native_value(self):
         return (self.coordinator.data or {}).get(self.key)
 
+    @interactive_command
     async def async_set_native_value(self, value):
         await self.coordinator.async_set(self.key, value)

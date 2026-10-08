@@ -329,3 +329,17 @@ async def test_signage_name_uses_its_public_setter_not_the_shadow_database():
     web._api = AsyncMock()
     await web.async_write_display_setting("signageName", "Living room")
     web._api.assert_awaited_once_with("setSignageName", None, signageName="Living room")
+
+
+async def test_non_address_web_write_leaves_serial_transport_available(settings):
+    manager, values = settings
+
+    async def write(key, value):
+        assert not manager.display._command_lock.locked()
+        # An unrelated serial read can finish while the web setting is applied.
+        async with manager.display._command_lock:
+            values[key] = value
+
+    manager.web.async_write_display_setting.side_effect = write
+    await asyncio.wait_for(manager.async_set("temperatureUnit", "fahrenheit"), 1)
+    assert manager.data["temperatureUnit"] == "fahrenheit"
