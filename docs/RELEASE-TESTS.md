@@ -1,5 +1,13 @@
 # Release acceptance
 
+## LG 2.30.3: responsive remote with latest-command buffering — 2026-10-08
+
+**292 browser cases pass across Chromium/WebKit**, including 74 remote-card cases. Added checks cover rapid/repeated keys, a 500-input burst, subsequent bursts while the next request is active, failed requests without replay, source-only wake, latest slider/source values, mixed commands with captured message text, queued standby, unavailable/off/missing/foreign entities, detach/rebind and two-display isolation. A running command no longer disables the card; each attached card context has one active request and one replaceable pending command. Leaving the card or changing its display discards queued work and ignores old results; HA may still complete an already sent request.
+
+The seven frontend registration/service-contract Python tests pass on each supported HA version; the full Python suites are also run by release CI. Ruff and whitespace checks pass. The resident display app stays at **1.20.0**.
+
+Installed in the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container. The real HA dashboard displayed **“Letzter Befehl vorgemerkt …”** during a rapid series of volume requests while navigation and source controls remained enabled. Each request used the existing **0%** value, preserving sound settings. Fresh native picture/sound/commercial and Studio snapshots matched afterward; power, Mediaplayer source, volume and mute were unchanged. The served remote bundle and all 76 component files matched source. The temporary browser tab was closed to release its preview connection. The device test verifies actual HA dispatch and UI availability; deterministic burst ordering is checked with controlled delayed service replies in both browser engines.
+
 ## LG 2.30.2: configuration and failure-path audit — 2026-10-08
 
 **904 Python tests pass on each of HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14; 262 browser cases pass across Chromium/WebKit.** The AV Companion suite passes **103 cases per HA version** against current LG. Official Hassfest reports zero invalid integrations; Ruff and whitespace checks pass. Combined Python statement/branch coverage rises from **79.2% to 83.7%** (statement coverage 86.1%, branch coverage 76.4%). CI now prints coverage reports.

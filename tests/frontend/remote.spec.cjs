@@ -195,30 +195,21 @@ test("message survives state updates and input is rendered as text", async ({
   await expect(page.locator("#message-panel")).toBeHidden();
 });
 
-test("pending request blocks repeats and failures are visible without optimistic state", async ({
-  page,
-}) => {
+test("pending request keeps controls enabled and sends only the latest buffered key", async ({page}) => {
   await mount(page);
-  await page.evaluate(() => {
-    window.pending = new Promise((resolve) => (window.finish = resolve));
-  });
-  await page.getByRole("button", { name: "Oben", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Oben", exact: true }),
-  ).toBeDisabled();
-  await page.evaluate(() => {
-    card._remote("up");
-    window.finish();
-    window.pending = null;
-  });
-  await expect(
-    page.getByRole("button", { name: "Oben", exact: true }),
-  ).toBeEnabled();
-  expect((await calls(page)).length).toBe(1);
-  await page.evaluate(() => (window.fail = true));
-  await page.getByRole("button", { name: "Ausschalten", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Befehl fehlgeschlagen");
+  await holdServices(page);
+  await page.getByRole("button", {name:"Oben", exact:true}).click();
+  await expect(page.getByRole("button", {name:"OK", exact:true})).toBeEnabled();
   await expect(page.locator("#status")).toHaveText("Ein");
+  for (const name of ["Unten", "Links", "Rechts", "OK"])
+    await page.getByRole("button", {name, exact:true}).click();
+  expect((await calls(page)).map(c => c[2].command)).toEqual(["up"]);
+  await expect(page.locator("#feedback")).toHaveText("Letzter Befehl vorgemerkt …");
+  await finishService(page, 0);
+  await expect.poll(async () => (await calls(page)).map(c => c[2].command)).toEqual(["up", "select"]);
+  await finishService(page, 1);
+  await expect(page.locator("#feedback")).toHaveText("Befehl gesendet");
+  expect(await page.evaluate(() => maxInFlight)).toBe(1);
 });
 
 async function preview(page) {
@@ -727,7 +718,8 @@ test('source selection wakes from standby, including the previously selected inp
   await expect(input).toHaveValue('');
   await page.evaluate(()=>{window.pending=new Promise(resolve=>window.finishWake=resolve);});
   await input.selectOption('HDMI 1');
-  await expect(input).toBeDisabled();
+  await expect(input).toBeEnabled();
+  await expect(input).toHaveValue('HDMI 1');
   await expect(page.locator('#feedback')).toHaveText('Display wird gestartet …');
   await expect(page.getByRole('button',{name:'Oben',exact:true})).toBeDisabled();
   expect(await calls(page)).toEqual([['media_player','select_source',{source:'HDMI 1',entity_id:'media_player.display'}]]);
@@ -779,7 +771,7 @@ test('two display remotes isolate pending actions, state changes and targets', a
   const first = page.locator('lg-display-remote').nth(0);
   const second = page.locator('lg-display-remote').nth(1);
   await first.getByRole('button',{name:'Oben',exact:true}).click();
-  await expect(first.getByRole('button',{name:'OK',exact:true})).toBeDisabled();
+  await expect(first.getByRole('button',{name:'OK',exact:true})).toBeEnabled();
   await expect(second.getByRole('button',{name:'OK',exact:true})).toBeEnabled();
   await second.getByRole('button',{name:'OK',exact:true}).click();
   expect(await calls(page)).toEqual([
@@ -794,4 +786,203 @@ test('two display remotes isolate pending actions, state changes and targets', a
   await expect(second.getByRole('button',{name:'OK',exact:true})).toBeEnabled();
   await second.getByRole('combobox',{name:'Eingang',exact:true}).selectOption('HDMI 3');
   expect((await calls(page)).at(-1)).toEqual(['media_player','select_source',{source:'HDMI 3',entity_id:'media_player.second'}]);
+});
+
+// Each promise represents a genuinely pending HA service call. The tests assert
+// observable dispatch order instead of depending on the card's queue fields.
+async function holdServices(page) {
+  await page.evaluate(() => {
+    window.serviceRequests = [];
+    window.inFlight = window.maxInFlight = 0;
+    hass.callService = (...args) => {
+      calls.push(args);
+      maxInFlight = Math.max(maxInFlight, ++inFlight);
+      return new Promise((resolve, reject) => serviceRequests.push({resolve, reject}))
+        .finally(() => --inFlight);
+    };
+    card.hass = {...hass};
+  });
+}
+async function finishService(page, index, fail = false) {
+  await page.evaluate(({index, fail}) => {
+    const request = serviceRequests[index];
+    if (fail) request.reject(Error("deliberate service failure"));
+    else request.resolve();
+  }, {index, fail});
+}
+
+test('repeated arrow keys and successive bursts keep one pending command', async ({page}) => {
+  await mount(page);
+  await holdServices(page);
+  const up = page.getByRole('button', {name:'Oben', exact:true});
+  await up.click();
+  await up.dispatchEvent('keydown', {key:'ArrowRight', repeat:true});
+  await up.dispatchEvent('keydown', {key:'ArrowDown', repeat:true});
+  await finishService(page, 0);
+  await expect.poll(async () => (await calls(page)).map(c => c[2].command)).toEqual(['up','down']);
+  await page.evaluate(() => {
+    for (let i=0; i<500; i++) card._remote(i===499 ? 'left' : 'right');
+  });
+  expect((await calls(page)).length).toBe(2);
+  await finishService(page, 1);
+  await expect.poll(async () => (await calls(page)).map(c => c[2].command)).toEqual(['up','down','left']);
+  await finishService(page, 2);
+  expect(await page.evaluate(() => maxInFlight)).toBe(1);
+  await expect(page.locator('#feedback')).toHaveText('Befehl gesendet');
+});
+
+test('failed active request is not replayed and the latest explicit command still runs', async ({page}) => {
+  await mount(page);
+  await holdServices(page);
+  await page.getByRole('button', {name:'Oben', exact:true}).click();
+  await page.getByRole('button', {name:'Zurück', exact:true}).click();
+  await finishService(page, 0, true);
+  await expect.poll(async () => (await calls(page)).map(c => c[2].command)).toEqual(['up','back']);
+  await finishService(page, 1);
+  await expect(page.locator('#feedback')).toHaveText('Befehl gesendet');
+  await page.getByRole('button', {name:'Ausschalten', exact:true}).click();
+  await finishService(page, 2, true);
+  await expect(page.locator('#feedback')).toContainText('Befehl fehlgeschlagen');
+  await expect(page.locator('#status')).toHaveText('Ein');
+  await expect(page.locator('#power')).toBeEnabled();
+});
+
+test('source wake buffers the latest source while preserving standby navigation guards', async ({page}) => {
+  await mount(page);
+  await update(page, {state:'off'});
+  await holdServices(page);
+  const source = page.getByRole('combobox', {name:'Eingang', exact:true});
+  await source.selectOption('HDMI 1');
+  await source.selectOption('Apple TV');
+  await source.selectOption('HDMI 3');
+  await expect(source).toBeEnabled();
+  await expect(source).toHaveValue('HDMI 3');
+  await expect(page.getByRole('button', {name:'Oben', exact:true})).toBeDisabled();
+  await update(page, {state:'on'});
+  await expect(source).toHaveValue('HDMI 3');
+  await finishService(page, 0);
+  await expect.poll(async () => (await calls(page)).map(c => c[2].source)).toEqual(['HDMI 1','HDMI 3']);
+  await update(page, {attributes:{...initial.attributes, source:'HDMI 3'}});
+  await finishService(page, 1);
+  await expect(source).toHaveValue('HDMI 3');
+  await expect(page.getByRole('button', {name:'Oben', exact:true})).toBeEnabled();
+});
+
+test('volume dragging keeps the latest requested value until it is sent', async ({page}) => {
+  await mount(page);
+  await holdServices(page);
+  const slider = page.getByRole('slider');
+  await slider.fill('45');
+  await slider.fill('60');
+  await slider.fill('80');
+  await expect(slider).toBeEnabled();
+  await expect(slider).toHaveValue('80');
+  await update(page, {attributes:{...initial.attributes, volume_level:0.45}});
+  await expect(slider).toHaveValue('80');
+  await expect(page.locator('#volume-value')).toHaveText('80%');
+  await finishService(page, 0);
+  await expect.poll(async () => (await calls(page)).map(c => c[2].volume_level)).toEqual([0.45,0.8]);
+  await update(page, {attributes:{...initial.attributes, volume_level:0.8}});
+  await finishService(page, 1);
+  await expect(slider).toHaveValue('80');
+});
+
+test('mixed controls share one buffer and copy the message at the time of the click', async ({page}) => {
+  await mount(page);
+  await holdServices(page);
+  await page.getByRole('button', {name:'Oben', exact:true}).click();
+  await page.getByRole('combobox', {name:'Eingang', exact:true}).selectOption('Apple TV');
+  await page.locator('#message-panel summary').click();
+  await page.locator('#message').fill('Diese Nachricht senden');
+  await page.getByRole('button', {name:'Senden', exact:true}).click();
+  await page.locator('#message').fill('Noch nicht senden');
+  await finishService(page, 0);
+  await expect.poll(async () => (await calls(page)).map(c => c[1])).toEqual(['send_remote_command','show_toast']);
+  expect((await calls(page))[1][2]).toEqual({message:'Diese Nachricht senden',entity_id:'media_player.display'});
+  await finishService(page, 1);
+});
+
+test('standby button replaces queued navigation without disabling the card', async ({page}) => {
+  await mount(page);
+  await holdServices(page);
+  await page.getByRole('button', {name:'Oben', exact:true}).click();
+  await page.getByRole('button', {name:'Unten', exact:true}).click();
+  await page.getByRole('button', {name:'Ausschalten', exact:true}).click();
+  await finishService(page, 0);
+  await expect.poll(async () => (await calls(page)).map(c => c[1])).toEqual(['send_remote_command','turn_off']);
+  await update(page, {state:'off'});
+  await finishService(page, 1);
+  await expect(page.locator('#status')).toHaveText('Standby');
+  await expect(page.locator('#power')).toBeEnabled();
+  await expect(page.getByRole('button', {name:'Oben', exact:true})).toBeDisabled();
+});
+
+for (const state of ['off','unavailable','unknown','missing','foreign']) {
+  test(`queued navigation is discarded on ${state} even if the device recovers before completion`, async ({page}) => {
+    await mount(page);
+    await holdServices(page);
+    await page.getByRole('button', {name:'Oben', exact:true}).click();
+    await page.getByRole('button', {name:'Unten', exact:true}).click();
+    await page.evaluate(state => {
+      if (state==='missing') delete hass.states['media_player.display'];
+      else if (state==='foreign') {
+        delete hass.entities['media_player.display'];
+        hass.states['media_player.display'] = {state:'on', attributes:{}};
+      } else hass.states['media_player.display'].state = state;
+      card.hass = {...hass};
+    }, state);
+    await expect(page.getByRole('button', {name:'Oben', exact:true})).toBeDisabled();
+    await page.evaluate(initial => {
+      hass.states['media_player.display'] = initial;
+      hass.entities['media_player.display'] = {platform:'lg_rs232_ip',device_id:'lg'};
+      card.hass = {...hass};
+    }, initial);
+    await finishService(page, 0);
+    await expect(page.locator('#feedback')).toHaveText('Befehl gesendet');
+    expect((await calls(page)).length).toBe(1);
+  });
+}
+
+for (const boundary of ['detach','entity change','entity change and back']) {
+  test(`a ${boundary} drops old queued commands and ignores late results`, async ({page}) => {
+    await mount(page);
+    await holdServices(page);
+    await page.getByRole('button', {name:'Oben', exact:true}).click();
+    await page.getByRole('button', {name:'Unten', exact:true}).click();
+    await page.evaluate(boundary => {
+      if (boundary==='detach') {
+        card.remove();
+        document.body.append(card);
+      } else {
+        hass.states['media_player.second'] = {...hass.states['media_player.display']};
+        hass.entities['media_player.second'] = {platform:'lg_rs232_ip',device_id:'second'};
+        card.setConfig({entity:'media_player.second'});
+        if (boundary.endsWith('and back')) card.setConfig({entity:'media_player.display'});
+      }
+    }, boundary);
+    await page.getByRole('button', {name:'OK', exact:true}).click();
+    expect((await calls(page)).map(c => c[2].command)).toEqual(['up','select']);
+    await finishService(page, 0, true);
+    await expect(page.locator('#feedback')).toHaveText('Befehl wird gesendet …');
+    await page.getByRole('button', {name:'Rechts', exact:true}).click();
+    expect((await calls(page)).length).toBe(2);
+    await finishService(page, 1);
+    await expect.poll(async () => (await calls(page)).map(c => c[2].command)).toEqual(['up','select','right']);
+    const target = boundary==='entity change' ? 'media_player.second' : 'media_player.display';
+    expect((await calls(page)).slice(1).map(c => c[2].entity_id)).toEqual([target,target]);
+    await finishService(page, 2);
+  });
+}
+
+test('cosmetic card configuration and HA updates retain the latest queued command', async ({page}) => {
+  await mount(page);
+  await holdServices(page);
+  await page.getByRole('button', {name:'Oben', exact:true}).click();
+  await page.getByRole('button', {name:'Links', exact:true}).click();
+  await page.evaluate(() => card.setConfig({entity:'media_player.display', name:'Mein Display'}));
+  await update(page, {attributes:{...initial.attributes, volume_level:0.5}});
+  await expect(page.locator('h2')).toHaveText('Mein Display');
+  await finishService(page, 0);
+  await expect.poll(async () => (await calls(page)).map(c => c[2].command)).toEqual(['up','left']);
+  await finishService(page, 1);
 });

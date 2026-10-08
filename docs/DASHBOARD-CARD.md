@@ -18,7 +18,9 @@ Die Vorschaukamera ist optional. Zuerst in den Integrationseinstellungen nativen
 
 Ab Version 2.2.1 funktioniert die LG-Großansicht auch mit dem aktiven Home-Assistant-Service-Worker in macOS Safari. Nach dem Update die Home-Assistant-Seite vollständig neu laden, damit das neue Frontend-Modul geladen wird.
 
-Unbekannte/nicht erreichbare Geräte und laufende Befehle sperren die Tasten. Ab **2.25.1** sind bei Standby sowohl **Einschalten** als auch die **Quellenwahl** möglich. Die Auswahl einer HDMI-Quelle oder App-Ansicht startet das Display direkt mit dieser Quelle. Im Standby zeigt die Liste „Eingang wählen“, damit auch der zuletzt verwendete Eingang erneut gewählt werden kann. Währenddessen erscheint „Display wird gestartet …“; wiederholte Klicks bleiben bis zum Abschluss gesperrt. Navigation und Lautstärke wecken das Display nicht. Fehler werden auf der Karte angezeigt. Tastatur: Tab navigiert zwischen den Bedienelementen; die Pfeiltasten funktionieren, wenn eine Taste des Steuerkreuzes oder der Navigationsleiste fokussiert ist. Die Beschriftung folgt der HA-Sprache (Deutsch/Englisch), die Farben dem HA-Theme.
+Ab **2.30.3** bleiben die Bedienelemente während eines laufenden Befehls verfügbar. Die Karte sendet einen Befehl und merkt sich zusätzlich genau **die letzte Eingabe**. Weitere schnelle Tastendrücke ersetzen diesen vorgemerkten Befehl; es entsteht keine lange Warteschlange. Das gilt gemeinsam für Navigation, Quellen, Lautstärke und Nachrichten sowie für wiederholte Pfeiltasten der Tastatur. Die Anzeige zeigt „Befehl wird gesendet …“ bzw. „Letzter Befehl vorgemerkt …“. Quellen- und Lautstärkeregler behalten währenddessen den angeforderten Wert.
+
+Tatsächlich unbekannte oder nicht erreichbare Geräte sperren die Tasten weiterhin und verwerfen den Puffer. Auch beim Schließen der Karte oder Wechsel des Zielgeräts wird die vorgemerkte Eingabe verworfen; bereits an HA gesendete Aktionen können noch abgeschlossen werden. Fehlgeschlagene Aktionen werden nicht automatisch wiederholt, eine danach explizit vorgemerkte Aktion kann bei weiterhin verfügbarem Display ausgeführt werden. Ab **2.25.1** sind bei Standby sowohl **Einschalten** als auch die **Quellenwahl** möglich. Die Auswahl einer HDMI-Quelle oder App-Ansicht startet das Display direkt mit dieser Quelle. Im Standby zeigt die Liste „Eingang wählen“, damit auch der zuletzt verwendete Eingang erneut gewählt werden kann. Währenddessen erscheint „Display wird gestartet …“; die Quellenwahl bleibt bedienbar und merkt sich die letzte Auswahl. Navigation und Lautstärke wecken das Display nicht. Fehler werden auf der Karte angezeigt. Tastatur: Tab navigiert zwischen den Bedienelementen; die Pfeiltasten funktionieren, wenn eine Taste des Steuerkreuzes oder der Navigationsleiste fokussiert ist. Die Beschriftung folgt der HA-Sprache (Deutsch/Englisch), die Farben dem HA-Theme.
 
 ## YAML
 
@@ -43,7 +45,7 @@ Update the integration, restart HA and reload the frontend. Edit a dashboard, ch
 
 ## Troubleshooting and development
 
-If the card picker does not list the card, fully reload the page after HA restarts and check that the LG integration is loaded. The integration registers `/lg_rs232_ip/lg-display-remote.js?v=2.5.0` as a frontend module. Do not add a second resource entry for it. The card bundle has no credentials and calls the existing authenticated HA entity services.
+If the card picker does not list the card, fully reload the page after HA restarts and check that the LG integration is loaded. The integration registers `/lg_rs232_ip/lg-display-remote.js?v=2.30.3` as a frontend module. Do not add a second resource entry for it. The card bundle has no credentials and calls the existing authenticated HA entity services.
 
 Home/Menu/Back/Exit use the LG webOS 4.0 guide's documented IR codes `7c`/`43`/`28`/`5b` (pages 67–68; [LG reference](devices/LG-UH5F-H.md)). Individual model support remains device-dependent.
 

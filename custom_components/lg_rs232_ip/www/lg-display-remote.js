@@ -42,6 +42,9 @@ const TEXT = {
     messageHint: "Message on the display",
     send: "Send",
     sent: "Command sent",
+    sending: "Sending command…",
+    buffered: "Latest command queued…",
+    discarded: "Queued command discarded: display unavailable for this action.",
     failed: "Command failed. Check the display connection.",
     preview: "Display preview",
     enlarge: "Enlarge preview",
@@ -102,6 +105,9 @@ const TEXT = {
     messageHint: "Nachricht auf dem Display",
     send: "Senden",
     sent: "Befehl gesendet",
+    sending: "Befehl wird gesendet …",
+    buffered: "Letzter Befehl vorgemerkt …",
+    discarded: "Vorgemerkter Befehl verworfen: Display für diese Aktion nicht bereit.",
     failed: "Befehl fehlgeschlagen. Verbindung zum Display prüfen.",
     preview: "Display-Vorschau",
     enlarge: "Vorschau vergrößern",
@@ -457,7 +463,21 @@ function installLGCameraPreview() {
 class LGDisplayRemote extends LGPreviewHost {
   constructor() {
     super();
-    this._busy = false;
+    this._commandGeneration = 0;
+    this._activeCommand = null;
+    this._queuedCommand = null;
+  }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this._resetCommands();
+  }
+  _resetCommands() {
+    // HA may already be executing the active request. Ignore its late result;
+    // nothing queued for the old card/device may be sent after this boundary.
+    this._commandGeneration += 1;
+    this._activeCommand = this._queuedCommand = null;
+    this._feedback = "";
+    this._error = false;
   }
   static getConfigElement() {
     return document.createElement("lg-display-remote-editor");
@@ -498,7 +518,7 @@ class LGDisplayRemote extends LGPreviewHost {
     }
     if (config.name !== undefined && typeof config.name !== "string")
       throw new Error("name must be a string");
-    if (this._config?.entity !== config.entity) this._feedback = "";
+    if (this._config?.entity !== config.entity) this._resetCommands();
     this._config = { ...config };
     this._built = false;
     this._update();
@@ -545,7 +565,7 @@ class LGDisplayRemote extends LGPreviewHost {
         }[event.key];
         if (command) {
           event.preventDefault();
-          if (!event.repeat) this._remote(command);
+          this._remote(command);
         }
       });
     });
@@ -606,39 +626,56 @@ class LGDisplayRemote extends LGPreviewHost {
     return (
       !!state &&
       isLG(this._hass, this._config.entity) &&
-      !this._busy &&
       (state.state === "on" || (allowOff && state.state === "off"))
     );
   }
   _remote(command) {
     return this._call("lg_rs232_ip", "send_remote_command", { command });
   }
-  async _call(domain, service, data = {}, allowOff = false) {
-    if (!this._ready(allowOff)) return;
-    this._busy = true;
-    const entity = this._config.entity;
-    this._feedback = allowOff && this._state()?.state === "off"
-      ? TEXT[language(this._hass)].starting : "";
-    this._error = false;
-    this._update();
-    try {
-      await this._hass.callService(domain, service, {
-        ...data,
-        entity_id: entity,
-      });
-      if (this._config.entity === entity) {
-        this._feedback = TEXT[language(this._hass)].sent;
-        this._error = false;
-      }
-    } catch (error) {
-      if (this._config.entity === entity) {
-        this._feedback = TEXT[language(this._hass)].failed;
-        this._error = true;
-      }
-    } finally {
-      this._busy = false;
+  _call(domain, service, data = {}, allowOff = false) {
+    if (!this.isConnected || !this._ready(allowOff)) return;
+    // One active request plus one replaceable slot: a burst never builds up
+    // delayed navigation, source changes or stale slider values on the panel.
+    this._queuedCommand = {
+      domain, service, allowOff,
+      data: { ...data, entity_id: this._config.entity },
+    };
+    if (this._activeCommand) {
+      this._feedback = TEXT[language(this._hass)].buffered;
+      this._error = false;
       this._update();
+      return;
     }
+    return this._drainCommands();
+  }
+  async _drainCommands() {
+    const generation = this._commandGeneration;
+    while (this._queuedCommand) {
+      const command = this._queuedCommand;
+      this._queuedCommand = null;
+      if (!this.isConnected || !this._ready(command.allowOff)) break;
+      this._activeCommand = command;
+      this._feedback = TEXT[language(this._hass)][
+        command.allowOff && this._state()?.state === "off" ? "starting" : "sending"
+      ];
+      this._error = false;
+      this._update();
+      let failed = false;
+      try {
+        await this._hass.callService(command.domain, command.service, command.data);
+      } catch (error) {
+        failed = true;
+      }
+      if (generation !== this._commandGeneration) return;
+      this._activeCommand = null;
+      this._feedback = TEXT[language(this._hass)][failed ? "failed" : "sent"];
+      this._error = failed;
+    }
+    this._update();
+  }
+  _pendingValue(service, key) {
+    return [this._queuedCommand, this._activeCommand]
+      .find(command => command?.service === service)?.data[key];
   }
   _update() {
     if (!this._config || !this._hass) return;
@@ -646,6 +683,11 @@ class LGDisplayRemote extends LGPreviewHost {
     const t = TEXT[this._language],
       s = this._state(),
       a = s?.attributes || {};
+    if (this._queuedCommand && !this._ready(this._queuedCommand.allowOff)) {
+      this._queuedCommand = null;
+      this._feedback = t.discarded;
+      this._error = true;
+    }
     const on = s?.state === "on",
       valid = !!s && isLG(this._hass, this._config.entity);
     this._get("title").textContent =
@@ -677,7 +719,7 @@ class LGDisplayRemote extends LGPreviewHost {
     this._get("sources").hidden = this._config.show_sources === false;
     const sources = Array.isArray(a.source_list) ? a.source_list : [];
     const source = this._get("source"),
-      selectedSource = on ? a.source : "",
+      selectedSource = this._pendingValue("select_source", "source") ?? (on ? a.source : ""),
       signature = JSON.stringify([sources, selectedSource]);
     if (this._sourceSignature !== signature) {
       source.replaceChildren();
@@ -690,9 +732,10 @@ class LGDisplayRemote extends LGPreviewHost {
     source.disabled = !this._ready(true) || sources.length === 0;
     this._get("volume").hidden = this._config.show_volume === false;
     const level = this._get("level"),
+      volumeLevel = this._pendingValue("volume_set", "volume_level") ?? a.volume_level,
       volume =
-        typeof a.volume_level === "number" && Number.isFinite(a.volume_level)
-          ? Math.round(a.volume_level * 100)
+        typeof volumeLevel === "number" && Number.isFinite(volumeLevel)
+          ? Math.round(volumeLevel * 100)
           : null;
     if (!this._volumeEditing) level.value = volume ?? 0;
     level.disabled = !this._ready() || volume === null;

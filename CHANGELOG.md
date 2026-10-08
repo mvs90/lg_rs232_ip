@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.30.3
+
+- Keep remote-card controls enabled while a service request is running. Retain only the latest additional command across navigation, sources, volume and messages, then send it after the active request finishes.
+- Support repeated arrow keys without building a delayed backlog. Keep requested source/slider values visible while queued, with explicit sending/queued feedback.
+- Discard queued work when the card is detached, its display changes or the device becomes unavailable for that action. Ignore late results from an earlier card/device context; never replay a failed command automatically.
+- Add 30 browser regression cases across Chromium/WebKit for bursts, failures, standby wake, mixed controls and lifecycle isolation. Display app remains 1.20.0.
+
 ## 2.30.2
 
 - Extend the regression suite to 904 LG cases, including all directed app-source transitions, real HTTP/WebSocket failure handling, two-display isolation, optional-feature composition and reload/cancellation paths. Add a two-card browser isolation test and collect branch coverage in CI.
