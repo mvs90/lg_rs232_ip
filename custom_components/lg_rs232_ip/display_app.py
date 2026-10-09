@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hmac
 import hashlib
+from html import escape
 import ipaddress
 import json
 from pathlib import Path
@@ -25,7 +26,7 @@ from .resident_app import ResidentApp, SI_APP_ID
 from .platform_diagnostics import PlatformDiagnostics
 from .web_manager import LGWebError
 
-APP_VERSION = "1.21.0"
+APP_VERSION = "1.21.1"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -507,6 +508,11 @@ class DisplayAppManager(ResidentApp):
         ):
             raise HomeAssistantError("Display app presentation failed or was cancelled")
 
+    @property
+    def offline_timeout(self):
+        value = self.entry.options.get("display_app_offline_timeout", 30)
+        return value if type(value) is int and 0 <= value <= 600 else 30
+
     def state(self):
         base = {
             "version": APP_VERSION,
@@ -524,6 +530,7 @@ class DisplayAppManager(ResidentApp):
             "startup_design_version": self.layouts.startup_design.version if self.layouts else None,
             "capture": self._capture,
             "diagnostics": self.platform.ticket,
+            "offline_timeout": self.offline_timeout,
             "offline_enabled": self.resident and self.entry.options.get("display_app_offline", False),
             "input_request": self._input_request,
             "input_transition": self._input_transition,
@@ -788,20 +795,17 @@ class DisplayAppView(HomeAssistantView):
         if resource not in manager.assets:
             raise web.HTTPNotFound()
         body = manager.assets[resource]
-        if (
-            resource == "index.html"
-            and manager.resident
-            and manager.entry.options.get("display_app_offline", False)
-        ):
+        if resource == "index.html":
             hdmi = manager.idle_hdmi() or ""
-            body = body.replace(
-                b'<html lang="de">',
-                (
-                    '<html lang="de" manifest="offline.appcache" data-offline-hdmi="'
-                    + hdmi
-                    + '">'
-                ).encode(),
+            attributes = (
+                f' data-app-version="{APP_VERSION}"'
+                f' data-offline-timeout="{manager.offline_timeout}"'
+                f' data-studio-version="{escape(manager.studio_version or "", quote=True)}"'
+                f' data-fallback-hdmi="{escape(hdmi, quote=True)}"'
             )
+            if manager.resident and manager.entry.options.get("display_app_offline", False):
+                attributes += f' manifest="offline.appcache" data-offline-hdmi="{escape(hdmi, quote=True)}"'
+            body = body.replace(b'<html lang="de">', f'<html lang="de"{attributes}>'.encode())
         return web.Response(body=body, content_type=mime[resource], headers=headers)
 
     async def post(self, request, entry_id, token, resource):

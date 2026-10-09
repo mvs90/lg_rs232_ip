@@ -1,13 +1,16 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.21.0", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.21.1", video = null, sourceNode = null, videoSource = null;
   var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
-  var hdmiFit = "contain";
+  var hdmiFit = "contain", lastHdmi = null;
+  var lastStateSuccess = Date.now(), connectionLost = false, fallbackActive = false, outageStart = null;
+  var fallbackDelay = Number(document.documentElement.getAttribute("data-offline-timeout") || 30);
+  if (!isFinite(fallbackDelay) || fallbackDelay < 0 || fallbackDelay > 600) { fallbackDelay = 30; }
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
   var animateHdmi = false;
   var captureBusy = false, lastCapture = null, cancelCapture = null;
-  var active = null, dismissed = null, expires = 0, lastSuccess = Date.now();
+  var active = null, dismissed = null, expires = 0;
   var acknowledged = false, ackBusy = false, heartbeatBusy = false, stopped = false;
   var pollXHR = null, pollTimer = null, cardsSignature = null, wasVisible = !document.hidden;
   var startupChecked = false, startupNoticeTimer = null;
@@ -20,18 +23,17 @@
   }
   function startupConnection(connected) {
     if (connected) { hideStartupNotice(); }
-    else if (!startupChecked && !document.hidden) {
+    else if (!connectionLost && !document.hidden) {
       el("startup-notice").hidden = false;
       startupNoticeTimer = window.setTimeout(hideStartupNotice, 5000);
     }
-    startupChecked = true;
+    connectionLost = !connected; startupChecked = true;
   }
   function request(method, path, data, done, timeout) {
     var xhr = new XMLHttpRequest(), finished = false;
     function finish(value) {
       if (finished) { return; } finished = true;
       xhr.onload = xhr.onerror = xhr.ontimeout = null;
-      if (value) { lastSuccess = Date.now(); }
       done(value);
     }
     xhr.open(method, path, true); xhr.timeout = timeout || (method === "GET" ? 30000 : 5000);
@@ -58,7 +60,7 @@
       var playing = video.play(); if (playing && playing.catch) { playing.catch(function () {}); }
     }
     video.style.objectFit = hdmiFit;
-    videoSource = source;
+    videoSource = lastHdmi = source;
   }
   function releaseHdmi() {
     if (!video) { return; }
@@ -160,6 +162,39 @@
     text("title", "Display bereit"); text("message", ""); text("status", message);
     cards([]); text("countdown", "");
   }
+  function fallbackHdmi() {
+    if (fallbackActive) { return; } fallbackActive = true;
+    if (designer) { designer.clear(); designer = null; }
+    if (cancelCapture) { cancelCapture(); }
+    if (active) { dismissed = active; }
+    design = currentContent = selectedView = active = null;
+    dashboardSelected = pipSelected = mediaSelected = animateHdmi = false;
+    inputRequest = inputAck = revision = null; expires = 0; acknowledged = false;
+    idleHdmi = lastHdmi;
+    if (idleHdmi) { ensureHdmi(idleHdmi); }
+    // Only resize the existing app video plane; never switch the physical input.
+    sceneKey = idleHdmi ? "hdmi_full" : null;
+    layout(idleHdmi ? "hdmi" : "boot");
+    text("title", "Display bereit"); text("message", ""); cards([]); text("countdown", "");
+  }
+  function fallbackWhenDue() {
+    if (outageStart === null || fallbackActive) { return; }
+    var custom = !!(design || active || selectedView || dashboardSelected || pipSelected || mediaSelected);
+    if (!custom || Date.now() - outageStart >= fallbackDelay * 1000) { fallbackHdmi(); }
+  }
+  function connectionFailure(cancelUpdate) {
+    if (stopped) { return; }
+    startupConnection(false);
+    if (window.LGStartup) { window.LGStartup.hide(); }
+    if (cancelUpdate !== false && window.LGOffline) { window.LGOffline.cancel(); }
+    if (outageStart === null) {
+      outageStart = Date.now();
+      // Discard a state response which was already in flight at cache removal.
+      if (pollXHR) { pollXHR.abort();pollXHR=null;clearTimeout(pollTimer);pollTimer=window.setTimeout(poll,2000); }
+    }
+    text("connection", "Verbindung unterbrochen");fallbackWhenDue();
+  }
+  document.addEventListener("lg-app-unavailable", connectionFailure);
   function acknowledge() {
     if (!active || acknowledged || ackBusy) { return; }
     var id = active; ackBusy = true;
@@ -198,9 +233,18 @@
     pollXHR = request("GET", "state" + (revision === null ? "" : "?since=" + encodeURIComponent(revision)), null, function (data) {
       pollXHR = null;
       if (stopped) { return; }
-      startupConnection(!!data);
+      if (data && (typeof data !== "object" || typeof data.version !== "string")) { data = null; }
       if (data) {
-        if ((data.studio_version !== undefined && (data.studio_version || null) !== (window.DisplayStudioRuntimeVersion || null)) || data.version !== VERSION || (window.LGOffline && window.LGOffline.status().enabled !== (data.offline_enabled===true))) { if(window.LGOffline){window.LGOffline.update();}else{window.location.reload();} pollTimer=window.setTimeout(poll,2000); return; }
+        lastStateSuccess = Date.now();
+        if (/^ext:\/\/hdmi:[1-4]$/.test(data.idle_hdmi || "")) { lastHdmi = data.idle_hdmi; }
+        else if (data.content && /^ext:\/\/hdmi:[1-4]$/.test(data.content.hdmi || "")) { lastHdmi = data.content.hdmi; }
+        if ((data.studio_version !== undefined && (data.studio_version || null) !== (window.DisplayStudioRuntimeVersion || null)) || data.version !== VERSION || (window.LGOffline && window.LGOffline.status().enabled !== (data.offline_enabled===true))) {
+          connectionFailure(false);
+          if(window.LGOffline && fallbackActive){window.LGOffline.update(data);}
+          pollTimer=window.setTimeout(poll,2000); return;
+        }
+        fallbackActive = false; outageStart = null; startupConnection(true);
+        if (typeof data.offline_timeout === "number" && isFinite(data.offline_timeout) && data.offline_timeout >= 0 && data.offline_timeout <= 600) { fallbackDelay = data.offline_timeout; }
         if(window.LGStartupDesign){window.LGStartupDesign.sync(data.startup_design_version);}
         text("connection", "Mit Home Assistant verbunden");
         var first = revision === null;
@@ -218,17 +262,19 @@
           if (window.LGStartup) { window.LGStartup.apply(data.startup, sceneKey); }
           animateHdmi = false;
           if (inputRequest) { window.requestAnimationFrame(acknowledgeInput); }
-        } catch (_) { if (window.LGStartup) { window.LGStartup.hide(); } event({type:"error", id:active}); clear("Anzeige fehlgeschlagen"); }
+        } catch (_) { if (window.LGStartup) { window.LGStartup.hide(); } event({type:"error", id:active}); connectionFailure(); fallbackHdmi(); }
         if (first) { heartbeat(); }
         if(data.diagnostics && window.LGPlatform){var diagnosticId=data.diagnostics.id;(data.diagnostics.operation==="video_wall" ? window.LGVideoWall : window.LGPlatform.sample)(data.diagnostics,function(result){event({type:"diagnostics",id:diagnosticId,result:result});});}
         // Paint commands first; a frame is collected only for an outstanding HA ticket.
         if (data.capture) { window.setTimeout(function () { capture(data.capture); }, 50); }
-      } else { if (window.LGStartup) { window.LGStartup.hide(); } text("connection", "Verbindung unterbrochen"); }
+      } else { connectionFailure(); }
       pollTimer = window.setTimeout(poll, data ? 0 : 2000);
     }, startupChecked ? 30000 : 5000);
   }
   var tickTimer = window.setInterval(function () {
-    if (active && (Date.now() >= expires || Date.now() - lastSuccess > 15000)) { clear("Anzeige beendet"); }
+    if (outageStart === null && Date.now() - lastStateSuccess > 35000) { connectionFailure(); }
+    fallbackWhenDue();
+    if (active && Date.now() >= expires) { clear("Anzeige beendet"); }
     if (active) {
       var now = new Date(); text("clock", ("0" + now.getHours()).slice(-2) + ":" + ("0" + now.getMinutes()).slice(-2));
       text("countdown", Math.max(0, Math.ceil((expires - Date.now()) / 1000)) + " s"); acknowledge();
@@ -245,6 +291,8 @@
     if (window.LGStartup) { window.LGStartup.hide(); }
     if(window.LGPlatform){window.LGPlatform.close();}
     if (designer) { designer.cancelHdmiAnimation(); designer.stopCameras(); }
+    document.removeEventListener("lg-app-unavailable", connectionFailure);
+    if (window.LGOffline) { window.LGOffline.close(); }
     stopped = true; clearTimeout(pollTimer); clearInterval(tickTimer); clearInterval(heartbeatTimer);
     if (pollXHR) { pollXHR.abort(); pollXHR = null; }
     if (cancelCapture) { cancelCapture(); }
@@ -256,6 +304,7 @@
   window.addEventListener("pagehide", stop);
   window.addEventListener("resize", function () { if (designer) { renderDesign(currentContent); } });
   var boot=window.LGOffline && window.LGOffline.restore();
-  if(boot){idleHdmi=boot.hdmi;hdmiFit=boot.fit;clear("Offline HDMI");}
+  if(boot){idleHdmi=lastHdmi=boot.hdmi;hdmiFit=boot.fit;clear("Offline HDMI");}
+  else {var initialHdmi=document.documentElement.getAttribute("data-fallback-hdmi");if(/^ext:\/\/hdmi:[1-4]$/.test(initialHdmi || "")){lastHdmi=initialHdmi;}}
   poll();
 }());

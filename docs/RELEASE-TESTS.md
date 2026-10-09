@@ -1,5 +1,14 @@
 # Release acceptance
 
+## 2.32.1 — retain the app through HA outages
+
+The local suites pass **820 Python cases** on HA 2026.9.4/Python 3.14 and **298 browser cases** across Chromium/WebKit. New cases cover obsolete manifests, every missing core asset, stalled cache updates, cancelled/late checks, custom/Dashboard/PiP/Mediaplayer views, 0/5/30/60-second fallback, recovery before and after the deadline, unchanged decoder identity, no native input commands, update-version grace and a stalled state poll despite successful heartbeats. Paired HTTP tests verify timeout validation, bootstrap HDMI without enabling persistent caching, version markers, invalid tokens and unloaded managers. Ruff and whitespace checks pass.
+
+Installed into the existing **unifi-air-quality-ha-dev / HA 2026.9.4** container. Its real German options form exposes **HDMI-Rückfall bei HA-Ausfall (Sekunden)** with default **30**. The paired LAN endpoint serves app **1.21.1**, the bootstrap delay and last HDMI input. The separately installed Studio and its saved library are preserved.
+
+Hardware acceptance is recorded separately from browser simulation: a native screenshot confirmed the original persistent white 404 page. Leaving/reopening SI retained that error page, so a one-time display reboot was used to recover HDMI. The panel subsequently acknowledged SI launches but did not bring the launcher into the foreground; the new physical outage sequence could therefore not yet be validated. The configured SI URL and pairing match and respond successfully from the HA host. The running-app fallback is covered by controlled browser tests; no physical 30-second transition or offline cold-start result is claimed for this release. Private screenshots, configuration snapshots and credentials remain outside Git.
+
+
 ## 2.32.0 — independent Display Studio
 
 The editor, layouts, themes, widget data and generic renderer now live in [Display Studio 1.0.0](https://github.com/mvs90/display_studio). LG retains native hardware control and the SI app; public Studio API v1 binds optional resources without a runtime import. AV API v1 is unchanged.

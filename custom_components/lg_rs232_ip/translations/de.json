@@ -45,7 +45,8 @@
           "display_app_mode": "Startmethode der Display-App",
           "display_app_entities": "Sensoren für die Display-Übersicht (maximal 12)",
           "display_app_resident": "SI-App dauerhaft mit Autostart betreiben",
-          "display_app_offline": "Offline-HDMI-Start über Gerätecache"
+          "display_app_offline": "Offline-HDMI-Start über Gerätecache",
+          "display_app_offline_timeout": "HDMI-Rückfall bei HA-Ausfall (Sekunden)"
         },
         "data_description": {
           "native_web_fingerprint": "Wird beim Speichern vom Display gelesen und für spätere Verbindungen gespeichert. Ein vorhandener Abdruck wird nicht automatisch ersetzt.",
@@ -56,7 +57,8 @@
           "display_app_mode": "SI wurde auf UH5F mit webOS 4 getestet. Vorhandene SI-Apps werden nicht überschrieben. Website ist eine alternative Startmethode.",
           "display_app_entities": "Nur diese Sensorwerte werden während einer aktiven Übersicht für das Display freigegeben. Keine Home-Assistant-Anmeldung auf dem Display nötig.",
           "display_app_resident": "Optional: HDMI bleibt in der App sichtbar. Meldungen und PiP benötigen dann keinen erneuten App-Start. Nur SI; beim ersten Start muss Home Assistant erreichbar sein. Physische Quellenwechsel pausieren den Betrieb bis zum nächsten Einschalten oder Fortsetzen.",
-          "display_app_offline": "Optional für den SI-Dauerbetrieb: speichert nur die App und den letzten HDMI-Eingang im LG-Browser. Einmal online laden und Cache-Status prüfen. Nach geleertem Cache ist HA zum ersten Start nötig; Unterstützung hängt vom Modell ab."
+          "display_app_offline": "Optional für den SI-Dauerbetrieb: speichert nur die App und den letzten HDMI-Eingang im LG-Browser. Einmal online laden und Cache-Status prüfen. Nach geleertem Cache ist HA zum ersten Start nötig; Unterstützung hängt vom Modell ab.",
+          "display_app_offline_timeout": "Eigene Ansichten bei Verbindungsabbruch zunächst beibehalten. Danach zeigt die laufende App den letzten HDMI-Eingang im Vollbild, ohne die LG-Quelle zu wechseln. Standard: 30 Sekunden; 0 = sofort; maximal 600 Sekunden. Bei rechtzeitiger Wiederverbindung bleibt die Ansicht erhalten."
         },
         "description": "Hier die Display-Einstellungen bestätigen. Für die Vorschaukamera den nativen LG-Webzugriff und die Screenshot-Vorschau aktivieren sowie das Mobile-URL-Passwort eintragen. Der Zertifikat-Fingerabdruck wird automatisch ermittelt, wenn das Feld leer bleibt. Alle Einstellungen lassen sich später über Konfigurieren ändern."
       }
@@ -111,7 +113,8 @@
           "display_app_mode": "Startmethode der Display-App",
           "display_app_entities": "Sensoren für die Display-Übersicht (maximal 12)",
           "display_app_resident": "SI-App dauerhaft mit Autostart betreiben",
-          "display_app_offline": "Offline-HDMI-Start über Gerätecache"
+          "display_app_offline": "Offline-HDMI-Start über Gerätecache",
+          "display_app_offline_timeout": "HDMI-Rückfall bei HA-Ausfall (Sekunden)"
         },
         "data_description": {
           "native_web_fingerprint": "Wird beim Speichern vom Display gelesen und für spätere Verbindungen gespeichert. Ein vorhandener Abdruck wird nicht automatisch ersetzt.",
@@ -122,7 +125,8 @@
           "display_app_mode": "SI wurde auf UH5F mit webOS 4 getestet. Vorhandene SI-Apps werden nicht überschrieben. Website ist eine alternative Startmethode.",
           "display_app_entities": "Nur diese Sensorwerte werden während einer aktiven Übersicht für das Display freigegeben. Keine Home-Assistant-Anmeldung auf dem Display nötig.",
           "display_app_resident": "Optional: HDMI bleibt in der App sichtbar. Meldungen und PiP benötigen dann keinen erneuten App-Start. Nur SI; beim ersten Start muss Home Assistant erreichbar sein. Physische Quellenwechsel pausieren den Betrieb bis zum nächsten Einschalten oder Fortsetzen.",
-          "display_app_offline": "Optional für den SI-Dauerbetrieb: speichert nur die App und den letzten HDMI-Eingang im LG-Browser. Einmal online laden und Cache-Status prüfen. Nach geleertem Cache ist HA zum ersten Start nötig; Unterstützung hängt vom Modell ab."
+          "display_app_offline": "Optional für den SI-Dauerbetrieb: speichert nur die App und den letzten HDMI-Eingang im LG-Browser. Einmal online laden und Cache-Status prüfen. Nach geleertem Cache ist HA zum ersten Start nötig; Unterstützung hängt vom Modell ab.",
+          "display_app_offline_timeout": "Eigene Ansichten bei Verbindungsabbruch zunächst beibehalten. Danach zeigt die laufende App den letzten HDMI-Eingang im Vollbild, ohne die LG-Quelle zu wechseln. Standard: 30 Sekunden; 0 = sofort; maximal 600 Sekunden. Bei rechtzeitiger Wiederverbindung bleibt die Ansicht erhalten."
         }
       }
     },

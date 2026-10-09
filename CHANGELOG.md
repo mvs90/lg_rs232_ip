@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.32.1
+
+- Keep the running display app alive when HA stops, the integration unloads or its AppCache manifest returns 404/410. Validate the paired document and core assets before an update reload; failed or stalled updates never force navigation to an error page.
+- Retain custom, Dashboard, PiP and Mediaplayer views during brief interruptions. Add **HDMI fallback on HA outage** in integration options: 0–600 seconds, default 30. After that delay, remove widgets/overlays and show the last HDMI input fullscreen inside the app, reusing its decoder without a physical source switch.
+- Restore the current server view on reconnection, show one brief warning per outage and cancel stale requests and resource checks on shutdown. Native app version: **1.21.1**.
+
 ## 2.30.3
 
 - Keep remote-card controls enabled while a service request is running. Retain only the latest additional command across navigation, sources, volume and messages, then send it after the active request finishes.

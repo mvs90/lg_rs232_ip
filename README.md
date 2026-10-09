@@ -1,6 +1,6 @@
 # LG Professional Display
 
-Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.32.0 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
+Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.32.1 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
 
 **Device settings follow the LG menu order** directly on the Home Assistant device page, with collapsible groups and a standard alphabetical fallback. LED Local Dimming is now available as a verified on/off switch. [Menu inventory, dependencies and remaining limits](docs/DEVICE-MENU.md).
 

@@ -145,6 +145,7 @@ def _display_options_form(user_input, saved_options):
         "preview_interval": (1, 3600, 30),
         "display_wake_timeout": (5, 300, 60),
         "power_transition_timeout": (0, 300, 20),
+        "display_app_offline_timeout": (0, 600, 30),
     }
     booleans = {
         "power_transition_mode": True,
