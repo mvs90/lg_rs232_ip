@@ -1,7 +1,7 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.21.1", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.21.2", video = null, sourceNode = null, videoSource = null;
   var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
   var hdmiFit = "contain", lastHdmi = null;
   var lastStateSuccess = Date.now(), connectionLost = false, fallbackActive = false, outageStart = null;
@@ -12,7 +12,7 @@
   var captureBusy = false, lastCapture = null, cancelCapture = null;
   var active = null, dismissed = null, expires = 0;
   var acknowledged = false, ackBusy = false, heartbeatBusy = false, stopped = false;
-  var pollXHR = null, pollTimer = null, cardsSignature = null, wasVisible = !document.hidden;
+  var pollXHR = null, pollTimer = null, cardsSignature = null, suspended = !!document.hidden;
   var startupChecked = false, startupNoticeTimer = null;
   function el(id) { return document.getElementById(id); }
   function text(id, value) { var node = el(id); if (node.textContent !== value) { node.textContent = value; } }
@@ -183,7 +183,7 @@
     if (!custom || Date.now() - outageStart >= fallbackDelay * 1000) { fallbackHdmi(); }
   }
   function connectionFailure(cancelUpdate) {
-    if (stopped) { return; }
+    if (stopped || suspended) { return; }
     startupConnection(false);
     if (window.LGStartup) { window.LGStartup.hide(); }
     if (cancelUpdate !== false && window.LGOffline) { window.LGOffline.cancel(); }
@@ -229,10 +229,10 @@
     event({type:"input_applied", id:id}, function (result) { if (result && inputRequest === id) { inputAck = id; } });
   }
   function poll() {
-    if (stopped) { return; }
+    if (stopped || suspended || pollXHR) { return; }
     pollXHR = request("GET", "state" + (revision === null ? "" : "?since=" + encodeURIComponent(revision)), null, function (data) {
       pollXHR = null;
-      if (stopped) { return; }
+      if (stopped || suspended) { return; }
       if (data && (typeof data !== "object" || typeof data.version !== "string")) { data = null; }
       if (data) {
         lastStateSuccess = Date.now();
@@ -271,7 +271,7 @@
       pollTimer = window.setTimeout(poll, data ? 0 : 2000);
     }, startupChecked ? 30000 : 5000);
   }
-  var tickTimer = window.setInterval(function () {
+  function tick() {
     if (outageStart === null && Date.now() - lastStateSuccess > 35000) { connectionFailure(); }
     fallbackWhenDue();
     if (active && Date.now() >= expires) { clear("Anzeige beendet"); }
@@ -284,27 +284,47 @@
       // Clocks/progress advance locally without changing the selected source.
       designer.tick(new Date(Date.now()+serverOffset));
     }
-  }, 1000);
-  var heartbeatTimer = window.setInterval(heartbeat, 5000);
-  function stop() {
+  }
+  var tickTimer = null, heartbeatTimer = null;
+  function startTimers() {
+    clearInterval(tickTimer); clearInterval(heartbeatTimer);
+    if (stopped || suspended) { return; }
+    tickTimer = window.setInterval(tick, 1000);
+    heartbeatTimer = window.setInterval(heartbeat, 5000);
+  }
+  function pause() {
     hideStartupNotice();
     if (window.LGStartup) { window.LGStartup.hide(); }
-    if(window.LGPlatform){window.LGPlatform.close();}
     if (designer) { designer.cancelHdmiAnimation(); designer.stopCameras(); }
-    document.removeEventListener("lg-app-unavailable", connectionFailure);
-    if (window.LGOffline) { window.LGOffline.close(); }
-    stopped = true; clearTimeout(pollTimer); clearInterval(tickTimer); clearInterval(heartbeatTimer);
+    if (window.LGOffline) { window.LGOffline.cancel(); }
+    clearTimeout(pollTimer); clearInterval(tickTimer); clearInterval(heartbeatTimer);
+    pollTimer = tickTimer = heartbeatTimer = null;
     if (pollXHR) { pollXHR.abort(); pollXHR = null; }
     if (cancelCapture) { cancelCapture(); }
   }
+  function stop() {
+    if (stopped) { return; }
+    stopped = true; pause();
+    if(window.LGPlatform){window.LGPlatform.close();}
+    document.removeEventListener("lg-app-unavailable", connectionFailure);
+    if (window.LGOffline) { window.LGOffline.close(); }
+  }
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden) { wasVisible = true; }
-    else if (wasVisible && window.PalmSystem) { heartbeat(); stop(); window.close(); }
+    if (stopped) { return; }
+    if (document.hidden && !suspended) {
+      // webOS can briefly hide SI while assigning its HDMI video plane.
+      // Pause work, but never close the resident app because of visibility alone.
+      heartbeat(); suspended = true; pause();
+    } else if (!document.hidden && suspended) {
+      suspended = false; lastStateSuccess = Date.now(); outageStart = null;
+      startupConnection(true); revision = null;
+      startTimers(); poll();
+    }
   });
   window.addEventListener("pagehide", stop);
   window.addEventListener("resize", function () { if (designer) { renderDesign(currentContent); } });
   var boot=window.LGOffline && window.LGOffline.restore();
   if(boot){idleHdmi=lastHdmi=boot.hdmi;hdmiFit=boot.fit;clear("Offline HDMI");}
   else {var initialHdmi=document.documentElement.getAttribute("data-fallback-hdmi");if(/^ext:\/\/hdmi:[1-4]$/.test(initialHdmi || "")){lastHdmi=initialHdmi;}}
-  poll();
+  startTimers(); poll();
 }());

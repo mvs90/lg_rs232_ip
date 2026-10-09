@@ -1,5 +1,7 @@
 """HA outage configuration and the paired bootstrap needed by the resident app."""
 
+from types import SimpleNamespace
+
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
 import pytest
@@ -49,3 +51,21 @@ async def test_paired_bootstrap_carries_timeout_and_hdmi_without_enabling_cache(
         app.closed = True
         assert (await client.get(base + "/index.html?_lg_reload=2")).status == 404
         app.closed = False
+
+
+async def test_studio_bundle_marker_tracks_bound_provider_not_stale_file_header(app):
+    layouts = SimpleNamespace(changed=None)
+    assets = {"layout.js": b'window.DisplayStudioRuntimeVersion = "1.2.1";\nwindow.LGLayoutRenderer = function () {};'}
+    original = assets["layout.js"]
+    app.bind_studio("studio", layouts, assets, "1.4.0")
+    assert app.studio_version == "1.4.0"
+    assert app.assets["layout.js"].endswith(b'window.DisplayStudioRuntimeVersion = "1.4.0";\n')
+    assert assets["layout.js"] == original
+    digest = app.asset_digest
+    app.bind_studio("studio", layouts, assets, "1.4.1")
+    assert app.assets["layout.js"].count(b'"1.4.0"') == 0
+    assert app.assets["layout.js"].endswith(b'window.DisplayStudioRuntimeVersion = "1.4.1";\n')
+    assert app.asset_digest != digest
+    app.unbind_studio("studio")
+    assert not app.assets["layout.js"]
+    assert app.studio_version is None

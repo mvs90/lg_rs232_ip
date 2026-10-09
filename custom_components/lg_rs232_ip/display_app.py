@@ -26,7 +26,7 @@ from .resident_app import ResidentApp, SI_APP_ID
 from .platform_diagnostics import PlatformDiagnostics
 from .web_manager import LGWebError
 
-APP_VERSION = "1.21.1"
+APP_VERSION = "1.21.2"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -112,6 +112,12 @@ class DisplayAppManager(ResidentApp):
             return
         self.studio_owner, self.studio_version, self.layouts = owner, version, layouts
         self.assets.update(assets)
+        if self.assets.get("layout.js"):
+            # The loaded provider owns the bundle version. Older Studio files
+            # may still carry a manually maintained marker from a prior release.
+            self.assets["layout.js"] += (
+                "\nwindow.DisplayStudioRuntimeVersion = " + json.dumps(version) + ";\n"
+            ).encode()
         self.asset_digest = hashlib.sha256(b"".join(self.assets[key] for key in sorted(self.assets))).hexdigest()[:16]
         layouts.changed = self._layouts_changed
         self._layouts_changed()

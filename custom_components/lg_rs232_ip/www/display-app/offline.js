@@ -48,9 +48,17 @@
       checkResource("app.js",function (body,type) {return type.indexOf("javascript")!==-1 && body.indexOf('VERSION = "'+expected.version+'"')!==-1;},function () {
         checkResource("app.css",function (body,type) {return type.indexOf("text/css")===0 && body.indexOf("body.hdmi")!==-1;},function () {
           checkResource("offline.js",function (body,type) {return type.indexOf("javascript")!==-1 && body.indexOf("window.LGOffline=")!==-1;},function () {
-            if(closed || !updating){return;}
-            if(enabled && cache && cache.status===4){try{cache.swapCache();}catch(_){unavailable();return;}}
-            cancel();closed=true;window.location.reload();
+            function reloadReady() {
+              if(closed || !updating){return;}
+              if(enabled && cache && cache.status===4){try{cache.swapCache();}catch(_){unavailable();return;}}
+              cancel();closed=true;window.location.reload();
+            }
+            if(expected.studio_version){
+              checkResource("layout.js",function (body,type) {
+                return type.indexOf("javascript")!==-1 && body.indexOf("window.LGLayoutRenderer")!==-1 &&
+                  body.indexOf("window.DisplayStudioRuntimeVersion = "+JSON.stringify(expected.studio_version)+";")!==-1;
+              },reloadReady);
+            } else {reloadReady();}
           });
         });
       });

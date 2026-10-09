@@ -15,6 +15,7 @@ async function mount(page, state) {
     if(state.noStudio&&['layout.js','layout.css','weather.js','cards.js','camera.js','startup-design.js'].includes(name))return route.fulfill({contentType:name.endsWith('.css')?'text/css':'application/javascript',body:''});
     if (state.offline && ['state','event','startup','startup-design'].includes(name)) return route.fulfill({status:state.failureStatus || 503,body:''});
     if (state.failResource===name && route.request().url().includes('_lg_reload=')) return route.fulfill({status:404,contentType:'text/html',body:'<h1>404 Not Found</h1>'});
+    if(name==='layout.js'&&state.studioVersion)return route.fulfill({contentType:'application/javascript',body:fs.readFileSync(assetPath(name),'utf8')+'\nwindow.DisplayStudioRuntimeVersion = '+JSON.stringify(state.staleStudioRuntime?'0.0.0':state.studioVersion)+';\n'});
     if(name === 'camera.json')return route.fulfill({contentType:'application/json',body:JSON.stringify({stream:state.cameraStream || null})});
     if(name === 'camera.jpg'){state.cameraFrames=(state.cameraFrames || 0)+1;return route.fulfill({contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});}
     if (name === 'startup') {
@@ -30,8 +31,9 @@ async function mount(page, state) {
       return route.fulfill({contentType:'application/json',body});
     }
     if (name === 'state') {
+      state.stateRequests=(state.stateRequests || 0)+1;
       if (state.delayState) await new Promise(resolve => setTimeout(resolve,state.delayState));
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.21.1', revision: 1, offline_enabled:state.cacheEnabled || false, offline_timeout:state.offlineTimeout ?? 30, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.21.2', studio_version:state.studioVersion, revision: 1, offline_enabled:state.cacheEnabled || false, offline_timeout:state.offlineTimeout ?? 30, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -39,7 +41,7 @@ async function mount(page, state) {
       if (event.type === 'rendered' && state.content) state.content.rendered = true;
       return route.fulfill({contentType: 'application/json', body: '{"ok":true}'});
     }
-    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: name==='index.html' ? fs.readFileSync(path.join(assets,name),'utf8').replace('<html lang="de">','<html lang="de" data-app-version="1.21.1" data-offline-timeout="'+(state.offlineTimeout ?? 30)+'" data-fallback-hdmi="'+(state.fallbackHdmi || '')+'"'+(state.cacheEnabled?' manifest="offline.appcache" data-offline-hdmi="ext://hdmi:1"':'')+'>') : fs.readFileSync(assetPath(name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'"}});
+    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: name==='index.html' ? fs.readFileSync(path.join(assets,name),'utf8').replace('<html lang="de">','<html lang="de" data-app-version="1.21.2" data-studio-version="'+(state.studioVersion || '')+'" data-offline-timeout="'+(state.offlineTimeout ?? 30)+'" data-fallback-hdmi="'+(state.fallbackHdmi || '')+'"'+(state.cacheEnabled?' manifest="offline.appcache" data-offline-hdmi="ext://hdmi:1"':'')+'>') : fs.readFileSync(assetPath(name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'"}});
   });
   await page.goto('http://display-app.test/index.html');
   return events;
@@ -1441,10 +1443,11 @@ test('brief outage preserves the exact view and decoder and a later outage gets 
 
 for(const resource of ['index.html','app.js','app.css','offline.js'])test(`automatic app refresh refuses missing ${resource} and retains its HDMI document`,async({page})=>{
   await page.clock.install();
+  await page.addInitScript(()=>{window.resourceFailures=0;document.addEventListener("lg-app-unavailable",()=>window.resourceFailures++);});
   const state={content:null,idle_hdmi:'ext://hdmi:2',failResource:resource};
   await mount(page,state);await expect(page.locator('body')).toHaveClass('hdmi');
-  await page.evaluate(()=>LGOffline.update({version:'1.21.1',offline_enabled:false}));
-  await expect(page.locator('#connection')).toHaveText('Verbindung unterbrochen');
+  await page.evaluate(()=>LGOffline.update({version:'1.21.2',offline_enabled:false}));
+  await expect.poll(()=>page.evaluate(()=>resourceFailures)).toBeGreaterThan(0);
   expect(state.navigations).toBe(1);
   await page.clock.fastForward(15000);
   expect(state.navigations).toBe(1);
@@ -1468,12 +1471,12 @@ test('cache timeout and late updateready never reload an unloaded integration',a
 test('valid refresh reloads once and pagehide aborts an outstanding validation request',async({page})=>{
   const state={content:null,idle_hdmi:'ext://hdmi:1'};
   await mount(page,state);await expect(page.locator('body')).toHaveClass('hdmi');
-  await page.evaluate(()=>LGOffline.update({version:'1.21.1',offline_enabled:false}));
+  await page.evaluate(()=>LGOffline.update({version:'1.21.2',offline_enabled:false}));
   await expect.poll(()=>state.navigations).toBe(2);
   await expect(page.locator('body')).toHaveClass('hdmi');
   let release;const wait=new Promise(resolve=>release=resolve);
   await page.route('**/index.html?_lg_reload=*',async route=>{await wait;await route.continue();});
-  await page.evaluate(()=>{LGOffline.update({version:'1.21.1',offline_enabled:false});window.dispatchEvent(new Event('pagehide'));});
+  await page.evaluate(()=>{LGOffline.update({version:'1.21.2',offline_enabled:false});window.dispatchEvent(new Event('pagehide'));});
   release();await page.waitForTimeout(100);
   expect(state.navigations).toBe(2);
 });
@@ -1504,7 +1507,7 @@ test('a version mismatch retains the custom view for its grace period before pro
   await page.clock.fastForward(2100);
   await expect.poll(()=>state.reloadChecks).toBeGreaterThan(0);
   expect(state.navigations).toBe(1);
-  state.version='1.21.1';await page.clock.fastForward(2100);
+  state.version='1.21.2';await page.clock.fastForward(2100);
   await expect(page.locator('body')).toHaveClass('designed');
 });
 
@@ -1527,4 +1530,71 @@ test('successful heartbeats cannot hide a stalled state poll from the outage wat
   await page.clock.fastForward(28000);await expect(page.locator('body')).toHaveClass('designed');
   await page.clock.fastForward(3100);await expect(page.locator('body')).toHaveClass('hdmi');
   expect(state.navigations).toBe(1);
+});
+
+
+async function webosVisibility(page, hidden=false) {
+  await page.addInitScript(initial=>{
+    window.testHidden=initial;window.PalmSystem={};window.closeCalls=0;
+    window.close=()=>window.closeCalls++;
+    Object.defineProperty(document,'hidden',{configurable:true,get:()=>testHidden});
+    window.setHidden=value=>{window.testHidden=value;document.dispatchEvent(new Event('visibilitychange'));};
+  },hidden);
+}
+
+for(const view of ['hdmi_full','pip_view'])test(`webOS temporary visibility changes retain resident ${view} and resume without closing or replacing HDMI`,async({page})=>{
+  await page.clock.install();await webosVisibility(page);
+  const state={content:null,idle_hdmi:'ext://hdmi:1',selected_view:view,layout:designed()};
+  const events=await mount(page,state);await expect(page.locator('body')).toHaveClass('designed');
+  await page.evaluate(()=>window.keptVideo=document.querySelector('#hdmi-slot video'));
+  await page.evaluate(()=>setHidden(true));
+  await expect.poll(()=>events.some(e=>e.type==='hello'&&e.visible===false)).toBe(true);
+  const reads=state.stateRequests;
+  await page.clock.fastForward(65000);
+  expect(state.stateRequests).toBe(reads);
+  expect(await page.evaluate(()=>closeCalls)).toBe(0);
+  await page.evaluate(()=>setHidden(false));
+  await expect.poll(()=>state.stateRequests).toBeGreaterThan(reads);
+  await expect(page.locator('body')).toHaveClass('designed');
+  expect(await page.evaluate(()=>keptVideo===document.querySelector('#hdmi-slot video'))).toBe(true);
+  expect(await page.evaluate(()=>closeCalls)).toBe(0);
+  // Fast duplicate transitions cannot leave stopped timers or create extra closes.
+  await page.evaluate(()=>{setHidden(true);setHidden(false);setHidden(false);});
+  state.offline=true;await expect(page.locator('#connection')).toHaveText('Verbindung unterbrochen');
+  await page.clock.fastForward(31000);await expect(page.locator('body')).toHaveClass('hdmi');
+  await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
+  const stoppedReads=state.stateRequests;
+  await page.evaluate(()=>{setHidden(true);setHidden(false);});await page.clock.fastForward(65000);
+  expect(state.stateRequests).toBe(stoppedReads);
+});
+
+test('an SI page initially loaded in the background starts polling only when it becomes visible',async({page})=>{
+  await page.clock.install();await webosVisibility(page,true);
+  const state={content:null,idle_hdmi:'ext://hdmi:1'};
+  await mount(page,state);await page.clock.fastForward(15000);
+  expect(state.stateRequests || 0).toBe(0);
+  expect(await page.evaluate(()=>closeCalls)).toBe(0);
+  await page.evaluate(()=>setHidden(false));
+  await expect(page.locator('body')).toHaveClass('hdmi');
+  await expect(page.locator('#connection')).toHaveText('Mit Home Assistant verbunden');
+});
+
+
+for(const broken of ['missing','stale'])test(`safe reload refuses a ${broken} Studio renderer instead of entering a reload loop`,async({page})=>{
+  await page.clock.install();
+  const state={content:null,idle_hdmi:'ext://hdmi:1',studioVersion:'1.4.0',staleStudioRuntime:broken==='stale',failResource:broken==='missing'?'layout.js':null};
+  await mount(page,state);
+  await page.evaluate(()=>LGOffline.update({version:'1.21.2',studio_version:'1.4.0',offline_enabled:false}));
+  await expect.poll(()=>state.reloadChecks || 0).toBeGreaterThanOrEqual(5);
+  await page.clock.fastForward(65000);
+  expect(state.navigations).toBe(1);
+  await expect(page.locator('body')).toHaveClass('hdmi');
+});
+
+test('safe reload accepts the renderer version supplied by the bound Studio provider',async({page})=>{
+  const state={content:null,idle_hdmi:'ext://hdmi:1',studioVersion:'1.4.0'};
+  await mount(page,state);await expect(page.locator('body')).toHaveClass('hdmi');
+  await page.evaluate(()=>LGOffline.update({version:'1.21.2',studio_version:'1.4.0',offline_enabled:false}));
+  await expect.poll(()=>state.navigations).toBe(2);
+  await expect(page.locator('#connection')).toHaveText('Mit Home Assistant verbunden');
 });

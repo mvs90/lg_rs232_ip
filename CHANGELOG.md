@@ -4,7 +4,9 @@
 
 - Keep the running display app alive when HA stops, the integration unloads or its AppCache manifest returns 404/410. Validate the paired document and core assets before an update reload; failed or stalled updates never force navigation to an error page.
 - Retain custom, Dashboard, PiP and Mediaplayer views during brief interruptions. Add **HDMI fallback on HA outage** in integration options: 0–600 seconds, default 30. After that delay, remove widgets/overlays and show the last HDMI input fullscreen inside the app, reusing its decoder without a physical source switch.
-- Restore the current server view on reconnection, show one brief warning per outage and cancel stale requests and resource checks on shutdown. Native app version: **1.21.1**.
+- Restore the current server view on reconnection, show one brief warning per outage and cancel stale requests and resource checks on shutdown. Native app version: **1.21.2**.
+- Pause polling, timers and captures while webOS hides the app; resume the same HDMI element when visible. A visibility change no longer closes the SI app.
+- Stamp the LG-bound renderer with its loaded Studio provider version and check that renderer before update navigation. A stale embedded Studio version no longer causes repeated reloads or unacknowledged view changes.
 
 ## 2.30.3
 
