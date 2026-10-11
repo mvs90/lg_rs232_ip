@@ -141,6 +141,7 @@ async def async_setup_entry(
             "sv",
             0x02,
             {0: "No signal", 1: "Signal present"},
+            signal_reader=data["controller"].async_get_signal_status,
         ),
     ]
 
@@ -658,7 +659,17 @@ class LGDisplayStatusSensor(LGDisplayBaseSensor):
     """Opt-in status sensor backed by an echoed LG subcommand."""
 
     def __init__(
-        self, display, name, unique_id, key, label, command, parameter, values
+        self,
+        display,
+        name,
+        unique_id,
+        key,
+        label,
+        command,
+        parameter,
+        values,
+        *,
+        signal_reader=None,
     ):
         self._lg_display = display
         self._attr_unique_id = f"{unique_id}_{key}"
@@ -666,6 +677,7 @@ class LGDisplayStatusSensor(LGDisplayBaseSensor):
         self._command = command
         self._parameter = parameter
         self._values = values
+        self._signal_reader = signal_reader
         self._attr_native_value = None
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, unique_id)})
 
@@ -674,9 +686,13 @@ class LGDisplayStatusSensor(LGDisplayBaseSensor):
         return self._lg_display.is_available and self._attr_native_value is not None
 
     async def async_update(self):
-        value = await self._lg_display.async_get_subcommand(
-            self._command, self._parameter
-        )
+        if self._signal_reader:
+            signal = await self._signal_reader()
+            value = int(signal) if type(signal) is bool else None
+        else:
+            value = await self._lg_display.async_get_subcommand(
+                self._command, self._parameter
+            )
         self._attr_native_value = self._values.get(value)
 
 
@@ -758,7 +774,12 @@ class RemotePowerOnSensor(PowerSettingEntity, SensorEntity):
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_device_class = SensorDeviceClass.ENUM
-    _attr_options = ["network_ready", "pm_mode_restricted", "wake_on_lan_disabled", "unknown"]
+    _attr_options = [
+        "network_ready",
+        "pm_mode_restricted",
+        "wake_on_lan_disabled",
+        "unknown",
+    ]
 
     def __init__(self, coordinator):
         super().__init__(coordinator, "remote_power_on", "mdi:power-plug-outline")

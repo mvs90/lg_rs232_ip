@@ -26,7 +26,7 @@ from .resident_app import ResidentApp, SI_APP_ID
 from .platform_diagnostics import PlatformDiagnostics
 from .web_manager import LGWebError
 
-APP_VERSION = "1.21.2"
+APP_VERSION = "1.22.1"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -92,6 +92,11 @@ class DisplayAppManager(ResidentApp):
         self.closed = False
         self.client_visible = False
         self.client_hdmi = False
+        self.client_hdmi_signal = None
+        self.client_hdmi_source = None
+        self.client_hdmi_request = None
+        self.client_hdmi_seen = 0.0
+        self.standby_notice = None
         self.capture_capable = False
         self._capture_retry = 0.0
         self._capture = None
@@ -272,6 +277,19 @@ class DisplayAppManager(ResidentApp):
         self._capture_future.set_result(image)
 
     @property
+    def hdmi_signal(self):
+        """Only a fresh sample for the current external plane can confirm loss."""
+        if (
+            not self.resident_connected
+            or time.monotonic() - self.client_hdmi_seen >= 12
+            or self.client_hdmi_source != self.idle_hdmi()
+            or not self.client_hdmi_source
+            or self.client_hdmi_request != self._input_request
+        ):
+            return None
+        return self.client_hdmi_signal
+
+    @property
     def status(self):
         if not self.enabled:
             return "disabled"
@@ -294,6 +312,7 @@ class DisplayAppManager(ResidentApp):
             "resident_paused": bool(self.saved.get("paused")),
             "capture_capable": self.connected and self.capture_capable,
             "hdmi_signal_ready": self.client_hdmi if self.connected else False,
+            "hdmi_signal_present": self.hdmi_signal,
             "app_version": APP_VERSION,
             "client_version": self.client_version,
             "layout_scene": self.client_layout_scene if self.connected else None,
@@ -519,6 +538,15 @@ class DisplayAppManager(ResidentApp):
         value = self.entry.options.get("display_app_offline_timeout", 30)
         return value if type(value) is int and 0 <= value <= 600 else 30
 
+    def standby_notice_payload(self):
+        notice = self.standby_notice
+        if (not notice or not self.resident_connected or self.controller.presentation_active
+                or self.controller.external_owner or self.controller._view_lease is not None
+                or self.hdmi_signal is not False):
+            return None
+        remaining = notice["deadline"] - time.monotonic()
+        return {"message": notice["message"], "remaining": remaining} if remaining > 0 else None
+
     def state(self):
         base = {
             "version": APP_VERSION,
@@ -533,6 +561,7 @@ class DisplayAppManager(ResidentApp):
             "media_view": self.media_view_selected,
             "selected_view": self.selected_view,
             "startup": self.startup,
+            "standby_notice": self.standby_notice_payload(),
             "startup_design_version": self.layouts.startup_design.version if self.layouts else None,
             "capture": self._capture,
             "diagnostics": self.platform.ticket,
@@ -593,6 +622,9 @@ class DisplayAppManager(ResidentApp):
             self.client_layout_scene,
             self.client_layout_revision,
             self.client_hdmi,
+            self.client_hdmi_signal,
+            self.client_hdmi_source,
+            self.client_hdmi_request,
             self.capture_capable,
             self.last_error,
         )
@@ -651,7 +683,11 @@ class DisplayAppManager(ResidentApp):
             if isinstance(startup_design, dict):
                 version = startup_design.get("version")
                 self.client_startup_design = {
-                    "version": version if isinstance(version, str) and len(version) == 64 and all(c in "0123456789abcdef" for c in version) else None,
+                    "version": version
+                    if isinstance(version, str)
+                    and len(version) == 64
+                    and all(c in "0123456789abcdef" for c in version)
+                    else None,
                     "cached": startup_design.get("cached") is True,
                     "image_cached": startup_design.get("image_cached") is True,
                 }
@@ -671,6 +707,19 @@ class DisplayAppManager(ResidentApp):
                 }
             self.client_visible = value.get("visible") is True
             self.client_hdmi = value.get("hdmi_ready") is True
+            signal = value.get("hdmi_signal")
+            self.client_hdmi_signal = signal if type(signal) is bool else None
+            source = value.get("hdmi_source")
+            self.client_hdmi_source = (
+                source
+                if source in ("ext://hdmi:1", "ext://hdmi:2", "ext://hdmi:3")
+                else None
+            )
+            request = value.get("hdmi_request")
+            self.client_hdmi_request = (
+                request if isinstance(request, str) and len(request) <= 64 else None
+            )
+            self.client_hdmi_seen = time.monotonic()
             self.capture_capable = value.get("capture") is True
         self.last_seen = time.monotonic()
         if (
@@ -707,6 +756,9 @@ class DisplayAppManager(ResidentApp):
             self.client_layout_scene,
             self.client_layout_revision,
             self.client_hdmi,
+            self.client_hdmi_signal,
+            self.client_hdmi_source,
+            self.client_hdmi_request,
             self.capture_capable,
             self.last_error,
         )

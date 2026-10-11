@@ -198,6 +198,66 @@ class DisplayAPI:
             else None
         )
 
+    def set_standby_notice(self, message=None, deadline=None):
+        """Optional countdown overlay; HA-monotonic deadline, no presentation lease."""
+        if not self.ready:
+            return
+        app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
+        if app is None:
+            return
+        notice = {"message": str(message)[:300], "deadline": deadline} if message and isinstance(deadline, (int, float)) else None
+        if notice != app.standby_notice:
+            app.standby_notice = notice
+            app.changed()
+
+    @property
+    def no_signal_views(self):
+        """App sources whose saved scene contains no HDMI/PiP element."""
+        if not self.dashboard_available:
+            return {}
+        app = self.hass.data[DOMAIN][self.entry_id]["display_app"]
+        scenes = app.layouts.config.get("scenes", {})
+        return {
+            key: label
+            for key, label in app.view_sources.items()
+            if key != "pip_view"
+            and key in scenes
+            and not any(
+                item.get("kind") == "hdmi" for item in scenes[key].get("elements", [])
+            )
+        }
+
+    @property
+    def hdmi_context(self):
+        """Optional v1 extension: safe resident HDMI/PiP monitoring context."""
+        if (
+            not self.ready
+            or self.controller.presentation_active
+            or self.controller.external_owner
+            or self.controller._view_lease is not None
+        ):
+            return None
+        app = self.hass.data[DOMAIN][self.entry_id].get("display_app")
+        if not app or not app.resident_connected:
+            return None
+        view = app.selected_view
+        if view is not None:
+            scene = (
+                app.layouts.config.get("scenes", {}).get(view, {})
+                if app.layouts
+                else {}
+            )
+            if not any(
+                item.get("kind") == "hdmi" for item in scene.get("elements", [])
+            ):
+                return None
+        return {
+            "mode": "pip" if view is not None else "fullscreen",
+            "input_id": app.selected_input,
+            "signal": app.hdmi_signal,
+            "view": view,
+        }
+
     async def async_get_signal_status(self):
         if (
             self.dashboard_active
@@ -206,7 +266,7 @@ class DisplayAPI:
             or self.active_view is not None
         ):
             return None
-        return await self.display.async_get_signal_status() if self.ready else None
+        return await self.controller.async_get_signal_status() if self.ready else None
 
     async def async_get_volume(self):
         return await self.display.async_get_volume() if self.ready else None

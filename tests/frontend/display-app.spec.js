@@ -33,7 +33,7 @@ async function mount(page, state) {
     if (name === 'state') {
       state.stateRequests=(state.stateRequests || 0)+1;
       if (state.delayState) await new Promise(resolve => setTimeout(resolve,state.delayState));
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.21.2', studio_version:state.studioVersion, revision: 1, offline_enabled:state.cacheEnabled || false, offline_timeout:state.offlineTimeout ?? 30, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.22.1', studio_version:state.studioVersion, revision: 1, offline_enabled:state.cacheEnabled || false, offline_timeout:state.offlineTimeout ?? 30, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content, standby_notice: state.standby_notice || null})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -41,7 +41,7 @@ async function mount(page, state) {
       if (event.type === 'rendered' && state.content) state.content.rendered = true;
       return route.fulfill({contentType: 'application/json', body: '{"ok":true}'});
     }
-    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: name==='index.html' ? fs.readFileSync(path.join(assets,name),'utf8').replace('<html lang="de">','<html lang="de" data-app-version="1.21.2" data-studio-version="'+(state.studioVersion || '')+'" data-offline-timeout="'+(state.offlineTimeout ?? 30)+'" data-fallback-hdmi="'+(state.fallbackHdmi || '')+'"'+(state.cacheEnabled?' manifest="offline.appcache" data-offline-hdmi="ext://hdmi:1"':'')+'>') : fs.readFileSync(assetPath(name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'"}});
+    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: name==='index.html' ? fs.readFileSync(path.join(assets,name),'utf8').replace('<html lang="de">','<html lang="de" data-app-version="1.22.1" data-studio-version="'+(state.studioVersion || '')+'" data-offline-timeout="'+(state.offlineTimeout ?? 30)+'" data-fallback-hdmi="'+(state.fallbackHdmi || '')+'"'+(state.cacheEnabled?' manifest="offline.appcache" data-offline-hdmi="ext://hdmi:1"':'')+'>') : fs.readFileSync(assetPath(name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'"}});
   });
   await page.goto('http://display-app.test/index.html');
   return events;
@@ -1446,7 +1446,7 @@ for(const resource of ['index.html','app.js','app.css','offline.js'])test(`autom
   await page.addInitScript(()=>{window.resourceFailures=0;document.addEventListener("lg-app-unavailable",()=>window.resourceFailures++);});
   const state={content:null,idle_hdmi:'ext://hdmi:2',failResource:resource};
   await mount(page,state);await expect(page.locator('body')).toHaveClass('hdmi');
-  await page.evaluate(()=>LGOffline.update({version:'1.21.2',offline_enabled:false}));
+  await page.evaluate(()=>LGOffline.update({version:'1.22.1',offline_enabled:false}));
   await expect.poll(()=>page.evaluate(()=>resourceFailures)).toBeGreaterThan(0);
   expect(state.navigations).toBe(1);
   await page.clock.fastForward(15000);
@@ -1471,12 +1471,12 @@ test('cache timeout and late updateready never reload an unloaded integration',a
 test('valid refresh reloads once and pagehide aborts an outstanding validation request',async({page})=>{
   const state={content:null,idle_hdmi:'ext://hdmi:1'};
   await mount(page,state);await expect(page.locator('body')).toHaveClass('hdmi');
-  await page.evaluate(()=>LGOffline.update({version:'1.21.2',offline_enabled:false}));
+  await page.evaluate(()=>LGOffline.update({version:'1.22.1',offline_enabled:false}));
   await expect.poll(()=>state.navigations).toBe(2);
   await expect(page.locator('body')).toHaveClass('hdmi');
   let release;const wait=new Promise(resolve=>release=resolve);
   await page.route('**/index.html?_lg_reload=*',async route=>{await wait;await route.continue();});
-  await page.evaluate(()=>{LGOffline.update({version:'1.21.2',offline_enabled:false});window.dispatchEvent(new Event('pagehide'));});
+  await page.evaluate(()=>{LGOffline.update({version:'1.22.1',offline_enabled:false});window.dispatchEvent(new Event('pagehide'));});
   release();await page.waitForTimeout(100);
   expect(state.navigations).toBe(2);
 });
@@ -1497,7 +1497,7 @@ test('a version mismatch retains the custom view for its grace period before pro
   await page.clock.install();
   const state={content:null,idle_hdmi:'ext://hdmi:1',selected_view:'dashboard',layout:designed()};
   await mount(page,state);await expect(page.locator('body')).toHaveClass('designed');
-  state.version='1.22.0';state.failResource='index.html';
+  state.version='99.0.0';state.failResource='index.html';
   await expect(page.locator('#connection')).toHaveText('Verbindung unterbrochen');
   await page.clock.fastForward(28000);
   await expect(page.locator('body')).toHaveClass('designed');
@@ -1507,7 +1507,7 @@ test('a version mismatch retains the custom view for its grace period before pro
   await page.clock.fastForward(2100);
   await expect.poll(()=>state.reloadChecks).toBeGreaterThan(0);
   expect(state.navigations).toBe(1);
-  state.version='1.21.2';await page.clock.fastForward(2100);
+  state.version='1.22.1';await page.clock.fastForward(2100);
   await expect(page.locator('body')).toHaveClass('designed');
 });
 
@@ -1584,7 +1584,7 @@ for(const broken of ['missing','stale'])test(`safe reload refuses a ${broken} St
   await page.clock.install();
   const state={content:null,idle_hdmi:'ext://hdmi:1',studioVersion:'1.4.0',staleStudioRuntime:broken==='stale',failResource:broken==='missing'?'layout.js':null};
   await mount(page,state);
-  await page.evaluate(()=>LGOffline.update({version:'1.21.2',studio_version:'1.4.0',offline_enabled:false}));
+  await page.evaluate(()=>LGOffline.update({version:'1.22.1',studio_version:'1.4.0',offline_enabled:false}));
   await expect.poll(()=>state.reloadChecks || 0).toBeGreaterThanOrEqual(5);
   await page.clock.fastForward(65000);
   expect(state.navigations).toBe(1);
@@ -1594,7 +1594,63 @@ for(const broken of ['missing','stale'])test(`safe reload refuses a ${broken} St
 test('safe reload accepts the renderer version supplied by the bound Studio provider',async({page})=>{
   const state={content:null,idle_hdmi:'ext://hdmi:1',studioVersion:'1.4.0'};
   await mount(page,state);await expect(page.locator('body')).toHaveClass('hdmi');
-  await page.evaluate(()=>LGOffline.update({version:'1.21.2',studio_version:'1.4.0',offline_enabled:false}));
+  await page.evaluate(()=>LGOffline.update({version:'1.22.1',studio_version:'1.4.0',offline_enabled:false}));
   await expect.poll(()=>state.navigations).toBe(2);
   await expect(page.locator('#connection')).toHaveText('Mit Home Assistant verbunden');
+});
+
+test('HDMI telemetry correlates settled signal with the selected input request', async ({page}) => {
+  test.setTimeout(60000);
+  await page.addInitScript(() => {
+    window.signalWidth=0; window.signalError=null;
+    Object.defineProperty(HTMLVideoElement.prototype,'videoWidth',{get:()=>window.signalWidth});
+    Object.defineProperty(HTMLVideoElement.prototype,'videoHeight',{get:()=>window.signalWidth ? 2160 : 0});
+    Object.defineProperty(HTMLVideoElement.prototype,'error',{get:()=>window.signalError});
+  });
+  const state={content:null,idle_hdmi:'ext://hdmi:1',input_request:'first'};
+  const events=await mount(page,state);
+  await expect(page.locator('#hdmi-slot source')).toHaveAttribute('src','ext://hdmi:1');
+  await page.waitForTimeout(10100);
+  await expect.poll(()=>events.some(e=>e.type==='hello' && e.hdmi_signal===false && e.hdmi_source==='ext://hdmi:1' && e.hdmi_request==='first')).toBe(true);
+  await page.evaluate(()=>{window.signalWidth=3840; window.originalHDMI=document.querySelector('video');});
+  await page.waitForTimeout(5100);
+  await expect.poll(()=>events.some(e=>e.type==='hello' && e.hdmi_signal===true)).toBe(true);
+  state.idle_hdmi='ext://hdmi:2';state.input_request='second';
+  await page.waitForTimeout(500);
+  await expect(page.locator('#hdmi-slot source')).toHaveAttribute('src','ext://hdmi:2');
+  await page.waitForTimeout(4500);
+  await expect.poll(()=>events.some(e=>e.type==='hello' && e.hdmi_request==='second' && e.hdmi_signal===null)).toBe(true);
+  await page.evaluate(()=>{window.signalWidth=0;});
+  await page.waitForTimeout(5100);
+  await expect.poll(()=>events.some(e=>e.type==='hello' && e.hdmi_source==='ext://hdmi:2' && e.hdmi_request==='second' && e.hdmi_signal===false)).toBe(true);
+  await page.evaluate(()=>{window.signalError={code:3};});
+  await page.waitForTimeout(5100);
+  await expect.poll(()=>events.filter(e=>e.type==='hello').at(-1)?.hdmi_signal).toBe(null);
+  expect(await page.evaluate(()=>window.originalHDMI===document.querySelector('video'))).toBe(true);
+});
+
+
+test('editable standby countdown paints locally without switching HDMI and cancels on signal return', async ({page})=>{
+  await page.clock.install();
+  await page.addInitScript(()=>{
+    window.hasSignal=false;
+    Object.defineProperty(HTMLVideoElement.prototype,'videoWidth',{get:()=>window.hasSignal?3840:0});
+    Object.defineProperty(HTMLVideoElement.prototype,'videoHeight',{get:()=>window.hasSignal?2160:0});
+    Object.defineProperty(HTMLVideoElement.prototype,'error',{get:()=>null});
+  });
+  const state={content:null,idle_hdmi:'ext://hdmi:1',standby_notice:{message:'Eigener Text <b> in {seconds}',remaining:15}};
+  await mount(page,state);
+  await page.clock.fastForward(6000);
+  await expect(page.locator('#standby-notice')).toBeVisible();
+  await expect(page.locator('#standby-notice')).toContainText('Eigener Text <b> in');
+  await expect(page.locator('#standby-notice b')).toHaveCount(0);
+  await page.evaluate(()=>{window.originalHDMI=document.querySelector('video');});
+  await page.route('http://display-app.test/state*',()=>{});
+  const before=await page.locator('#standby-notice').textContent();
+  await page.clock.fastForward(3000);
+  expect(await page.locator('#standby-notice').textContent()).not.toBe(before);
+  await page.evaluate(()=>{window.hasSignal=true;});
+  await page.clock.fastForward(1100);
+  await expect(page.locator('#standby-notice')).toBeHidden();
+  expect(await page.evaluate(()=>document.querySelector('video')===window.originalHDMI)).toBe(true);
 });

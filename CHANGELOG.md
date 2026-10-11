@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.33.0
+
+- Render AV Companion's editable signal-loss countdown over the existing HDMI/PiP plane, with a local one-second text update and no presentation lease or source switch. Hide it on signal recovery, disconnection or expiry.
+
+- Correct HDMI signal detection inside the resident display app. The raw LG signal query describes the active SI application and can remain positive without HDMI video; use fresh external-video telemetry instead. Input Signal, the controller and the AV API now agree.
+- Correlate each sample with the current HDMI input and selection request. Startup, decoder errors, hidden/disconnected clients, stale samples and previous-input reports are unknown, never confirmed signal loss. Reuse the existing five-second heartbeat without extra hardware queries. Native HDMI keeps its hardware query. Display app: **1.22.1**.
+- Add optional API v1 HDMI/PiP context and HDMI-free target views for AV Companion 1.5.0. Persistent PiP can opt into a timed dashboard fallback or shutdown; temporary presentations and view leases remain protected.
+
 ## 2.32.1
 
 - Keep the running display app alive when HA stops, the integration unloads or its AppCache manifest returns 404/410. Validate the paired document and core assets before an update reload; failed or stalled updates never force navigation to an error page.

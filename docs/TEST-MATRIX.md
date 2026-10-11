@@ -116,3 +116,11 @@ git diff --check
 Run AV's suite in its own repository with both repositories on `PYTHONPATH`; keep the minimum supported LG API check as well as a current-LG check. For real transport tests allow local loopback sockets. For Docker use the existing designated test instance and the scoped harness above. Re-run the targeted hardware checks when protocol, startup, ownership or rendering behaviour changes, recording fresh originals and restoration before declaring acceptance.
 
 From LG 2.32, layout/editor tests live in the independent [Display Studio repository](https://github.com/mvs90/display_studio). LG CI checks out that release only as a test dependency for native app/adapter regressions; LG runtime has no Studio import or hard dependency.
+
+## 2.33.0 resident signal and AV countdown — 2026-10-11
+
+835 LG Python cases pass on HA 2025.3.4 and 2026.9.4. Added cases cover fresh tri-state app signal, invalid/stale/source-mismatched telemetry, native fallback, safe persistent PiP context and target filtering, temporary/external presentation protection, and the ephemeral countdown payload. 314 browser cases pass across Chromium and WebKit, including version/cache/outage behaviour, correlated HDMI samples and text-only local countdown rendering without replacing the video plane. AV Companion 1.5.0 has 178 tests, including minimum LG 2.0.0 compatibility.
+
+Existing Docker + UH5F hardware acceptance confirms actual in-app HDMI no-signal detection, PiP keep/view/off policies, a 120-second fullscreen shutdown and the newly configured 15-second fullscreen shutdown via its deadline callback. The existing app heartbeat supplies signal telemetry; no additional native polling or video decoder was added. See the AV [detailed test report](https://github.com/mvs90/av_companion/blob/main/docs/TESTING.md) for configuration, measurements and limits.
+
+A fresh native UH5F capture also visibly confirmed the editable German countdown at two seconds remaining, followed by shutdown. The test used unconnected HDMI 2, then restored the original HDMI-1 mapping and kept the explicitly requested 15-second options. Preview-camera caches were not used as proof of the displayed notice.

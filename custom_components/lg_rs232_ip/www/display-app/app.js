@@ -1,9 +1,9 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.21.2", video = null, sourceNode = null, videoSource = null;
+  var VERSION = "1.22.1", video = null, sourceNode = null, videoSource = null;
   var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
-  var hdmiFit = "contain", lastHdmi = null;
+  var hdmiFit = "contain", lastHdmi = null, hdmiChangedAt = 0;
   var lastStateSuccess = Date.now(), connectionLost = false, fallbackActive = false, outageStart = null;
   var fallbackDelay = Number(document.documentElement.getAttribute("data-offline-timeout") || 30);
   if (!isFinite(fallbackDelay) || fallbackDelay < 0 || fallbackDelay > 600) { fallbackDelay = 30; }
@@ -51,11 +51,13 @@
   function ensureHdmi(source) {
     if (!/^ext:\/\/hdmi:[1-4]$/.test(source)) { throw new Error("HDMI input missing"); }
     if (!video) {
+      hdmiChangedAt = Date.now();
       video = document.createElement("video"); video.autoplay = true;
       sourceNode = document.createElement("source"); sourceNode.type = "service/webos-external";
       sourceNode.src = source; video.appendChild(sourceNode); el("hdmi-slot").appendChild(video);
     } else if (videoSource !== source) {
       // Reuse the decoder element; only an explicit HDMI selection reloads its source.
+      hdmiChangedAt = Date.now();
       video.pause(); sourceNode.src = source; video.load();
       var playing = video.play(); if (playing && playing.catch) { playing.catch(function () {}); }
     }
@@ -67,6 +69,18 @@
     video.pause(); sourceNode.removeAttribute("src"); video.load();
     el("hdmi-slot").removeChild(video); video = sourceNode = videoSource = null;
   }
+  function hdmiSignal() {
+    // Decoder errors/startup are unknown. Zero dimensions on a settled external
+    // video plane mean no HDMI signal; the SI app itself is not a signal source.
+    if (!video || video.error || Date.now() - hdmiChangedAt < 5000) { return null; }
+    return !!(video.videoWidth && video.videoHeight);
+  }
+  var standbyNotice = null;
+  function standbyTick() {
+    var box = el("standby-notice"), seconds = standbyNotice ? Math.ceil((standbyNotice.until - Date.now()) / 1000) : 0;
+    if (!standbyNotice || seconds <= 0 || hdmiSignal() !== false || outageStart !== null || suspended || stopped) { box.hidden = true; return; }
+    text("standby-notice", standbyNotice.message.split("{seconds}").join(String(seconds))); box.hidden = false;
+  }
   function heartbeat() {
     if (heartbeatBusy || stopped) { return; } heartbeatBusy = true;
     event({type:"hello", version:VERSION, bridge:typeof window.PalmServiceBridge === "function",
@@ -75,6 +89,7 @@
       camera:designer ? designer.cameraStatus() : {mode:"inactive",ready:false},
       rendering:{width:window.innerWidth,height:window.innerHeight,pixel_ratio:window.devicePixelRatio || 1,screen_width:window.screen.width,screen_height:window.screen.height},
       visible:!document.hidden, layout_scene:sceneKey, layout_revision:design ? design.revision : null, hdmi_ready:!!(video && video.videoWidth && video.videoHeight && !video.error),
+      hdmi_signal:hdmiSignal(), hdmi_source:videoSource, hdmi_request:inputRequest,
       capture:typeof window.PalmServiceBridge === "function"}, function () { heartbeatBusy = false; });
   }
   function capture(ticket) {
@@ -252,6 +267,8 @@
         revision = data.revision; idleHdmi = data.idle_hdmi || null; inputRequest = data.input_request;
         hdmiFit = data.hdmi_fit === "fill" ? "fill" : "contain";
         if(window.LGOffline){window.LGOffline.remember(idleHdmi,hdmiFit);}
+        standbyNotice = data.standby_notice && typeof data.standby_notice.message === "string" && data.standby_notice.remaining > 0 ? {message:data.standby_notice.message,until:Date.now()+data.standby_notice.remaining*1000} : null;
+        standbyTick();
         design = data.layout || null; selectedView = data.selected_view || null; dashboardSelected = data.dashboard === true; pipSelected = data.pip === true; mediaSelected = data.media_view === true;
         // A previous dashboard must not cover HDMI while a new HDMI start waits
         // for its acknowledgement. The saved scene changes only on the server.
@@ -272,6 +289,7 @@
     }, startupChecked ? 30000 : 5000);
   }
   function tick() {
+    standbyTick();
     if (outageStart === null && Date.now() - lastStateSuccess > 35000) { connectionFailure(); }
     fallbackWhenDue();
     if (active && Date.now() >= expires) { clear("Anzeige beendet"); }
@@ -293,6 +311,7 @@
     heartbeatTimer = window.setInterval(heartbeat, 5000);
   }
   function pause() {
+    standbyNotice = null; el("standby-notice").hidden = true;
     hideStartupNotice();
     if (window.LGStartup) { window.LGStartup.hide(); }
     if (designer) { designer.cancelHdmiAnimation(); designer.stopCameras(); }

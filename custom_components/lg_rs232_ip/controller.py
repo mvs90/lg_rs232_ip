@@ -139,10 +139,26 @@ class DisplayController(TemporaryView, NativeControls):
                 self.volume = await self._lg_display.async_get_volume()
                 raw = await self._lg_display.async_send_command("k", "e", 0xFF)
                 self.muted = raw == 0 if raw is not None else None
-                self.signal = await self._lg_display.async_get_signal_status()
+                self.signal = await self.async_get_signal_status()
             else:
                 self.signal = None
             self.async_write_ha_state()
+
+    async def async_get_signal_status(self):
+        """The raw sv query reports SI app activity, not its embedded HDMI plane."""
+        app = (
+            self.hass.data.get(DOMAIN, {})
+            .get(self._config_entry.entry_id, {})
+            .get("display_app")
+        )
+        if (
+            app
+            and app.resident
+            and app.saved.get("resident")
+            and not app.saved.get("paused")
+        ):
+            return app.hdmi_signal
+        return await self._lg_display.async_get_signal_status()
 
     async def async_ensure_on(self, reason="display action"):
         """Confirm wake despite boot-time TCP loss; never confuse a lost ACK with NG."""
