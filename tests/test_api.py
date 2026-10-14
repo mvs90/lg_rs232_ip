@@ -176,3 +176,77 @@ async def test_adapter_read_contract_and_stale_lease_after_reload(player):
     player.hass.data["lg_rs232_ip"]["test"] = {"controller": replacement}
     await api.async_end_external_presentation(token)
     assert replacement.external_owner == "new-owner"
+
+
+async def test_av_input_adapter_waits_for_resident_instead_of_pausing_boot(player):
+    from contextlib import nullcontext
+    from unittest.mock import patch
+    api = api_for(player)
+    app = SimpleNamespace(
+        resident=True,
+        resident_connected=False,
+        starting=lambda *args: nullcontext(),
+        cancel_startup=Mock(),
+        saved={},
+        async_select_hdmi=AsyncMock(return_value=True),
+        async_pause_resident=AsyncMock(),
+    )
+    player.hass.data['lg_rs232_ip']['test']['display_app'] = app
+    waiting, release = asyncio.Event(), asyncio.Event()
+    async def ready(*args):
+        waiting.set()
+        await release.wait()
+        app.resident_connected = True
+        return True
+    with patch.object(player, '_async_wait_for_resident', side_effect=ready):
+        task = asyncio.create_task(api.async_set_input(0x91))
+        await waiting.wait()
+        app.async_select_hdmi.assert_not_awaited()
+        player._lg_display.async_set_input.assert_not_awaited()
+        release.set()
+        assert await task is True
+    app.async_select_hdmi.assert_awaited_once_with(0x91)
+    app.async_pause_resident.assert_not_awaited()
+    assert player._current_input_id == 0x91
+
+
+async def test_av_power_adapter_confirms_boot_after_lost_ack(player):
+    api = api_for(player)
+    player._lg_display.async_get_power_status.side_effect = [False, True]
+    player._lg_display.async_power_on.return_value = False
+    from unittest.mock import patch
+    with patch('custom_components.lg_rs232_ip.controller.asyncio.sleep', new_callable=AsyncMock):
+        assert await api.async_power_on() is True
+    assert player.power is True
+    player._lg_display.async_power_on.assert_awaited_once()
+
+
+async def test_av_input_native_adapter_readback_confirms_lost_ack(player):
+    api = api_for(player)
+    player._lg_display.async_set_input.return_value = False
+    player._lg_display.async_get_input.return_value = 0x91
+    assert await api.async_set_input(0x91) is True
+    player._lg_display.async_set_input.assert_awaited_once_with(0x91)
+
+
+async def test_av_external_presentation_keeps_its_native_input_path(player):
+    api = api_for(player)
+    token = await api.async_begin_external_presentation()
+    assert await api.async_set_input(0x91) is True
+    assert player.external_owner == token
+    player._lg_display.async_set_input.assert_awaited_once_with(0x91)
+    await api.async_end_external_presentation(token)
+
+
+async def test_av_input_adapter_does_not_cancel_native_presentations(player):
+    api = api_for(player)
+    held = asyncio.Event()
+    player._presentation_task = asyncio.create_task(held.wait())
+    try:
+        with pytest.raises(HomeAssistantError, match='presentation'):
+            await api.async_set_input(0x91)
+        assert not player._presentation_task.done()
+        player._lg_display.async_set_input.assert_not_awaited()
+    finally:
+        held.set()
+        await player._presentation_task

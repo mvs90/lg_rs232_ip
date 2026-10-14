@@ -298,13 +298,25 @@ class DisplayAPI:
             return await getattr(self.display, method)(*args)
 
     async def async_power_on(self):
-        return await self._write("async_power_on")
+        controller = self.controller
+        async with controller._control_lock:
+            if controller.presentation_active:
+                raise HomeAssistantError("LG native presentation is active")
+            return await controller.async_ensure_on("AV power on")
 
     async def async_power_off(self):
         return await self._write("async_power_off")
 
     async def async_set_input(self, value):
-        return await self._write("async_set_input", value)
+        controller = self.controller
+        if controller.presentation_active:
+            raise HomeAssistantError("LG native presentation is active")
+        if controller.external_owner is not None:
+            # AV temporary content owns this lease and deliberately pauses SI.
+            return await self._write("async_set_input", value)
+        # Share native readback/retry and resident-app startup with LG's own
+        # source selector. Never pause a booting app as a native-input fallback.
+        return await controller.async_select_input(value)
 
     async def async_set_volume(self, value):
         return await self._write("async_set_volume", value)

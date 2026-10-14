@@ -1,5 +1,11 @@
 # Test coverage and hardware acceptance
 
+## AV source-only startup (2.33.1 / AV 1.6.2) — 2026-10-14
+
+The public API now exercises the same wake/readback and resident-readiness transaction as the native LG source selector. Regression coverage adds delayed SI readiness without physical-input fallback, a lost power ACK, a lost native input ACK, preserved AV external-presentation ownership and rejection of conflicting native content. The full 840-test suite was exercised on HA 2026.9.4 and 2025.3.4; the required frontend version assertion was rechecked after its version bump.
+
+In the existing HA 2026.9.4 Docker installation with the real 75UH5F-HJ, one AV HDMI 1 request after standby restored the resident fullscreen HDMI scene (55.8 s). One Dashboard request after confirmed LG-off and manually removed display power restored the configured socket and dashboard scene (44.1 s). These are measured startup times, not a promise of instant boot. Configuration, OSD handling and Studio installation were preserved.
+
 Start with the [current scenario matrix, measured coverage and remaining hardware limits](TEST-MATRIX.md). The 2026-10-08 audit runs 904 LG tests on both supported HA versions, 103 AV tests per version, 262 browser cases and 14 scenarios in the existing HA container. It distinguishes controlled regression tests from physical device acceptance and includes reproduction commands.
 
 The historical combined-system checklist below now requires **AV Companion** for linked devices, standby, socket, sound and combined HomeKit checks. Native LG cases remain in this repository. See [2.0 split results](RELEASE-TESTS.md).

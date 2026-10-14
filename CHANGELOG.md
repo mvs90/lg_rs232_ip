@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.33.1
+
+- Route AV API HDMI selection through the same confirmed wake, native input readback/retry and resident-app readiness transaction as the LG source selector. Do not pause a booting SI app or fall back to a physical input while it is still connecting. Return explicit completion to the caller.
+- Confirm AV power-on after lost or early TCP acknowledgements. Preserve the native-input path of an AV-owned temporary presentation and reject conflicting native presentations.
+
 ## 2.33.0
 
 - Render AV Companion's editable signal-loss countdown over the existing HDMI/PiP plane, with a local one-second text update and no presentation lease or source switch. Hide it on signal recovery, disconnection or expiry.

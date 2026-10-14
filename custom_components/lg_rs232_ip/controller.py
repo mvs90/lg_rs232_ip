@@ -417,17 +417,17 @@ class DisplayController(TemporaryView, NativeControls):
         with startup:
             async with self._control_lock:
                 if generation != self._view_generation or self._ha_stopping:
-                    return
+                    return False
                 if await self.async_ensure_on("HDMI selection") is False:
-                    return
+                    return False
             if use_app:
                 if not await self._async_wait_for_resident(
                     app, generation, "HDMI selection"
                 ):
-                    return
+                    return False
             async with self._control_lock:
                 if generation != self._view_generation or self._ha_stopping:
-                    return
+                    return False
                 if use_app and self.external_owner:
                     raise HomeAssistantError("An external presentation owns the display")
                 if app:
@@ -435,7 +435,7 @@ class DisplayController(TemporaryView, NativeControls):
                         self._current_input_id = input_id
                         self._source = self._resolve_source_name(input_id)
                         self.async_write_ha_state()
-                        return
+                        return True
                     if use_app:
                         raise HomeAssistantError(
                             "Display app disconnected during HDMI selection"
@@ -446,11 +446,12 @@ class DisplayController(TemporaryView, NativeControls):
                     app.saved.pop("custom_view", None)
                     await app.async_pause_resident(leave=False)
                 if not await self._async_set_native_input(input_id, generation):
-                    return
+                    return False
                 self._current_input_id = input_id
                 self._source = self._resolve_source_name(input_id)
                 self.async_write_ha_state()
             await self.async_refresh()
+            return True
 
     async def _async_set_native_input(self, input_id, generation):
         """Allow the native input service to settle after confirmed power-on."""
