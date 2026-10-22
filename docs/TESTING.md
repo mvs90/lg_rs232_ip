@@ -1,5 +1,9 @@
 # Test coverage and hardware acceptance
 
+## 2.33.2 / Studio 1.2.2 audit — 2026-10-22
+
+840 LG Python tests pass on HA 2025.3.4/Python 3.13 and HA 2026.9.4/Python 3.14 with the current Studio dependency. CI now pins Studio 1.2.2, including the live-output wrapper and lunar-phase icon cache keys. The coordinated audit also runs Studio and AV suites on both versions and 128 Studio and 314 LG Chromium/WebKit editor, browser-renderer and native-app/remote checks. Ruff passes in all three repositories. No new physical-device acceptance was performed; prior hardware observations below retain their original dates and limits.
+
 ## AV source-only startup (2.33.1 / AV 1.6.2) — 2026-10-14
 
 The public API now exercises the same wake/readback and resident-readiness transaction as the native LG source selector. Regression coverage adds delayed SI readiness without physical-input fallback, a lost power ACK, a lost native input ACK, preserved AV external-presentation ownership and rejection of conflicting native content. The full 840-test suite was exercised on HA 2026.9.4 and 2025.3.4; the required frontend version assertion was rechecked after its version bump.

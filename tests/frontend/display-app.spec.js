@@ -345,7 +345,8 @@ test('weather shows hourly night icons, bounded forecasts, solar gradients and s
   await mount(page,state);
   await expect(page.locator('.lg-weather .lg-value')).toHaveText('8 °C');
   await expect(page.locator('.lg-forecast-period')).toHaveCount(6);
-  expect(await page.locator('.lg-weather>.lg-weather-icon').evaluate(node=>node._wxType)).toBe('moon');
+  // Newer Studio bundles include the lunar phase in the icon cache key.
+  expect(await page.locator('.lg-weather>.lg-weather-icon').evaluate(node=>node._wxType)).toMatch(/^moon(?::|$)/);
   const night=await page.locator('#layout-root').evaluate(node=>node.style.background);
   await page.screenshot({path:'test-results/weather-dashboard-night-'+test.info().project.name+'.png'});
   state.layout.sun={elevation:35,azimuth:160,rising:true,is_daytime:true};state.layout.values['weather.test'].state='sunny';

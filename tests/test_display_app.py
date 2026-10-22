@@ -2388,20 +2388,20 @@ async def test_optional_studio_binding_reload_and_release_keeps_lg_independent(a
         assert app.layouts is None
         assert app.assets['layout.js'] == b''
         await provider.async_start()
-        assert app.layouts is layouts
+        assert app.layouts is layouts.output
         assert app.state()['studio_version'] == VERSION
         assert b'DisplayStudioRuntimeVersion' in app.assets['layout.js']
         api = get_display_api(app.hass, 'test')
         with pytest.raises(HomeAssistantError, match='Another'):
             await api.async_bind_studio('other', layouts, {}, VERSION)
         await api.async_unbind_studio('other')
-        assert app.layouts is layouts
+        assert app.layouts is layouts.output
         # The LG entry may be recreated while Studio remains loaded.
         app.unbind_studio('studio')
         app.hass.data['lg_rs232_ip']['test'].pop('studio_owner', None)
         app.hass.bus.async_fire('lg_rs232_ip_status', {'entry_id':'test'})
         await app.hass.async_block_till_done()
-        assert app.layouts is layouts
+        assert app.layouts is layouts.output
         await provider.async_close()
         assert app.layouts is None and app.assets['layout.js'] == b''
         assert app.state()['studio_version'] is None

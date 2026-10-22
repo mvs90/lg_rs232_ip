@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.33.2
+
+- Validate the Studio adapter against Display Studio 1.2.2 and pin that renderer in CI. Regression tests follow the live-preview output binding and lunar-phase icon keys.
+- Maintenance verification across both supported Home Assistant versions; no hardware protocol changes.
+
 ## 2.33.1
 
 - Route AV API HDMI selection through the same confirmed wake, native input readback/retry and resident-app readiness transaction as the LG source selector. Do not pause a booting SI app or fall back to a physical input while it is still connecting. Return explicit completion to the caller.
