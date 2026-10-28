@@ -126,3 +126,9 @@ Neu sind sechs RGB-Weißabgleichregler, der vollständige Klangmodus einschließ
 Zeitzonen werden aus dem Katalog des Displays gewählt; manuelle Sommerzeit ist mit Start-/Endregel einstellbar. Die Aktionen stehen unter **Entwicklerwerkzeuge → Aktionen → LG Professional Display** bereit. Für Zeitpläne und Zeitzone ist der native Webzugriff erforderlich, die optionale Display-App nicht. [Anleitung, Beispiele und Grenzen](NATIVE-SCHEDULES-AUDIO.md).
 
 Bei einem HA-Ausfall bleibt die aktuelle App-Ansicht zunächst erhalten. Unter **LG Professional Display → Konfigurieren → HDMI-Rückfall bei HA-Ausfall (Sekunden)** lässt sich die Wartezeit von 0 bis 600 Sekunden einstellen (Standard **30**). Danach wird der letzte HDMI-Eingang innerhalb der App auf Vollbild vergrößert, ohne die LG-Quelle umzuschalten. Nach Wiederverbindung erscheint wieder die aktuelle Ansicht. Entfernte App-Dateien bzw. ein 404-AppCache-Manifest lösen kein blindes Neuladen mehr aus. Details und Kaltstartgrenzen: [Display-App](DISPLAY-APP.md).
+
+## Projekt unterstützen
+
+Wenn dir dieses Projekt hilft, kannst du seine Weiterentwicklung und Pflege
+freiwillig über [PayPal](https://www.paypal.me/mvs90) unterstützen.
+Vielen Dank für deine Unterstützung!

@@ -84,3 +84,9 @@ Version 2.21 adds a fixed editable **Startanzeige** in Studio, with local text, 
 ### Additional device settings (2.30)
 
 RGB white balance, complete sound presets and LG audio input/output controls now accompany native on/off and brightness schedule actions, timezone selection and manual DST rules. See [configuration and examples](docs/NATIVE-SCHEDULES-AUDIO.md) for supported hardware, dependencies and the remaining settings audit.
+
+## Support this project
+
+If you find this project useful, you can support its development and maintenance
+with a voluntary contribution via [PayPal](https://www.paypal.me/mvs90).
+Thank you for your support!
