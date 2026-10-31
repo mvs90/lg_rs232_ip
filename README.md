@@ -88,5 +88,6 @@ RGB white balance, complete sound presets and LG audio input/output controls now
 ## Support this project
 
 If you find this project useful, you can support its development and maintenance
-with a voluntary contribution via [PayPal](https://www.paypal.me/mvs90).
+with a voluntary contribution via [GitHub Sponsors](https://github.com/sponsors/mvs90) or
+[PayPal](https://www.paypal.me/mvs90).
 Thank you for your support!
