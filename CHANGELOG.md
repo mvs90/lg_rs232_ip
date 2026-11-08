@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.34.0
+
+- Consolidate the installed display app 1.22.5, bounded capture transports, direct web previews and diagnostic counters with the published integration.
+- Preserve confirmed startup/source transactions and all published outage/reload regressions; validate against Display Studio 1.5.0.
+
 ## 2.33.2
 
 - Validate the Studio adapter against Display Studio 1.2.2 and pin that renderer in CI. Regression tests follow the live-preview output binding and lunar-phase icon keys.

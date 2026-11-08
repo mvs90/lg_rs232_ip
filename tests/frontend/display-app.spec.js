@@ -33,7 +33,7 @@ async function mount(page, state) {
     if (name === 'state') {
       state.stateRequests=(state.stateRequests || 0)+1;
       if (state.delayState) await new Promise(resolve => setTimeout(resolve,state.delayState));
-      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.22.1', studio_version:state.studioVersion, revision: 1, offline_enabled:state.cacheEnabled || false, offline_timeout:state.offlineTimeout ?? 30, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content, standby_notice: state.standby_notice || null})});
+      return route.fulfill({contentType: 'application/json', body: JSON.stringify({version: state.version || '1.22.5', studio_version:state.studioVersion, revision: 1, offline_enabled:state.cacheEnabled || false, offline_timeout:state.offline_timeout ?? state.offlineTimeout ?? 30, hdmi_fit: state.hdmi_fit || "contain", dashboard: state.dashboard || false, pip: state.pip || false, media_view: state.media_view || false, selected_view: state.selected_view || null, startup:state.startup || null, startup_design_version:state.startupDesign?.version || null, input_request: state.input_request || null, input_transition: state.input_transition || "none", idle_hdmi: state.idle_hdmi || null, capture: state.capture || null, diagnostics:state.diagnostics || null, layout: state.layout || null, content: state.content, standby_notice: state.standby_notice || null})});
     }
     if(name === 'cover.jpg')return route.fulfill(new URL(route.request().url()).searchParams.get('v')==='missing'?{status:204,body:''}:{contentType:'image/png',body:fs.readFileSync('tests/fixtures/media-cover.png')});
     if (name === 'event') {
@@ -41,7 +41,7 @@ async function mount(page, state) {
       if (event.type === 'rendered' && state.content) state.content.rendered = true;
       return route.fulfill({contentType: 'application/json', body: '{"ok":true}'});
     }
-    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: name==='index.html' ? fs.readFileSync(path.join(assets,name),'utf8').replace('<html lang="de">','<html lang="de" data-app-version="1.22.1" data-studio-version="'+(state.studioVersion || '')+'" data-offline-timeout="'+(state.offlineTimeout ?? 30)+'" data-fallback-hdmi="'+(state.fallbackHdmi || '')+'"'+(state.cacheEnabled?' manifest="offline.appcache" data-offline-hdmi="ext://hdmi:1"':'')+'>') : fs.readFileSync(assetPath(name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'"}});
+    return route.fulfill({contentType: name.endsWith('.js') ? 'application/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.png') ? 'image/png' : 'text/html', body: name==='index.html' ? fs.readFileSync(path.join(assets,name),'utf8').replace('<html lang="de">','<html lang="de" data-app-version="1.22.5" data-studio-version="'+(state.studioVersion || '')+'" data-offline-timeout="'+(state.offline_timeout ?? state.offlineTimeout ?? 30)+'" data-fallback-hdmi="'+(state.fallbackHdmi || '')+'"'+(state.cacheEnabled?' manifest="offline.appcache" data-offline-hdmi="ext://hdmi:1"':'')+'>') : fs.readFileSync(assetPath(name)), headers: {'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'"}});
   });
   await page.goto('http://display-app.test/index.html');
   return events;
@@ -60,13 +60,13 @@ test('paired app renders plain text, confirms paint and clears withdrawn content
 });
 
 test('paired app blanks private content on loss of HA connection', async ({page}) => {
-  const state = {content: content()};
+  const state = {content: content(), offline_timeout:15};
   await mount(page, state);
   await expect(page.locator('.card')).toHaveCount(1);
   state.offline = true;
   await page.waitForTimeout(150);
   await page.clock.install();
-  await page.clock.fastForward(31000);
+  await page.clock.fastForward(16000);
   await expect(page.locator('.card')).toHaveCount(0);
   await expect(page.locator('#title')).toHaveText('Display bereit');
 });
@@ -95,7 +95,7 @@ test('resident idle, overlay, PiP and expired/offline message retain the same HD
     Object.defineProperty(HTMLVideoElement.prototype, 'videoHeight', {get: () => 2160});
     Object.defineProperty(HTMLVideoElement.prototype, 'error', {get: () => null});
   });
-  const state = {content: null, idle_hdmi: 'ext://hdmi:1'};
+  const state = {content: null, idle_hdmi: 'ext://hdmi:1', offline_timeout:15};
   await mount(page, state);
   await expect(page.locator('body')).toHaveClass('hdmi');
   await page.evaluate(() => {window.originalHDMI = document.querySelector('video');});
@@ -110,7 +110,7 @@ test('resident idle, overlay, PiP and expired/offline message retain the same HD
   await expect(page.locator('body')).toHaveClass('overlay');
   state.offline = true;
   await page.waitForTimeout(150);
-  await page.clock.install(); await page.clock.fastForward(31000);
+  await page.clock.install(); await page.clock.fastForward(16000);
   await expect(page.locator('body')).toHaveClass('hdmi');
   expect(await page.evaluate(() => document.querySelector('video') === window.originalHDMI)).toBe(true);
   await expect(page.locator('#message')).toHaveText('');
@@ -122,6 +122,7 @@ test('app uploads one binary screenshot for a ticket and reports capture failure
     window.PalmServiceBridge = function() {
       this.call = () => {
         window.captureCalls++;
+        if (window.failCapture) {this.onservicecallback('{"returnValue":false}');return;}
         this.onservicecallback(JSON.stringify({returnValue:true, encoding:'base64', data:btoa('\xff\xd8\xffimage\xff\xd9')}));
       };
       this.cancel = () => {};
@@ -140,12 +141,7 @@ test('app uploads one binary screenshot for a ticket and reports capture failure
   expect(uploads[0].equals(Buffer.from([255,216,255,...Buffer.from('image'),255,217]))).toBe(true);
   await page.waitForTimeout(300);
   expect(uploads.length).toBe(1);
-  await page.evaluate(() => {
-    window.PalmServiceBridge = function() {
-      this.call = () => this.onservicecallback(JSON.stringify({returnValue:false}));
-      this.cancel = () => {};
-    };
-  });
+  await page.evaluate(() => {window.failCapture = true;});
   state.capture = {id:'failure',height:720};
   await expect.poll(() => events.some(e => e.type === 'capture_error' && e.id === 'failure')).toBe(true);
 });
@@ -197,14 +193,15 @@ test('new content immediately replaces old content; expired content cannot reapp
   await expect(page.locator('#message')).toHaveText('');
 });
 
-test('repeated screenshots release native bridges and retain one HDMI element', async ({page}) => {
+test('repeated screenshots reuse one native bridge, release calls and retain one HDMI element', async ({page}) => {
   await page.addInitScript(() => {
-    window.liveBridges = 0; window.maxBridges = 0; window.captureCalls = 0;
+    window.liveBridges = 0; window.maxBridges = 0; window.captureCalls = 0; window.createdBridges = 0;
     window.PalmServiceBridge = function() {
-      window.liveBridges++; window.maxBridges = Math.max(window.maxBridges, window.liveBridges);
-      let cancelled = false;
+      window.createdBridges++;
+      let cancelled = true;
       this.cancel = () => { if (!cancelled) {cancelled = true; window.liveBridges--;} };
       this.call = () => {
+        cancelled = false; window.liveBridges++; window.maxBridges = Math.max(window.maxBridges, window.liveBridges);
         window.captureCalls++;
         setTimeout(() => this.onservicecallback(JSON.stringify({returnValue:true,encoding:'base64',data:btoa('\xff\xd8\xffframe\xff\xd9')})), 5);
       };
@@ -225,10 +222,73 @@ test('repeated screenshots release native bridges and retain one HDMI element', 
   }
   expect(await page.evaluate(() => window.maxBridges)).toBe(1);
   expect(await page.evaluate(() => window.captureCalls)).toBe(30);
+  expect(await page.evaluate(() => window.createdBridges)).toBe(1);
+  expect(await page.evaluate(() => LGCaptureDiagnostics())).toEqual({capture_bridges:1,capture_frames:30,capture_errors:0,capture_buffer_bytes:65536});
   expect(await page.evaluate(() => document.querySelector('video') === window.originalHDMI)).toBe(true);
 });
 
 const studioPresets = require('../fixtures/studio-catalog.json').presets;
+test('preview reuses HTTP transports and uploads exact JPEG sizes from a bounded buffer', async ({page}) => {
+  await page.addInitScript(() => {
+    const NativeXHR=window.XMLHttpRequest;window.transportIds={state:[],frame:[]};let serial=0;
+    window.XMLHttpRequest=function() {
+      const xhr=new NativeXHR(),id=++serial,open=xhr.open;
+      xhr.open=function(method,path,...rest) {
+        const key=String(path).split('?')[0];
+        if(window.transportIds[key])window.transportIds[key].push(id);
+        return open.call(xhr,method,path,...rest);
+      };return xhr;
+    };
+    window.XMLHttpRequest.prototype=NativeXHR.prototype;
+    window.captureLengths=[100000,4,65540];window.captureIndex=0;
+    window.PalmServiceBridge=function() {
+      this.cancel=()=>{};
+      this.call=()=>this.onservicecallback(JSON.stringify({returnValue:true,encoding:'base64',data:btoa('\xff\xd8'+'x'.repeat(window.captureLengths[window.captureIndex++])+'\xff\xd9')}));
+    };
+  });
+  const state={content:null,capture:null},uploads=[];await mount(page,state);
+  await page.route('http://display-app.test/frame?*',async route=>{
+    uploads.push(route.request().postDataBuffer());await route.fulfill({contentType:'application/json',body:'{"ok":true}'});
+  });
+  for(let i=0;i<3;i++){
+    state.capture={id:'buffer-'+i,height:720};await expect.poll(()=>uploads.length).toBe(i+1);
+  }
+  for(const [i,length] of [100000,4,65540].entries())expect(uploads[i].equals(Buffer.concat([Buffer.from([255,216]),Buffer.alloc(length,120),Buffer.from([255,217])]))).toBe(true);
+  const ids=await page.evaluate(()=>transportIds);
+  expect(new Set(ids.state).size).toBe(1);expect(new Set(ids.frame).size).toBe(1);
+  expect(await page.evaluate(()=>LGCaptureDiagnostics().capture_buffer_bytes)).toBe(131072);
+});
+test('timed out captures isolate late native replies and recover with a fresh bridge', async ({page}) => {
+  await page.addInitScript(() => {
+    window.captureBridges = [];
+    window.PalmServiceBridge = function() {
+      window.captureBridges.push(this);
+      this.call = () => {this.reply = this.onservicecallback;};
+      this.cancel = () => {};
+    };
+  });
+  const state = {content:null,capture:{id:'late',height:720}};
+  const events = await mount(page,state);
+  const uploads = [];
+  await page.route('http://display-app.test/frame?*', async route => {
+    uploads.push(new URL(route.request().url()).searchParams.get('id'));
+    await route.fulfill({contentType:'application/json',body:'{"ok":true}'});
+  });
+  await expect.poll(() => events.some(e => e.type==='capture_error' && e.id==='late'),{timeout:6000}).toBe(true);
+  state.capture = {id:'recovered',height:720};
+  await expect.poll(() => page.evaluate(() => window.captureBridges.length)).toBe(2);
+  await page.evaluate(() => {
+    const frame=JSON.stringify({returnValue:true,encoding:'base64',data:btoa('\xff\xd8\xffframe\xff\xd9')});
+    // Native implementations can already have queued a callback when cancelled.
+    window.captureBridges[0].reply(frame);
+    window.captureBridges[0].onservicecallback(frame);
+    window.captureBridges[1].reply(frame);
+    window.captureBridges[1].reply(frame);
+  });
+  await expect.poll(() => uploads.length).toBe(1);
+  expect(uploads).toEqual(['recovered']);
+  await expect.poll(() => page.evaluate(() => LGCaptureDiagnostics())).toEqual({capture_bridges:2,capture_frames:1,capture_errors:1,capture_buffer_bytes:65536});
+});
 function designed(mode='signal') {
   const config=JSON.parse(JSON.stringify(studioPresets[1].layout));
   config.enabled=true; config.mode=mode; config.signal_delay=1;
@@ -345,7 +405,6 @@ test('weather shows hourly night icons, bounded forecasts, solar gradients and s
   await mount(page,state);
   await expect(page.locator('.lg-weather .lg-value')).toHaveText('8 °C');
   await expect(page.locator('.lg-forecast-period')).toHaveCount(6);
-  // Newer Studio bundles include the lunar phase in the icon cache key.
   expect(await page.locator('.lg-weather>.lg-weather-icon').evaluate(node=>node._wxType)).toMatch(/^moon(?::|$)/);
   const night=await page.locator('#layout-root').evaluate(node=>node.style.background);
   await page.screenshot({path:'test-results/weather-dashboard-night-'+test.info().project.name+'.png'});
@@ -437,7 +496,8 @@ test('playing cover background follows tracks, modes and playback without replac
   await page.addInitScript(()=>{
     window.edgeSamples=0;
     const original=CanvasRenderingContext2D.prototype.getImageData;
-    CanvasRenderingContext2D.prototype.getImageData=function(...args){window.edgeSamples++;return original.apply(this,args);};
+    // Count the 32×32 artwork sampler, excluding text ink measurement.
+    CanvasRenderingContext2D.prototype.getImageData=function(...args){if(this.canvas.width===32&&this.canvas.height===32)window.edgeSamples++;return original.apply(this,args);};
   });
   const state={content:null,idle_hdmi:'ext://hdmi:1',dashboard:true,layout:designed()};
   const scene=state.layout.config.scenes.dashboard;
@@ -546,7 +606,8 @@ test('colour-only music backdrop hides the duplicate cover and reuses edge analy
   await page.addInitScript(()=>{
     window.edgeSamples=0;
     const original=CanvasRenderingContext2D.prototype.getImageData;
-    CanvasRenderingContext2D.prototype.getImageData=function(...args){window.edgeSamples++;return original.apply(this,args);};
+    // Count the 32×32 artwork sampler, excluding text ink measurement.
+    CanvasRenderingContext2D.prototype.getImageData=function(...args){if(this.canvas.width===32&&this.canvas.height===32)window.edgeSamples++;return original.apply(this,args);};
   });
   const state={content:null,idle_hdmi:'ext://hdmi:1',media_view:true,layout:designed()};
   const scene=state.layout.config.scenes.media_view,card=scene.elements[0];
@@ -638,7 +699,7 @@ test('edited HDMI view updates all inputs, returns after messages and resets wit
   const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
   const scene=state.layout.config.scenes.hdmi_full;
   scene.elements[0].width=75;
-  scene.elements.push({...state.layout.config.scenes.dashboard.elements[0],label:'HDMI ANSICHT'});
+  scene.elements.push({...state.layout.config.scenes.dashboard.elements[0],id:'hdmi-text',kind:'text',text:'HDMI ANSICHT',show_label:false});
   await mount(page,state);
   await expect(page.locator('#hdmi-slot')).toBeVisible();
   await expect.poll(()=>page.locator('#hdmi-slot').evaluate(e=>e.style.width)).toBe('75%');
@@ -753,14 +814,14 @@ test('camera uses one muted extra decoder, keeps it on data polls, releases it o
     HTMLMediaElement.prototype.pause=function(){this._paused=true;};
     HTMLMediaElement.prototype.load=function(){this._loads=(this._loads || 0)+1;};
   });
-  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed(),cameraStream:'/display_studio/runtime/test-stream.m3u8'};
   state.layout.config.scenes.hdmi_full.elements.push(cameraItem(state.layout,{camera_source:'test'}));
   await mount(page,state);
   await expect(page.locator('video')).toHaveCount(2);
   await expect(page.locator('.lg-camera')).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
   await expect(page.locator('.lg-camera-picture')).toHaveCSS('background-color','rgba(0, 0, 0, 0)');
   await page.evaluate(()=>{window.extraVideo=document.querySelector('.lg-camera video');window.hdmiVideo=document.querySelector('#hdmi-slot video');});
-  expect(await page.evaluate(()=>extraVideo.muted&&extraVideo.src==='test-stream.m3u8')).toBe(true);
+  expect(await page.evaluate(()=>extraVideo.muted&&extraVideo.src==='/display_studio/runtime/test-stream.m3u8')).toBe(true);
   await page.waitForTimeout(1100);
   expect(await page.evaluate(()=>extraVideo===document.querySelector('.lg-camera video'))).toBe(true);
   state.selected_view='dashboard';
@@ -823,7 +884,7 @@ test('cached app updates once while the new cache downloads instead of reloading
     Object.defineProperty(window,'applicationCache',{configurable:true,value:{status:1,update(){window.cacheUpdates++;},addEventListener(name,fn){window.cacheEvents[name]=fn;}}});
   });
   await mount(page,{cacheEnabled:true,content:null,idle_hdmi:'ext://hdmi:1'});
-  await page.evaluate(()=>{LGOffline.update();LGOffline.update();LGOffline.update();});
+  await page.evaluate(()=>{LGOffline.update({version:'1.22.5'});LGOffline.update({version:'1.22.5'});LGOffline.update({version:'1.22.5'});});
   expect(await page.evaluate(()=>cacheUpdates)).toBe(1);
 });
 
@@ -841,6 +902,7 @@ test('on-demand platform diagnostics use a fixed whitelist and do not repeat a t
   await expect.poll(()=>events.filter(e=>e.type==='diagnostics').length).toBe(1);
   expect(await page.evaluate(()=>nativeCalls.length)).toBe(3);
   expect(events.find(e=>e.type==='diagnostics').result.sensors.password).toBeUndefined();
+  const browser=events.find(e=>e.type==='diagnostics').result.browser;expect(browser.page_id).toMatch(/^[a-z0-9]{1,32}$/);expect(browser.uptime_ms).toBeGreaterThanOrEqual(0);expect(browser.font_faces).toBeGreaterThanOrEqual(0);expect(browser.reload_reason).toBe('unknown');
 });
 
 test('video wall verifies changes and rolls back a rejected readback without arbitrary methods',async({page})=>{
@@ -865,24 +927,24 @@ test('video wall verifies changes and rolls back a rejected readback without arb
   expect(await page.evaluate(()=>tileWrites.length)).toBe(before);
 });
 
-test('multicast rebinds only on address change, releases its decoder and never requests HA snapshots',async({page})=>{
+test('proxied multicast rebinds on address change and releases its decoder without snapshot fallback',async({page})=>{
   await page.addInitScript(()=>{
     Object.defineProperty(HTMLMediaElement.prototype,'src',{get(){return this._src || '';},set(value){this._src=value;}});
     HTMLMediaElement.prototype.play=function(){return Promise.resolve();};
     HTMLMediaElement.prototype.pause=function(){this._paused=true;};
     HTMLMediaElement.prototype.load=function(){this._loads=(this._loads || 0)+1;};
   });
-  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed()};
+  const state={content:null,idle_hdmi:'ext://hdmi:1',layout:designed(),cameraStream:'/api/hls/multicast-one/master_playlist.m3u8'};
   const scene=state.layout.config.scenes.hdmi_full;scene.elements[0].width=60;
-  const item=cameraItem(state.layout,{camera_source:'multicast',multicast_url:'udp://239.1.2.3:5000'});scene.elements.push(item);
+  const item=cameraItem(state.layout,{camera_source:'multicast',camera_mode:'stream',multicast_url:'udp://239.1.2.3:5000'});scene.elements.push(item);
   await mount(page,state);
   await expect(page.locator('.lg-camera video')).toHaveCount(1);
   await page.evaluate(()=>{window.first=document.querySelector('.lg-camera video');window.originalHDMI=document.querySelector('#hdmi-slot video');});
-  expect(await page.evaluate(()=>first.src)).toBe('udp://239.1.2.3:5000');
+  expect(await page.evaluate(()=>first.src)).toBe(state.cameraStream);
   await page.waitForTimeout(1100);
   expect(await page.evaluate(()=>first===document.querySelector('.lg-camera video'))).toBe(true);
-  item.multicast_url='udp://239.1.2.4:5000';
-  await expect.poll(()=>page.evaluate(()=>document.querySelector('.lg-camera video').src)).toBe(item.multicast_url);
+  state.cameraStream='/api/hls/multicast-two/master_playlist.m3u8';item.multicast_url='udp://239.1.2.4:5000';
+  await expect.poll(()=>page.evaluate(()=>document.querySelector('.lg-camera video').src)).toBe(state.cameraStream);
   expect(await page.evaluate(()=>first._paused&&first._loads===1)).toBe(true);
   await page.evaluate(()=>document.querySelector('.lg-camera video').onerror());
   await expect(page.locator('.lg-camera')).toContainText('Stream nicht verfügbar');
@@ -909,14 +971,13 @@ test('offline startup notice appears once for five seconds while HDMI and retrie
   expect(await page.evaluate(()=>bootDecoder===document.querySelector('#hdmi-slot video'))).toBe(true);
 });
 
-test('recovery hides the notice and each new outage shows only one brief notice',async({page})=>{
-  await page.clock.install();
+test('recovery clears the connection notice and later outages show it only briefly',async({page})=>{
   const state={cacheEnabled:true,offline:true,content:null,idle_hdmi:'ext://hdmi:1'};
   await mount(page,state);await expect(page.locator('#startup-notice')).toBeVisible();
   state.offline=false;
   await expect(page.locator('#connection')).toHaveText('Mit Home Assistant verbunden',{timeout:4000});
   await expect(page.locator('#startup-notice')).toBeHidden();
-  state.offline=true;
+  await page.clock.install();state.offline=true;
   await expect(page.locator('#connection')).toHaveText('Verbindung unterbrochen');
   await expect(page.locator('#startup-notice')).toBeVisible();
   await page.clock.fastForward(6000);
@@ -1290,7 +1351,8 @@ test('widget clock parts remain live, scale at 4K and restore native layout with
   clock.parts={time:{visible:true},date:{visible:false}};
   await expect(page.locator('.lg-clock .lg-detail')).toBeHidden();await expect(page.locator('.lg-clock .lg-value')).toBeVisible();
   clock.parts={};await expect(page.locator('.lg-clock .lg-detail')).toBeVisible();
-  await expect(page.locator('.lg-clock .lg-detail')).toHaveCSS('position','static');
+  await expect(page.locator('.lg-clock .lg-detail')).toHaveCSS('position','absolute');
+  expect(await page.locator('.lg-clock .lg-detail').evaluate(n=>n._clockFrame.height)).toBeGreaterThan(4);
   expect(await page.evaluate(()=>document.querySelector('.lg-clock')===window.keptWidget&&document.querySelector('#hdmi-slot video')===window.keptHDMI)).toBe(true);
 });
 
@@ -1302,7 +1364,7 @@ test('media part overrides retain covers through live updates and hide cover fet
   await page.evaluate(()=>{window.oldCover=document.querySelector('.lg-media-art img');});
   media.media_title='New title';await expect(page.locator('.lg-media>.lg-value')).toHaveText('New title');
   expect(await page.evaluate(()=>window.oldCover===document.querySelector('.lg-media-art img'))).toBe(true);
-  const elapsed=page.locator('.lg-media-elapsed');await expect(elapsed).toHaveCSS('font-family','monospace');await expect(elapsed).toContainText(':');
+  const elapsed=page.locator('.lg-media-elapsed');await expect(elapsed).toHaveCSS('font-family','StudioMono, sans-serif');await expect(elapsed).toContainText(':');
   let requests=0;await page.route('**/cover.jpg*',async route=>{requests++;return route.fulfill({status:204,body:''});});
   scene.media_background_enabled=false;card.parts.cover.visible=false;
   await expect(page.locator('.lg-media-art')).toBeHidden();const before=requests;media.artwork='removed-cover';
@@ -1323,7 +1385,7 @@ test('forecast and calendar subparts remain styled when live rows are updated or
   layout.values['weather.home'].forecasts.daily=[];layout.values['calendar.home'].events=[];
   await expect(page.locator('.lg-forecast-period')).toHaveCount(0);await expect(page.locator('.lg-calendar .lg-row')).toHaveCount(0);
   layout.values['weather.home'].forecasts.daily=[{datetime:'2026-10-07T10:00:00Z',condition:'rainy',temperature:17,precipitation_probability:90}];layout.values['calendar.home'].events=[{start:'2026-10-07T10:00:00Z',summary:'Second'}];
-  await expect(page.locator('.lg-period-rain')).toBeHidden();await expect(page.locator('.lg-period-temp')).toHaveCSS('font-family','monospace');await expect(page.locator('.lg-calendar .lg-row span')).toHaveText('Mein Termin');
+  await expect(page.locator('.lg-period-rain')).toBeHidden();await expect(page.locator('.lg-period-temp')).toHaveCSS('font-family','StudioMono, sans-serif');await expect(page.locator('.lg-calendar .lg-row span')).toHaveText('Mein Termin');
 });
 
 test('custom clock composition survives offline startup and malformed local overrides are rejected',async({page})=>{
@@ -1335,7 +1397,7 @@ test('custom clock composition survives offline startup and malformed local over
   // the synthetic intent used to exercise the cached widget renderer.
   await expect(page.locator('#startup-notice')).toBeVisible();
   await page.evaluate(()=>LGStartup.apply({id:'offline-parts',view:'media_view',remaining:90},null));
-  await expect(page.locator('#startup-canvas .lg-clock .lg-detail')).toHaveCSS('font-family','monospace');
+  await expect(page.locator('#startup-canvas .lg-clock .lg-detail')).toHaveCSS('font-family','StudioMono, sans-serif');
   expect(await page.evaluate(()=>LGStartupDesign.status().cached)).toBe(true);
   expect(await page.evaluate(()=>LGWidgetParts.valid({kind:'clock',parts:{time:{x:101,y:0,width:20,height:20}}}))).toBe(false);
   expect(await page.evaluate(()=>LGWidgetParts.valid({kind:'clock',parts:{date:{onclick:'bad'}}}))).toBe(false);
@@ -1366,6 +1428,46 @@ test('LG resident HDMI and basic notification work without Display Studio instal
   await expect(page.locator('#title')).toHaveText(state.content.title);
   await expect(page.locator('#hdmi-slot source')).toHaveAttribute('src','ext://hdmi:1');
   expect(errors).toEqual([]);
+});
+
+test.describe('device clock',()=>{test.use({timezoneId:'UTC'});
+test('clock uses device time and keeps seconds, date and blinking alive without HA',async({page})=>{
+  await page.clock.install({time:new Date('2026-10-16T23:59:58Z')});
+  const state={content:null,dashboard:true,layout:designed(),offline_timeout:600};
+  const item=state.layout.config.scenes.dashboard.elements.find(i=>i.kind==='clock');
+  Object.assign(item,{show_label:false,clock_seconds:true,clock_blink:true,clock_date_format:'iso'});
+  state.layout.config.scenes.dashboard.elements=[item];state.layout.now='2001-01-01T00:00:00Z';
+  await mount(page,state);await expect(page.locator('.lg-clock .lg-value')).toHaveText('23:59:58');
+  state.offline=true;await page.clock.fastForward(2000);
+  await expect(page.locator('.lg-clock .lg-value')).toHaveText('00:00:00');await expect(page.locator('.lg-clock .lg-detail')).toHaveText('2026-10-17');
+  await page.clock.fastForward(1000);await expect(page.locator('.lg-clock .lg-clock-colon').first()).toHaveCSS('visibility','hidden');
+  await page.clock.fastForward(60000);await expect(page.locator('.lg-clock .lg-value')).toHaveText('00:01:01');
+});
+
+});
+
+test('HDMI signal reporting distinguishes startup from loss and drives a local standby countdown',async({page})=>{
+  await page.clock.install();
+  await page.addInitScript(()=>{
+    window.signalPresent=false;
+    Object.defineProperty(HTMLVideoElement.prototype,'videoWidth',{get:()=>window.signalPresent?1920:0});
+    Object.defineProperty(HTMLVideoElement.prototype,'videoHeight',{get:()=>window.signalPresent?1080:0});
+    Object.defineProperty(HTMLVideoElement.prototype,'error',{get:()=>null});
+  });
+  const state={content:null,idle_hdmi:'ext://hdmi:1',input_request:'first'};
+  const events=await mount(page,state);
+  await expect(page.locator('#hdmi-slot video')).toHaveCount(1);
+  expect(events.filter(e=>e.type==='heartbeat').every(e=>e.hdmi_signal===null)).toBe(true);
+  await page.clock.fastForward(6000);
+  await expect.poll(()=>events.some(e=>e.hdmi_signal===false&&e.hdmi_source==='ext://hdmi:1'&&e.hdmi_request==='first')).toBe(true);
+  state.standby_notice={message:'Ausschalten in {seconds}',remaining:20};
+  await expect(page.locator('#standby-notice')).toHaveText('Ausschalten in 20');
+  await expect(page.locator('#standby-notice')).toBeVisible();
+  await page.evaluate(()=>{window.signalPresent=true;});
+  await page.clock.fastForward(1000);
+  await expect(page.locator('#standby-notice')).toBeHidden();
+  await page.clock.fastForward(5000);
+  await expect.poll(()=>events.some(e=>e.hdmi_signal===true)).toBe(true);
 });
 
 async function fakeLegacyCache(page) {
@@ -1447,7 +1549,7 @@ for(const resource of ['index.html','app.js','app.css','offline.js'])test(`autom
   await page.addInitScript(()=>{window.resourceFailures=0;document.addEventListener("lg-app-unavailable",()=>window.resourceFailures++);});
   const state={content:null,idle_hdmi:'ext://hdmi:2',failResource:resource};
   await mount(page,state);await expect(page.locator('body')).toHaveClass('hdmi');
-  await page.evaluate(()=>LGOffline.update({version:'1.22.1',offline_enabled:false}));
+  await page.evaluate(()=>LGOffline.update({version:'1.22.5',offline_enabled:false}));
   await expect.poll(()=>page.evaluate(()=>resourceFailures)).toBeGreaterThan(0);
   expect(state.navigations).toBe(1);
   await page.clock.fastForward(15000);
@@ -1472,12 +1574,12 @@ test('cache timeout and late updateready never reload an unloaded integration',a
 test('valid refresh reloads once and pagehide aborts an outstanding validation request',async({page})=>{
   const state={content:null,idle_hdmi:'ext://hdmi:1'};
   await mount(page,state);await expect(page.locator('body')).toHaveClass('hdmi');
-  await page.evaluate(()=>LGOffline.update({version:'1.22.1',offline_enabled:false}));
+  await page.evaluate(()=>LGOffline.update({version:'1.22.5',offline_enabled:false}));
   await expect.poll(()=>state.navigations).toBe(2);
   await expect(page.locator('body')).toHaveClass('hdmi');
   let release;const wait=new Promise(resolve=>release=resolve);
   await page.route('**/index.html?_lg_reload=*',async route=>{await wait;await route.continue();});
-  await page.evaluate(()=>{LGOffline.update({version:'1.22.1',offline_enabled:false});window.dispatchEvent(new Event('pagehide'));});
+  await page.evaluate(()=>{LGOffline.update({version:'1.22.5',offline_enabled:false});window.dispatchEvent(new Event('pagehide'));});
   release();await page.waitForTimeout(100);
   expect(state.navigations).toBe(2);
 });
@@ -1508,7 +1610,7 @@ test('a version mismatch retains the custom view for its grace period before pro
   await page.clock.fastForward(2100);
   await expect.poll(()=>state.reloadChecks).toBeGreaterThan(0);
   expect(state.navigations).toBe(1);
-  state.version='1.22.1';await page.clock.fastForward(2100);
+  state.version='1.22.5';await page.clock.fastForward(2100);
   await expect(page.locator('body')).toHaveClass('designed');
 });
 
@@ -1585,7 +1687,7 @@ for(const broken of ['missing','stale'])test(`safe reload refuses a ${broken} St
   await page.clock.install();
   const state={content:null,idle_hdmi:'ext://hdmi:1',studioVersion:'1.4.0',staleStudioRuntime:broken==='stale',failResource:broken==='missing'?'layout.js':null};
   await mount(page,state);
-  await page.evaluate(()=>LGOffline.update({version:'1.22.1',studio_version:'1.4.0',offline_enabled:false}));
+  await page.evaluate(()=>LGOffline.update({version:'1.22.5',studio_version:'1.4.0',offline_enabled:false}));
   await expect.poll(()=>state.reloadChecks || 0).toBeGreaterThanOrEqual(5);
   await page.clock.fastForward(65000);
   expect(state.navigations).toBe(1);
@@ -1595,7 +1697,7 @@ for(const broken of ['missing','stale'])test(`safe reload refuses a ${broken} St
 test('safe reload accepts the renderer version supplied by the bound Studio provider',async({page})=>{
   const state={content:null,idle_hdmi:'ext://hdmi:1',studioVersion:'1.4.0'};
   await mount(page,state);await expect(page.locator('body')).toHaveClass('hdmi');
-  await page.evaluate(()=>LGOffline.update({version:'1.22.1',studio_version:'1.4.0',offline_enabled:false}));
+  await page.evaluate(()=>LGOffline.update({version:'1.22.5',studio_version:'1.4.0',offline_enabled:false}));
   await expect.poll(()=>state.navigations).toBe(2);
   await expect(page.locator('#connection')).toHaveText('Mit Home Assistant verbunden');
 });

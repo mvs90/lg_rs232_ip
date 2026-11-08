@@ -4,6 +4,8 @@
   var root=document.documentElement, enabled=root.hasAttribute("manifest"), cache=window.applicationCache;
   var key="lg-display-hdmi-v1", scope=window.location.pathname, restored=null;
   var updateTimer=null, updating=false, checking=null, expected=null, nextAttempt=0, closed=false;
+  var reloadReason="unknown";
+  try {if(sessionStorage.getItem("lg-display-reload")==="bundle_update"){reloadReason="bundle_update";}sessionStorage.removeItem("lg-display-reload");}catch(_){}
   var valid=function (value) {return typeof value==="string" && /^ext:\/\/hdmi:[1-4]$/.test(value);};
   function forget() {try {window.localStorage.removeItem(key);} catch (_) {}}
   function read() {
@@ -51,6 +53,7 @@
             function reloadReady() {
               if(closed || !updating){return;}
               if(enabled && cache && cache.status===4){try{cache.swapCache();}catch(_){unavailable();return;}}
+              try{sessionStorage.setItem("lg-display-reload","bundle_update");}catch(_){}
               cancel();closed=true;window.location.reload();
             }
             if(expected.studio_version){
@@ -80,7 +83,7 @@
       // No sensor values, layouts or images; write only when the input changes.
       try {if(window.localStorage.getItem(key)!==value){window.localStorage.setItem(key,value);}} catch (_) {}
     },
-    status:function () {return {enabled:enabled,supported:!!cache,cache_status:cache ? cache.status : 0,restored_hdmi:!!restored};},
+    status:function () {return {enabled:enabled,supported:!!cache,cache_status:cache ? cache.status : 0,restored_hdmi:!!restored,reload_reason:reloadReason};},
     cancel:cancel,
     close:function () {closed=true;cancel();},
     update:function (state) {

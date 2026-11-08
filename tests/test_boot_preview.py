@@ -172,19 +172,108 @@ async def test_preview_clients_share_one_throttled_capture(preview):
 
 
 @pytest.mark.asyncio
-async def test_preview_failure_drops_stale_frame_and_recovers(preview):
+async def test_requested_stills_refresh_between_idle_captures(preview):
+    entity, _, web = preview
+    entity._interval = 10
+    entity._active_interval = 0.5
+    with patch("custom_components.lg_rs232_ip.camera.time") as clock:
+        clock.monotonic.return_value = 100
+        await entity.async_update()
+        for index in range(1, 5):
+            clock.monotonic.return_value = 100 + index * 5
+            await entity.async_update()
+            assert web.async_capture.await_count == index  # Idle timer not due.
+            web.async_capture.return_value = f"frame-{index}".encode()
+            results = await asyncio.gather(
+                *(entity.async_camera_image() for _ in range(10))
+            )
+            assert results == [f"frame-{index}".encode()] * 10
+            assert web.async_capture.await_count == index + 1
+            assert not entity.is_streaming
+            assert entity._next_capture == clock.monotonic.return_value + 10
+            clock.monotonic.return_value += 0.2
+            await entity.async_camera_image()
+            assert web.async_capture.await_count == index + 1  # Still rate-limited.
+
+
+@pytest.mark.asyncio
+async def test_requested_still_respects_disabled_acceleration(preview):
+    entity, _, web = preview
+    entity._active_interval = 0
+    with patch("custom_components.lg_rs232_ip.camera.time") as clock:
+        clock.monotonic.return_value = 100
+        await entity.async_camera_image()
+        clock.monotonic.return_value = 105
+        await entity.async_camera_image()
+        assert web.async_capture.await_count == 1
+        clock.monotonic.return_value = 130
+        await entity.async_camera_image()
+        assert web.async_capture.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_requested_stills_cannot_bypass_capture_failure_backoff(preview):
+    entity, _, web = preview
+    with patch("custom_components.lg_rs232_ip.camera.time") as clock:
+        clock.monotonic.return_value = 100
+        web.async_capture.side_effect = LGWebError("offline")
+        await entity.async_camera_image()
+        clock.monotonic.return_value = 101.5
+        assert await entity.async_camera_image() is None
+        assert web.async_capture.await_count == 1
+        clock.monotonic.return_value = 102
+        web.async_capture.side_effect = None
+        assert await entity.async_camera_image() == b"real-frame"
+        assert web.async_capture.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_preview_failure_preserves_recent_frame_and_recovers(preview):
     entity, display, web = preview
     await entity.async_update()
+    captured = entity._captured_at
     web.async_capture.side_effect = LGWebError("private-device-response")
     entity._next_capture = 0
     await entity.async_update()
-    assert entity._image is None
-    assert not entity.available
+    assert entity._image == b"real-frame"
+    assert entity.available
+    assert entity._captured_at == captured
     assert entity.extra_state_attributes["preview_error"] == "capture_failed"
     web.async_capture.side_effect = None
     entity._next_capture = 0
     await entity.async_update()
     assert entity.available
+
+
+@pytest.mark.asyncio
+async def test_failed_frame_expires_even_during_long_retry_backoff(preview):
+    entity, display, web = preview
+    with patch("custom_components.lg_rs232_ip.camera.time") as clock:
+        clock.monotonic.return_value = 100
+        await entity.async_camera_image()
+        display.async_get_power_status.assert_awaited_with(use_cache=True)
+        clock.monotonic.return_value = 101
+        web.async_capture.side_effect = LGWebError("offline")
+        entity._next_capture = 0
+        assert await entity.async_camera_image() == b"real-frame"
+        entity._next_capture = entity._retry_at = 200
+        clock.monotonic.return_value = 115
+        assert await entity.async_camera_image() is None
+        assert entity._captured_at is None
+        assert not entity.available
+        assert web.async_capture.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_confirmed_power_off_erases_even_recent_frame(preview):
+    entity, display, _ = preview
+    await entity.async_camera_image()
+    display.async_get_power_status.return_value = False
+    entity._next_capture = 0
+    assert await entity.async_camera_image() is None
+    assert entity._captured_at is None
+    assert entity._captured_monotonic is None
+    display.async_power_on.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -410,20 +499,96 @@ async def test_unload_cancels_pending_capture_and_never_rearms_timer(preview):
 
 
 @pytest.mark.asyncio
-async def test_camera_dynamically_selects_app_and_falls_back_without_reconfiguration(
+async def test_camera_keeps_high_frequency_capture_out_of_the_display_app(
     preview,
 ):
     entity, display, web = preview
     app = entity._app = AsyncMock()
     app.async_capture.return_value = b"app-frame"
-    assert await entity.async_camera_image() == b"app-frame"
-    assert entity.extra_state_attributes["capture_backend"] == "app"
-    web.async_capture.assert_not_awaited()
-    app.async_capture.return_value = None
-    entity._next_capture = 0
     assert await entity.async_camera_image() == b"real-frame"
     assert entity.extra_state_attributes["capture_backend"] == "web"
-    app.async_capture.return_value = b"reconnected-app-frame"
+    app.async_capture.assert_not_awaited()
+    # A temporary web failure must not restart the native allocation growth.
+    web.async_capture.side_effect = LGWebError("offline")
     entity._next_capture = 0
-    assert await entity.async_camera_image() == b"reconnected-app-frame"
-    assert web.async_capture.await_count == 1
+    assert await entity.async_camera_image() == b"real-frame"
+    assert entity.extra_state_attributes["preview_error"] == "capture_failed"
+    app.async_capture.assert_not_awaited()
+    assert web.async_capture.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_mjpeg_transient_failure_withholds_frames_without_black_or_fake_age(preview):
+    from aiohttp import ClientSession, MultipartReader, web as aiohttp_web
+    from aiohttp.test_utils import TestServer
+
+    entity, _, camera_web = preview
+    app = aiohttp_web.Application()
+    app.router.add_get('/camera', entity.handle_async_mjpeg_stream)
+    async with TestServer(app) as server, ClientSession() as client:
+        async with client.get(server.make_url('/camera')) as response:
+            reader = MultipartReader.from_response(response)
+            for _ in range(2):
+                part = await asyncio.wait_for(reader.next(), 2)
+                assert bytes(await part.read()) == b'real-frame'
+            stamp = entity._captured_at
+            camera_web.async_capture.side_effect = LGWebError('temporary')
+            entity._next_capture = 0
+            await entity.async_update()
+            pending = asyncio.create_task(reader.next())
+            await asyncio.sleep(.8)
+            assert not pending.done(), 'Transient failure sent a black/stale frame'
+            assert entity.available and entity._captured_at == stamp
+            camera_web.async_capture.side_effect = None
+            camera_web.async_capture.return_value = b'next-good-frame'
+            entity._next_capture = 0
+            part = await asyncio.wait_for(pending, 3)
+            assert bytes(await part.read()) == b'next-good-frame'
+            assert entity._captured_at > stamp
+        async with asyncio.timeout(3):
+            while entity._active_viewers:
+                await asyncio.sleep(.05)
+
+
+@pytest.mark.asyncio
+async def test_preview_uses_recent_controller_power_without_joining_serial_queue(preview):
+    import time
+    entity, display, web = preview
+    display._last_power_status = True
+    display._last_power_status_at = time.monotonic() - 10
+    display.async_get_power_status.side_effect = lambda **kwargs: asyncio.sleep(30)
+    assert await asyncio.wait_for(entity.async_camera_image(), .1) == b'real-frame'
+    display.async_get_power_status.assert_not_awaited()
+    web.async_capture.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('reason', ['stale', 'off', 'supply_off'])
+async def test_preview_never_uses_old_or_explicitly_off_controller_state(preview, reason):
+    import time
+    entity, display, web = preview
+    display._last_power_status = reason != 'off'
+    display._last_power_status_at = time.monotonic() - (61 if reason == 'stale' else 1)
+    display.is_intentionally_unpowered = reason == 'supply_off'
+    display.async_get_power_status.return_value = False
+    assert await entity.async_camera_image() is None
+    web.async_capture.assert_not_awaited()
+    if reason != 'supply_off':
+        display.async_get_power_status.assert_awaited_once_with(use_cache=True)
+
+
+@pytest.mark.asyncio
+async def test_preview_failure_drops_stale_frame_and_recovers(preview):
+    entity, display, web = preview
+    await entity.async_update()
+    web.async_capture.side_effect = LGWebError("private-device-response")
+    entity._captured_monotonic -= 16
+    entity._next_capture = 0
+    await entity.async_update()
+    assert entity._image is None
+    assert not entity.available
+    assert entity.extra_state_attributes["preview_error"] == "capture_failed"
+    web.async_capture.side_effect = None
+    entity._next_capture = 0
+    await entity.async_update()
+    assert entity.available

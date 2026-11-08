@@ -96,14 +96,14 @@ class ResidentApp:
             return None
         if self.saved.get("custom_view"):
             value = self.saved["custom_view"]
-            return value if value in self.view_sources else "dashboard"
+            return value if value in self.view_sources else next(iter(self.view_sources), None)
         for flag, key in (
             ("dashboard", "dashboard"),
             ("pip", "pip_view"),
             ("media_view", "media_view"),
         ):
             if self.saved.get(flag):
-                return key
+                return key if key in self.view_sources else next(iter(self.view_sources), None)
         return None
 
     @property

@@ -1,13 +1,18 @@
 /* Read-only whitelist. One operation at a time, only on an explicit HA request. */
 (function () {
   "use strict";
-  var active=null,last=null;
+  var active=null,last=null,started=Date.now(),pageId=started.toString(36)+Math.random().toString(36).slice(2,10);
   function close(){if(active){active.cancel();active=null;}}
   window.LGPlatform={close:close,sample:function(ticket,done){
     if(!ticket || !ticket.id || ticket.id===last || active || document.hidden){return;}
     last=ticket.id;
     if(typeof window.PalmServiceBridge!=="function"){done({});return;}
-    var base="luna://com.webos.service.commercial.scapadapter", result={}, timer=null, bridge=null, closed=false;
+    var browser={page_id:pageId,uptime_ms:Math.max(0,Date.now()-started),font_faces:document.fonts ? document.fonts.size : 0};
+    if(window.performance && performance.memory){["usedJSHeapSize","totalJSHeapSize","jsHeapSizeLimit"].forEach(function(k){browser[k]=performance.memory[k];});}
+    if(window.LGOffline){browser.reload_reason=window.LGOffline.status().reload_reason;}
+    if(window.LGFontLoadFailures){browser.font_failures=window.LGFontLoadFailures();}
+    if(window.LGCaptureDiagnostics){var capture=window.LGCaptureDiagnostics();["capture_bridges","capture_frames","capture_errors","capture_buffer_bytes"].forEach(function(k){browser[k]=capture[k];});}
+    var base="luna://com.webos.service.commercial.scapadapter", result={browser:browser}, timer=null, bridge=null, closed=false;
     var operations=[["usage",base+"/getSystemUsageInfo",{cpus:true,memory:true}],["sensors",base+"/deviceInfo/getSensorValues",{}],["tile",base+"/signage/getTileInfo",{}]];
     function cancel(){closed=true;clearTimeout(timer);if(bridge){bridge.onservicecallback=function(){};if(bridge.cancel){bridge.cancel();}}}
     active={cancel:cancel};

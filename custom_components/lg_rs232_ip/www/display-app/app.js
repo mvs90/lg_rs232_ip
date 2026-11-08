@@ -1,8 +1,8 @@
 /* ES5 / Chromium 53. One external video plane; no framework or screenshot loop. */
 (function () {
   "use strict";
-  var VERSION = "1.22.1", video = null, sourceNode = null, videoSource = null;
-  var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null, serverOffset = 0;
+  var VERSION = "1.22.5", video = null, sourceNode = null, videoSource = null;
+  var selectedView = null, dashboardSelected = false, pipSelected = false, mediaSelected = false, design = null, designer = null, currentContent = null, sceneKey = null;
   var hdmiFit = "contain", lastHdmi = null, hdmiChangedAt = 0;
   var lastStateSuccess = Date.now(), connectionLost = false, fallbackActive = false, outageStart = null;
   var fallbackDelay = Number(document.documentElement.getAttribute("data-offline-timeout") || 30);
@@ -10,6 +10,10 @@
   var idleHdmi = null, revision = null, inputRequest = null, inputAck = null;
   var animateHdmi = false;
   var captureBusy = false, lastCapture = null, cancelCapture = null;
+  var captureBridge = null, captureBridges = 0, captureFrames = 0, captureErrors = 0;
+  var captureUpload = null, captureBuffer = null, pollTransport = null;
+  // Sampled only by the manually requested platform diagnostic, never per frame.
+  window.LGCaptureDiagnostics = function () { return {capture_bridges:captureBridges,capture_frames:captureFrames,capture_errors:captureErrors,capture_buffer_bytes:captureBuffer ? captureBuffer.length : 0}; };
   var active = null, dismissed = null, expires = 0;
   var acknowledged = false, ackBusy = false, heartbeatBusy = false, stopped = false;
   var pollXHR = null, pollTimer = null, cardsSignature = null, suspended = !!document.hidden;
@@ -29,8 +33,8 @@
     }
     connectionLost = !connected; startupChecked = true;
   }
-  function request(method, path, data, done, timeout) {
-    var xhr = new XMLHttpRequest(), finished = false;
+  function request(method, path, data, done, timeout, transport) {
+    var xhr = transport || new XMLHttpRequest(), finished = false;
     function finish(value) {
       if (finished) { return; } finished = true;
       xhr.onload = xhr.onerror = xhr.ontimeout = null;
@@ -95,31 +99,48 @@
   function capture(ticket) {
     if (!ticket || ticket.id === lastCapture || captureBusy || document.hidden || stopped || typeof window.PalmServiceBridge !== "function") { return; }
     captureBusy = true; lastCapture = ticket.id;
-    var finished = false, timer, xhr = null, b = new window.PalmServiceBridge();
+    var finished = false, timer, xhr = null, b = null;
     function finish(ok, silent) {
       if (finished) { return; } finished = true; clearTimeout(timer); captureBusy = false; cancelCapture = null;
-      b.onservicecallback = function () {};
-      if (b.cancel) { b.cancel(); }
+      if (b) {
+        b.onservicecallback = function () {};
+        try { if (b.cancel) { b.cancel(); } } catch (_) { if (captureBridge === b) { captureBridge = null; } }
+        // Failed/cancelled calls get a fresh bridge so late native replies cannot
+        // enter a subsequent ticket. Successful serial calls reuse one native
+        // object instead of leaving a new native allocation to GC every frame.
+        if (!ok && captureBridge === b) { captureBridge = null; }
+      }
       if (xhr) { xhr.onload = xhr.onerror = xhr.ontimeout = null; if (!ok) { xhr.abort(); } }
-      if (!ok && !silent) { event({type:"capture_error", id:ticket.id}); }
+      if (ok) { captureFrames++; }
+      if (!ok && !silent) { captureErrors++; event({type:"capture_error", id:ticket.id}); }
       b = xhr = null;
     }
     cancelCapture = function () { finish(false, true); };
     timer = setTimeout(function () { finish(false); }, 3000);
+    try {
+      if (!captureBridge) { captureBridge = new window.PalmServiceBridge(); captureBridges++; }
+      b = captureBridge;
+    } catch (_) { finish(false); return; }
     b.onservicecallback = function (raw) {
       if (finished || xhr) { return; }
       try {
         var result = JSON.parse(raw);
         if (result.returnValue !== true || result.encoding !== "base64" || typeof result.data !== "string" || result.data.length > 7 * 1024 * 1024) { finish(false); return; }
-        var decoded = atob(result.data), bytes = new Uint8Array(decoded.length), i;
+        var decoded = atob(result.data), length = decoded.length, i;
         result = raw = null;
-        if (bytes.length > 5 * 1024 * 1024) { finish(false); return; }
-        for (i = 0; i < bytes.length; i++) { bytes[i] = decoded.charCodeAt(i); }
+        if (length > 5 * 1024 * 1024) { finish(false); return; }
+        // One bounded scratch buffer, only resized when a larger JPEG arrives.
+        // Reuse it after the previous upload completes, never while in flight.
+        if (!captureBuffer || captureBuffer.length < length) {
+          captureBuffer = new Uint8Array(Math.min(5 * 1024 * 1024, Math.max(65536, Math.ceil(length / 65536) * 65536)));
+        }
+        for (i = 0; i < length; i++) { captureBuffer[i] = decoded.charCodeAt(i); }
         decoded = null;
-        xhr = new XMLHttpRequest(); xhr.open("POST", "frame?id=" + encodeURIComponent(ticket.id), true); xhr.timeout = 3000;
+        if (!captureUpload) { captureUpload = new XMLHttpRequest(); }
+        xhr = captureUpload; xhr.open("POST", "frame?id=" + encodeURIComponent(ticket.id), true); xhr.timeout = 3000;
         xhr.setRequestHeader("Content-Type", "image/jpeg");
         xhr.onload = function () { finish(xhr.status === 200); };
-        xhr.onerror = xhr.ontimeout = function () { finish(false); }; xhr.send(bytes.buffer);
+        xhr.onerror = xhr.ontimeout = function () { finish(false); }; xhr.send(captureBuffer.subarray(0,length));
       } catch (_) { finish(false); }
     };
     try { b.call("luna://com.webos.service.commercial.signage.storageservice/captureScreen", JSON.stringify({save:false,width:Math.round(ticket.height * 16 / 9),height:ticket.height})); }
@@ -164,7 +185,7 @@
     var changedScene=sceneKey!==null && sceneKey!==key;
     sceneKey = key;
     layout("designed");
-    designer.render(design.config.scenes[key], design.values, {animateWidgets:changedScene && (animateHdmi || !!content), cameraUrls:function(item) {var query="?view="+encodeURIComponent(key)+"&id="+encodeURIComponent(item.id);return {info:"camera.json"+query,image:"camera.jpg"+query,test:"test-stream.m3u8"};}, animateHdmi:animateHdmi && !content, onHdmiSettled:function () {window.requestAnimationFrame(acknowledgeInput);}, message:content, timezone:design.timezone, sun:design.sun, hideHdmi:!!baseScene && !baseScene.elements.some(function (item) { return item.kind === "hdmi"; }), mediaUrl:function(entity,id,size) {return "cover.jpg?entity="+encodeURIComponent(entity)+"&v="+encodeURIComponent(id)+"&size="+(size || 640);}, imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date(Date.now()+serverOffset)});
+    designer.render(design.config.scenes[key], design.values, {animateWidgets:changedScene && (animateHdmi || !!content), cameraUrls:function(item) {var query="?view="+encodeURIComponent(key)+"&id="+encodeURIComponent(item.id);return {info:"camera.json"+query,image:"camera.jpg"+query,test:"test-stream.m3u8"};}, animateHdmi:animateHdmi && !content, onHdmiSettled:function () {window.requestAnimationFrame(acknowledgeInput);}, message:content, timezone:design.timezone, sun:design.sun, hideHdmi:!!baseScene && !baseScene.elements.some(function (item) { return item.kind === "hdmi"; }), mediaUrl:function(entity,id,size) {return "cover.jpg?entity="+encodeURIComponent(entity)+"&v="+encodeURIComponent(id)+"&size="+(size || 640);}, imageUrl:function(id) {return "background.jpg?id="+id;}, now:new Date()});
     return true;
   }
   function clear(message) {
@@ -245,6 +266,9 @@
   }
   function poll() {
     if (stopped || suspended || pollXHR) { return; }
+    // State replies contain the layout. Keep one native response buffer instead
+    // of creating a new XHR with every preview capture/state notification.
+    if (!pollTransport) { pollTransport = new XMLHttpRequest(); }
     pollXHR = request("GET", "state" + (revision === null ? "" : "?since=" + encodeURIComponent(revision)), null, function (data) {
       pollXHR = null;
       if (stopped || suspended) { return; }
@@ -273,7 +297,6 @@
         // A previous dashboard must not cover HDMI while a new HDMI start waits
         // for its acknowledgement. The saved scene changes only on the server.
         if (data.startup && data.startup.view === "hdmi_full") { selectedView = null; dashboardSelected = pipSelected = mediaSelected = false; }
-        if (design && design.now) { serverOffset = new Date(design.now).getTime() - Date.now(); }
         try {
           render(data.content);
           if (window.LGStartup) { window.LGStartup.apply(data.startup, sceneKey); }
@@ -286,7 +309,7 @@
         if (data.capture) { window.setTimeout(function () { capture(data.capture); }, 50); }
       } else { connectionFailure(); }
       pollTimer = window.setTimeout(poll, data ? 0 : 2000);
-    }, startupChecked ? 30000 : 5000);
+    }, startupChecked ? 30000 : 5000, pollTransport);
   }
   function tick() {
     standbyTick();
@@ -300,7 +323,7 @@
     acknowledgeInput();
     if (designer) {
       // Clocks/progress advance locally without changing the selected source.
-      designer.tick(new Date(Date.now()+serverOffset));
+      designer.tick(new Date());
     }
   }
   var tickTimer = null, heartbeatTimer = null;

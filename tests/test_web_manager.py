@@ -1,5 +1,6 @@
 """Test the observed vendor protocol without a physical panel or credentials."""
 
+import asyncio
 import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
@@ -7,6 +8,7 @@ from unittest.mock import AsyncMock, Mock
 import aiohttp
 import pytest
 from custom_components.lg_rs232_ip.web_manager import (
+    _CAPTURE_DOWNLOAD_TIMEOUT,
     LGWebError,
     LGWebManager,
     normalize_fingerprint,
@@ -16,6 +18,67 @@ from custom_components.lg_rs232_ip.web_manager import (
 @pytest.fixture
 def web():
     return LGWebManager("example.test", "test-password", "ab" * 32)
+
+
+async def test_login_status_is_not_requested_for_every_preview_frame(web, monkeypatch):
+    clock = [100.0]
+    monkeypatch.setattr("custom_components.lg_rs232_ip.web_manager.time.monotonic", lambda: clock[0])
+    web._authenticated = True
+    web._json = AsyncMock(return_value=True)
+    await web._login()
+    for _ in range(100):
+        await web._login()
+    web._json.assert_awaited_once_with("GET", "/login/checkLoginStatus")
+    clock[0] += 31
+    await web._login()
+    assert web._json.await_count == 2
+
+
+async def test_capture_deadline_cancels_work_and_releases_queue(web, monkeypatch):
+    monkeypatch.setattr("custom_components.lg_rs232_ip.web_manager._CAPTURE_TIMEOUT", 0.02)
+    cancelled = asyncio.Event()
+
+    async def stalled(*args, **kwargs):
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.set()
+
+    web._api = stalled
+    with pytest.raises(LGWebError, match="deadline") as error:
+        await web.async_capture()
+    assert error.value.reason == "capture_command_timeout"
+    assert cancelled.is_set()
+    async with asyncio.timeout(0.1), web._capture_lock:
+        pass
+
+
+async def test_capture_queue_timeout_does_not_issue_a_command(web, monkeypatch):
+    monkeypatch.setattr("custom_components.lg_rs232_ip.web_manager._CAPTURE_TIMEOUT", 0.02)
+    web._api = AsyncMock()
+    async with web._capture_lock:
+        with pytest.raises(LGWebError) as error:
+            await web.async_capture()
+        assert error.value.reason == "capture_queue_timeout"
+        web._api.assert_not_called()
+    async with asyncio.timeout(0.1), web._capture_lock:
+        pass
+
+
+@pytest.mark.parametrize("status", [302, 401, 403])
+async def test_capture_expired_login_is_invalidated_without_following_redirect(web, status):
+    web._authenticated = True
+    web._api = AsyncMock(return_value="/tmp/capture123.jpg")
+    context = AsyncMock()
+    context.__aenter__.return_value = Mock(status=status)
+    web._session = Mock()
+    web._session.get.return_value = context
+    with pytest.raises(LGWebError) as error:
+        await web.async_capture()
+    assert error.value.reason == "capture_http_failed"
+    assert not web._authenticated
+    assert web._session.get.call_count == 1
+    assert web._session.get.call_args.kwargs["allow_redirects"] is False
 
 
 @pytest.mark.parametrize("value", ["", "ab" * 31, "zz" * 32])
@@ -175,6 +238,8 @@ async def test_capture_download_uses_control_port_pin_and_no_redirects(web):
     assert web._session.get.call_args.kwargs == {
         "ssl": web._ssl,
         "allow_redirects": False,
+        "headers": {"Connection": "close"},
+        "timeout": _CAPTURE_DOWNLOAD_TIMEOUT,
     }
 
 
@@ -395,3 +460,18 @@ async def test_opt_out_is_used_on_http_and_screenshot_requests():
     web._api = AsyncMock(return_value="/tmp/capture123.jpg")
     await web.async_capture()
     assert web._session.get.call_args.kwargs["ssl"] is False
+
+
+async def test_screenshot_is_not_blocked_by_settings_transaction(web):
+    web._api = AsyncMock(return_value='/tmp/capture123.jpg')
+    image = b'\xff\xd8\xffcurrent-frame\xff\xd9'
+    response = Mock(status=200)
+    response.content.iter_chunked = lambda _: async_chunks([image])
+    context = AsyncMock()
+    context.__aenter__.return_value = response
+    web._session = Mock()
+    web._session.get.return_value = context
+    async with web._lock:
+        assert await asyncio.wait_for(web.async_capture(), .1) == image
+        assert web._lock.locked(), 'A capture must not release a control transaction'
+    assert not web._capture_lock.locked()

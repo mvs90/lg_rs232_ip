@@ -26,7 +26,7 @@ from .resident_app import ResidentApp, SI_APP_ID
 from .platform_diagnostics import PlatformDiagnostics
 from .web_manager import LGWebError
 
-APP_VERSION = "1.22.1"
+APP_VERSION = "1.22.5"
 ASSETS = Path(__file__).parent / "www" / "display-app"
 
 
@@ -141,13 +141,15 @@ class DisplayAppManager(ResidentApp):
         self._notify()
 
     def _layouts_changed(self):
-        if (
-            self.saved.get("custom_view")
-            and self.saved["custom_view"] not in self.view_sources
-        ):
-            self.saved["custom_view"] = None
-            self.saved["dashboard"] = True
-            self.saved["pip"] = self.saved["media_view"] = False
+        selected = self.saved.get("custom_view") or next((key for flag, key in (
+            ("dashboard", "dashboard"), ("pip", "pip_view"), ("media_view", "media_view")
+        ) if self.saved.get(flag)), None)
+        if selected and selected not in self.view_sources:
+            target = next(iter(self.view_sources), None)
+            self.saved["custom_view"] = target if target not in {"dashboard", "pip_view", "media_view"} else None
+            self.saved["dashboard"] = target == "dashboard"
+            self.saved["pip"] = target == "pip_view"
+            self.saved["media_view"] = target == "media_view"
             self.store.async_delay_save(lambda: dict(self.saved), 1)
         self.changed()
         self._notify()
@@ -792,7 +794,7 @@ class DisplayAppView(HomeAssistantView):
             "Cache-Control": "no-store",
             "Referrer-Policy": "no-referrer",
             "X-Content-Type-Options": "nosniff",
-            "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'",
+            "Content-Security-Policy": "default-src 'none'; font-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self' ext: udp:; manifest-src 'self'; frame-ancestors 'none'",
         }
         if resource == "offline.appcache":
             if not manager.resident or not manager.entry.options.get(
@@ -848,6 +850,8 @@ class DisplayAppView(HomeAssistantView):
             "test-stream.m3u8": "application/vnd.apple.mpegurl",
             "test-stream.ts": "video/mp2t",
         }
+        if resource.endswith('.ttf') and resource in manager.assets:
+            mime[resource] = 'font/ttf'
         if resource not in mime:
             raise web.HTTPNotFound()
         if resource not in manager.assets:

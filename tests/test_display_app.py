@@ -1046,9 +1046,11 @@ async def configure_dashboard(app):
     await resident_app(app)
     manager = DisplayLayouts(app.hass, app.entry)
     await manager.async_start()
-    config = manager.document()["config"]
+    from custom_components.display_studio.layout_config import make_layout
+    from custom_components.display_studio.layout_library import from_config
+    config = make_layout()
     config["enabled"] = True
-    await manager.async_save(config, 0)
+    await manager.async_save(config, 0, from_config(config))
     app.layouts = manager
     app.controller.hass = app.hass
     app.hass.data["lg_rs232_ip"]["test"]["controller"] = app.controller
@@ -1196,12 +1198,20 @@ async def test_dashboard_source_does_not_hide_a_custom_hdmi_label(app):
 
 
 async def test_paired_media_artwork_only_exposes_selected_saved_players(app):
+    from homeassistant.helpers import entity_registry as er
     from custom_components.display_studio.layout_config import element
     from custom_components.display_studio.layout_api import (
         LayoutMediaView,
         LayoutSuggestionsView,
     )
     from tests.test_layout_cards import cover
+
+    from homeassistant.helpers import device_registry as dr
+
+    app.hass.data[dr.DATA_REGISTRY] = dr.DeviceRegistry(app.hass)
+    app.hass.data[er.DATA_REGISTRY] = er.EntityRegistry(app.hass)
+    await dr.async_get(app.hass).async_load()
+    await er.async_get(app.hass).async_load()
 
     layouts = await configure_dashboard(app)
     app.hass.data["lg_rs232_ip"]["test"]["layouts"] = layouts
@@ -2408,4 +2418,111 @@ async def test_optional_studio_binding_reload_and_release_keeps_lg_independent(a
         assert not layouts._closed  # Studio, never LG, owns this lifetime.
     finally:
         await provider.async_close()
+        await layouts.async_close()
+
+async def test_studio_fonts_are_local_token_scoped_and_included_in_offline_cache(app):
+    from custom_components.display_studio.fonts import font_assets
+    fonts=font_assets();app.assets.update(fonts)
+    app.resident=True;app.entry.options['display_app_offline']=True
+    http=web.Application();DisplayAppView(app.hass).register(app.hass,http,http.router)
+    base=f'/api/lg_rs232_ip/display_app/test/{app.token}/'
+    async with TestClient(TestServer(http)) as client:
+        manifest=await (await client.get(base+'offline.appcache')).text()
+        for name,data in fonts.items():
+            response=await client.get(base+name)
+            assert response.status==200 and response.content_type=='font/ttf'
+            assert await response.read()==data and name in manifest
+            assert "font-src 'self'" in response.headers['Content-Security-Policy']
+        assert (await client.get(base+'missing.ttf')).status==404
+        assert (await client.get(base.replace(app.token,'wrong')+'Roboto.ttf')).status==404
+
+
+async def test_hdmi_signal_contract_requires_fresh_app_report(app):
+    assert app.hdmi_signal is None
+    await resident_app(app)
+    # Ready only describes the video plane; actual signal is a separate field.
+    assert app.hdmi_signal is None
+    event={'type':'heartbeat','visible':True,'hdmi_ready':True,'hdmi_source':app.idle_hdmi(),'hdmi_request':app._input_request}
+    app.event({**event,'hdmi_signal':True})
+    assert app.hdmi_signal is True
+    app.event({**event,'hdmi_signal':False})
+    assert app.hdmi_signal is False
+    app.client_hdmi_seen -= 13
+    assert app.hdmi_signal is None
+    app.event({**event,'hdmi_signal':True,'hdmi_source':'ext://hdmi:2'})
+    assert app.hdmi_signal is None
+    app.event({**event,'hdmi_signal':True,'hdmi_request':'stale'})
+    assert app.hdmi_signal is None
+    app.event({**event,'hdmi_signal':True})
+    assert app.hdmi_signal is True
+    app.closed=True
+    assert app.hdmi_signal is None
+
+
+async def test_controller_refresh_uses_resident_hdmi_contract_during_startup(app):
+    app.resident=True
+    app.saved.update(resident=True,paused=False,selected_input=0x90)
+    app._resident_foreground=SI_APP_ID
+    controller=app.controller
+    controller.hass=app.hass
+    controller._lg_display.async_get_signal_status.reset_mock()
+    event={'type':'heartbeat','visible':True,'hdmi_source':'ext://hdmi:1','hdmi_request':app._input_request}
+    with patch.object(app,'async_maybe_recover',AsyncMock()):
+        await controller.async_start()
+        assert controller.signal is None
+        app.event({**event,'type':'hello','version':APP_VERSION,'hdmi_signal':True})
+        await controller.async_refresh()
+        assert controller.signal is True
+        app.event({**event,'hdmi_signal':False})
+        await controller.async_refresh()
+        assert controller.signal is False
+        app.client_hdmi_seen -= 13
+        await controller.async_refresh()
+        assert controller.signal is None
+        controller._lg_display.async_get_signal_status.assert_not_awaited()
+        app.saved['paused']=True
+        await controller.async_refresh()
+        controller._lg_display.async_get_signal_status.assert_awaited_once()
+    await controller.async_close()
+
+
+async def test_standby_notice_contract_can_set_clear_and_suppresses_unknown_signal(app):
+    import time
+    from custom_components.lg_rs232_ip.api import get_display_api
+    await resident_app(app)
+    app.hass.data['lg_rs232_ip']['test']['controller']=app.controller
+    api=get_display_api(app.hass,'test')
+    assert app.standby_notice is None
+    api.set_standby_notice('Ausschalten in {seconds}',time.monotonic()+20)
+    assert app.state()['standby_notice'] is None
+    app.event({'type':'heartbeat','visible':True,'hdmi_signal':False,'hdmi_source':app.idle_hdmi(),'hdmi_request':app._input_request})
+    assert app.state()['standby_notice']['message']=='Ausschalten in {seconds}'
+    assert 0<app.state()['standby_notice']['remaining']<=20
+    app.client_hdmi_seen-=13
+    assert app.state()['standby_notice'] is None
+    api.set_standby_notice()
+    assert app.standby_notice is None and app.state()['standby_notice'] is None
+
+
+@pytest.mark.parametrize("identifier,flag", [("dashboard","dashboard"),("pip_view","pip"),("media_view","media_view")])
+async def test_studio_can_remove_former_default_sources_and_fall_back_without_recreating_them(app, identifier, flag):
+    """Studio owns optional source IDs; old flags must not resurrect a deleted one."""
+    layouts = await configure_dashboard(app)
+    try:
+        # Exercise the provider contract independently of the older bundled editor.
+        from unittest.mock import PropertyMock
+        remaining = {"view_room": "Raum"}
+        with patch.object(type(layouts), "source_views", new_callable=PropertyMock, return_value=remaining):
+            app.saved.update(dashboard=False, pip=False, media_view=False, custom_view=None)
+            app.saved[flag] = True
+            assert app.selected_view == "view_room"
+            app._layouts_changed()
+            assert app.saved["custom_view"] == "view_room"
+            assert not any(app.saved[key] for key in ("dashboard", "pip", "media_view"))
+            remaining.clear()
+            app._layouts_changed()
+            assert app.saved["custom_view"] is None
+            assert app.selected_view is None
+            assert identifier not in app.view_sources
+    finally:
         await layouts.async_close()

@@ -53,3 +53,43 @@ async def test_unanswered_close_is_bounded_and_does_not_replay(event):
         done.set()
         await client.async_close()
         await runner.cleanup()
+
+
+@pytest.mark.parametrize('stall', ['headers', 'body'])
+async def test_stalled_screenshot_retries_only_file_on_a_fresh_connection(monkeypatch, stall):
+    from aiohttp.test_utils import TestServer
+    from custom_components.lg_rs232_ip import web_manager
+
+    monkeypatch.setattr(web_manager, '_CAPTURE_DOWNLOAD_TIMEOUT', aiohttp.ClientTimeout(total=.2, sock_read=.06))
+    done = asyncio.Event()
+    peers = []
+    image = b'\xff\xd8\xffcomplete-dark-or-color-frame\xff\xd9'
+
+    async def capture(request):
+        assert request.path == '/tmp/capture123.jpg'
+        assert request.headers['Connection'] == 'close'
+        assert request.cookies['session'] == 'same-authenticated-session'
+        peers.append(request.transport.get_extra_info('peername'))
+        if len(peers) == 1:
+            if stall == 'body':
+                response = server_web.StreamResponse(headers={'Content-Length': str(len(image))})
+                await response.prepare(request)
+                await response.write(image[:4])
+            await done.wait()
+        return server_web.Response(body=image)
+
+    app = server_web.Application()
+    app.router.add_get('/tmp/capture123.jpg', capture)
+    async with TestServer(app) as server:
+        client = LGWebManager('example.invalid', 'test', verify_certificate=False)
+        client._api = AsyncMock(return_value='/tmp/capture123.jpg')
+        client._url = lambda _, path: URL(str(server.make_url(path)))
+        client._session = aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True))
+        client._session.cookie_jar.update_cookies({'session': 'same-authenticated-session'}, response_url=server.make_url('/'))
+        try:
+            assert await asyncio.wait_for(client.async_capture(), 1) == image
+            assert len(peers) == 2 and peers[0] != peers[1]
+            client._api.assert_awaited_once_with('capture', 'capture', height=720)
+        finally:
+            done.set()
+            await client.async_close()

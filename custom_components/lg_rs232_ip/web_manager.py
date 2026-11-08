@@ -9,8 +9,10 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import re
 import ssl
+import time
 import uuid
 
 import aiohttp
@@ -18,9 +20,17 @@ from yarl import URL
 
 from .command_queue import PriorityLock
 
+_CAPTURE_TIMEOUT = 5.0
+_CAPTURE_DOWNLOAD_TIMEOUT = aiohttp.ClientTimeout(total=1.5, sock_read=0.75)
+_LOGGER = logging.getLogger(__name__)
+
 
 class LGWebError(Exception):
     """Sanitized LG web-manager failure."""
+
+    def __init__(self, message, *, reason="capture_failed"):
+        super().__init__(message)
+        self.reason = reason
 
 
 def normalize_fingerprint(value: str) -> str:
@@ -86,16 +96,29 @@ class LGWebManager:
         )
         self._session = None
         self._lock = PriorityLock()
+        # Capture is a read-only service on its own WebSocket. Long multi-command
+        # settings polls must not stop frames. Keep captures mutually exclusive
+        # and share one serialized login, without replaying control operations.
+        self._capture_lock = asyncio.Lock()
+        self._login_lock = asyncio.Lock()
         self._authenticated = False
+        self._login_checked_at = 0.0
+        self._capture_socket = None
+        self._capture_sequence = 0
+        self._capture_used_at = 0.0
+        self._capture_ping_at = 0.0
+        self._capture_ping_interval = 10.0
 
     def _url(self, port: int, path: str) -> URL:
         return URL.build(scheme="https", host=self._host, port=port, path=path)
 
     async def async_close(self):
+        await self._close_capture_socket()
         if self._session:
             await self._session.close()
             self._session = None
         self._authenticated = False
+        self._login_checked_at = 0.0
 
     async def _json(self, method, path, *, params=None, data=None, body=None):
         if self._session is None:
@@ -112,8 +135,9 @@ class LGWebManager:
                 json=body,
                 ssl=self._ssl,
                 allow_redirects=False,
+                headers={"Connection": "close"},
                 timeout=aiohttp.ClientTimeout(
-                    total=120 if path == "/file/contentManager" else 20
+                    total=120 if path == "/file/contentManager" else 2 if path == "/login/checkLoginStatus" else 20
                 ),
             ) as response:
                 if response.status != 200:
@@ -129,9 +153,18 @@ class LGWebManager:
             raise LGWebError("LG web connection or response failed") from None
 
     async def _login(self):
+        async with self._login_lock:
+            await self._login_locked()
+
+    async def _login_locked(self):
         if self._authenticated:
+            # Cookie authentication is still checked by the LG on every API
+            # call. Do not add a login-status HTTP request to every video frame.
+            if time.monotonic() - self._login_checked_at < 30:
+                return
             try:
                 if await self._json("GET", "/login/checkLoginStatus") is True:
+                    self._login_checked_at = time.monotonic()
                     return
             except LGWebError:
                 self._authenticated = False
@@ -145,6 +178,7 @@ class LGWebManager:
                 self._url(3777, "/login/captcha"),
                 ssl=self._ssl,
                 allow_redirects=False,
+                headers={"Connection": "close"},
             ) as response:
                 if response.status != 200:
                     raise LGWebError("LG login challenge unavailable")
@@ -167,13 +201,19 @@ class LGWebManager:
                     "LG web login rejected; verify the Mobile URL password"
                 )
             self._authenticated = True
+            self._login_checked_at = time.monotonic()
         except (aiohttp.ClientError, TimeoutError):
             raise LGWebError("LG web login connection failed") from None
 
     async def _api(self, command, event, **params):
         """One bounded Engine.IO 3 / Socket.IO 2 request; mutations never retry."""
-        await self._login()
+        if command == "capture" and event == "capture":
+            return await self._capture_api(**params)
+        phase = "login"
+        started = time.monotonic()
         try:
+            await self._login()
+            phase = "connect"
             async with asyncio.timeout(12):
                 async with self._session.ws_connect(
                     self._url(3737, "/socket.io/").with_query(
@@ -185,30 +225,33 @@ class LGWebManager:
                     # frame; keep the request/response deadline unchanged.
                     timeout=aiohttp.ClientWSTimeout(ws_close=0.25),
                 ) as ws:
+                    phase = "handshake"
                     opened = False
                     while True:
                         message = await ws.receive()
                         if message.type != aiohttp.WSMsgType.TEXT:
-                            raise LGWebError("LG control connection closed")
+                            raise LGWebError("LG control connection closed", reason="control_closed")
                         packet = message.data
                         if packet.startswith("0"):
                             opened = True
                         elif packet == "40" and opened:
                             break
                         elif packet.startswith("44"):
-                            raise LGWebError("LG control login rejected")
+                            self._authenticated = False
+                            raise LGWebError("LG control login rejected", reason="control_auth_failed")
                     await ws.send_str(
                         "42"
                         + json.dumps(
                             ["api", {"command": command, "eventID": 1, **params}]
                         )
                     )
+                    phase = "reply"
                     if event is None:
                         return None
                     while True:
                         message = await ws.receive()
                         if message.type != aiohttp.WSMsgType.TEXT:
-                            raise LGWebError("LG control connection closed")
+                            raise LGWebError("LG control connection closed", reason="control_closed")
                         packet = message.data
                         if packet.startswith("2"):
                             await ws.send_str("3" + packet[1:])
@@ -218,7 +261,7 @@ class LGWebManager:
                                 continue
                             if reply[0] == "error":
                                 self._authenticated = False
-                                raise LGWebError("LG control session expired")
+                                raise LGWebError("LG control session expired", reason="control_auth_failed")
                             if event == "toast" and reply[0] == "return":
                                 value = reply[1]
                                 if (
@@ -242,8 +285,111 @@ class LGWebManager:
                                 ):
                                     raise LGWebError("LG rejected the control request")
                                 return value
+        except asyncio.CancelledError:
+            if command == "capture":
+                _LOGGER.debug("LG screenshot request cancelled during %s after %.0f ms", phase, (time.monotonic() - started) * 1000)
+            raise
         except (aiohttp.ClientError, TimeoutError, ValueError):
-            raise LGWebError("LG control request failed; it was not replayed") from None
+            raise LGWebError("LG control request failed; it was not replayed", reason="control_transport_failed") from None
+
+    async def _close_capture_socket(self):
+        ws, self._capture_socket = self._capture_socket, None
+        if ws is not None:
+            await ws.close()
+
+    async def _capture_packet(self, ws):
+        message = await ws.receive()
+        if message.type != aiohttp.WSMsgType.TEXT or message.data == "1":
+            raise LGWebError("LG capture connection closed", reason="control_closed")
+        packet = message.data
+        if packet.startswith("44"):
+            self._authenticated = False
+            raise LGWebError("LG capture login rejected", reason="control_auth_failed")
+        if packet.startswith("2"):
+            await ws.send_str("3" + packet[1:])
+        return packet
+
+    async def _capture_api(self, **params):
+        """Reuse one bounded screenshot channel, serialized by _capture_lock.
+
+        Engine.IO 3 needs client pings. Active capture requests service these;
+        after an idle period discard the socket instead of leaving a background
+        keepalive/reader running. IDs prevent an old reply becoming a new frame.
+        Only this read-only command may reconnect once after a transport loss.
+        """
+        phase = "login"
+        started = time.monotonic()
+        try:
+            for attempt in range(2):
+                try:
+                    now = time.monotonic()
+                    ws = self._capture_socket
+                    if ws is not None and (
+                        ws.closed or not self._authenticated
+                        or now - self._capture_used_at > min(5.0, self._capture_ping_interval)
+                    ):
+                        await self._close_capture_socket()
+                        ws = None
+                    if ws is None:
+                        phase = "login"
+                        await self._login()
+                        phase = "connect"
+                        async with asyncio.timeout(1.5):
+                            ws = await self._session.ws_connect(
+                                self._url(3737, "/socket.io/").with_query(EIO="3", transport="websocket"),
+                                ssl=self._ssl, max_msg_size=262144,
+                                timeout=aiohttp.ClientWSTimeout(ws_close=0.25),
+                            )
+                        self._capture_socket = ws
+                        phase = "handshake"
+                        async with asyncio.timeout(1.5):
+                            opened = False
+                            while True:
+                                packet = await self._capture_packet(ws)
+                                if packet.startswith("0"):
+                                    hello = json.loads(packet[1:])
+                                    self._capture_ping_interval = max(0.05, min(10.0, float(hello.get("pingInterval", 25000)) / 2000))
+                                    opened = True
+                                elif packet == "40" and opened:
+                                    break
+                        self._capture_ping_at = time.monotonic()
+                    if time.monotonic() - self._capture_ping_at >= self._capture_ping_interval:
+                        await ws.send_str("2")
+                        self._capture_ping_at = time.monotonic()
+                    self._capture_sequence += 1
+                    event_id = self._capture_sequence
+                    phase = "reply"
+                    await ws.send_str("42" + json.dumps(["api", {"command": "capture", "eventID": event_id, **params}]))
+                    async with asyncio.timeout(2.0):
+                        while True:
+                            packet = await self._capture_packet(ws)
+                            if not packet.startswith("42"):
+                                continue
+                            reply = json.loads(packet[2:])
+                            if not isinstance(reply, list) or len(reply) < 2:
+                                continue
+                            if reply[0] == "error":
+                                self._authenticated = False
+                                raise LGWebError("LG capture session expired", reason="control_auth_failed")
+                            if reply[0] == "capture" + str(event_id):
+                                if not isinstance(reply[1], str):
+                                    raise LGWebError("LG rejected the capture request")
+                                self._capture_used_at = time.monotonic()
+                                return reply[1]
+                except (aiohttp.ClientError, TimeoutError, LGWebError) as err:
+                    await self._close_capture_socket()
+                    if isinstance(err, LGWebError) and err.reason != "control_closed":
+                        raise
+                    _LOGGER.debug("LG screenshot transport retry during %s after %.0f ms (attempt %d)", phase, (time.monotonic() - started) * 1000, attempt + 1)
+                    if attempt:
+                        raise LGWebError("LG capture connection unavailable", reason="control_transport_failed") from None
+        except asyncio.CancelledError:
+            await self._close_capture_socket()
+            _LOGGER.debug("LG screenshot request cancelled during %s after %.0f ms", phase, (time.monotonic() - started) * 1000)
+            raise
+        except (ValueError, TypeError, AttributeError):
+            await self._close_capture_socket()
+            raise LGWebError("LG capture response invalid") from None
 
     async def async_toast(self, message: str):
         if not message.strip() or len(message) > 1000:
@@ -609,26 +755,52 @@ class LGWebManager:
         """Capture a real panel frame; download only the returned same-device path."""
         if height not in (360, 720, 1080):
             raise LGWebError("Unsupported capture resolution")
-        async with self._lock:
-            path = await self._api("capture", "capture", height=height)
-            if not isinstance(path, str) or not re.fullmatch(
-                r"/tmp/capture[0-9]+\.jpg", path
-            ):
-                raise LGWebError("LG did not return a valid capture path")
-            try:
-                # Capture paths are served by Control Manager, NOT Content Manager.
-                async with self._session.get(
-                    self._url(3737, path),
-                    ssl=self._ssl,
-                    allow_redirects=False,
-                ) as response:
-                    if response.status != 200:
-                        raise LGWebError("LG screenshot is unavailable")
-                    image = await _read_limited(response, 5 * 1024 * 1024)
-                    if not image.startswith(b"\xff\xd8\xff") or not image.endswith(
-                        b"\xff\xd9"
-                    ):
-                        raise LGWebError("LG returned an invalid JPEG screenshot")
-                    return image
-            except (aiohttp.ClientError, TimeoutError):
-                raise LGWebError("LG screenshot download failed") from None
+        stage = "queue"
+        try:
+            async with asyncio.timeout(_CAPTURE_TIMEOUT), self._capture_lock:
+                stage = "command"
+                command_started = time.monotonic()
+                path = await self._api("capture", "capture", height=height)
+                if not isinstance(path, str) or not re.fullmatch(
+                    r"/tmp/capture[0-9]+\.jpg", path
+                ):
+                    raise LGWebError("LG did not return a valid capture path")
+                stage = "download"
+                download_started = time.monotonic()
+                for attempt in range(2):
+                    try:
+                        # This read-only file GET can be retried without taking
+                        # another screenshot or replaying a device command.
+                        # Older Control Manager servers occasionally stall a
+                        # persistent HTTP connection. Bound idle reads and close
+                        # this socket so the next GET uses a fresh connection.
+                        async with self._session.get(
+                            self._url(3737, path),
+                            ssl=self._ssl,
+                            allow_redirects=False,
+                            headers={"Connection": "close"},
+                            timeout=_CAPTURE_DOWNLOAD_TIMEOUT,
+                        ) as response:
+                            if response.status != 200:
+                                if response.status in (301, 302, 303, 307, 308, 401, 403):
+                                    self._authenticated = False
+                                raise LGWebError("LG screenshot is unavailable", reason="capture_http_failed")
+                            image = await _read_limited(response, 5 * 1024 * 1024)
+                            if not image.startswith(b"\xff\xd8\xff") or not image.endswith(
+                                b"\xff\xd9"
+                            ):
+                                raise LGWebError("LG returned an invalid JPEG screenshot")
+                            if time.monotonic() - command_started > 0.75:
+                                _LOGGER.debug(
+                                    "LG screenshot slow: command %.0f ms, download %.0f ms, retries %d",
+                                    (download_started - command_started) * 1000,
+                                    (time.monotonic() - download_started) * 1000,
+                                    attempt,
+                                )
+                            return image
+                    except (aiohttp.ClientError, TimeoutError):
+                        _LOGGER.debug("LG screenshot download retry after %.0f ms (attempt %d)", (time.monotonic() - download_started) * 1000, attempt + 1)
+                        if attempt:
+                            raise LGWebError("LG screenshot download failed", reason="capture_download_failed") from None
+        except TimeoutError:
+            raise LGWebError("LG screenshot deadline exceeded", reason="capture_" + stage + "_timeout") from None

@@ -128,3 +128,27 @@ def test_multicast_canonical_local_group():
         == "udp://239.255.20.35:15000"
     )
     assert validate_multicast_url("") == ""
+
+
+async def test_browser_diagnostics_are_bounded_and_only_sampled_on_request():
+    p = platform()
+    result = await sample(p, {"browser": {
+        "page_id": "testpage123", "uptime_ms": 123456, "font_faces": 15,
+        "capture_bridges": 1, "capture_frames": 3000, "capture_errors": 0, "capture_buffer_bytes": 65536,
+        "usedJSHeapSize": 12345678, "totalJSHeapSize": 15000000,
+        "jsHeapSizeLimit": 1000000000, "reload_reason": "bundle_update",
+        "url": "private", "cookies": "secret", "font_failures": ["StudioMono|400", "private"],
+    }})
+    assert result["browser"] == {
+        "page_id": "testpage123", "uptime_ms": 123456, "font_faces": 15,
+        "capture_bridges": 1, "capture_frames": 3000, "capture_errors": 0, "capture_buffer_bytes": 65536,
+        "usedJSHeapSize": 12345678, "totalJSHeapSize": 15000000,
+        "jsHeapSizeLimit": 1000000000, "reload_reason": "bundle_update", "font_failures": ["StudioMono|400"],
+    }
+    result = await sample(p, {"browser": {
+        "page_id": "https://private", "uptime_ms": -1, "font_faces": True,
+        "usedJSHeapSize": float("inf"), "reload_reason": "private",
+        "capture_bridges": -1, "capture_frames": 2**53, "capture_errors": True, "capture_buffer_bytes": 6*1024**2,
+    }})
+    assert result["browser"] == {}
+    assert "browser" not in await sample(p, {})

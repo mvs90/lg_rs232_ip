@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import logging
 import time
 
 from aiohttp import web as aiohttp_web
@@ -22,6 +23,9 @@ _EMPTY_FRAME = base64.b64decode(
     "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAJABADASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AI+AD//Z"
 )
 _BOUNDARY = "lg-display-frame"
+_TRANSIENT_FRAME_GRACE = 15.0
+_CONFIRMED_POWER_MAX_AGE = 60.0
+_LOGGER = logging.getLogger(__name__)
 
 
 def _mjpeg_part(image: bytes) -> bytes:
@@ -51,7 +55,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class LGDisplayPreview(Camera):
-    """All viewers share one capture; faster only while a stream is open."""
+    """Share captures, accelerating only for requested images or open streams."""
 
     _attr_has_entity_name = True
     _attr_name = "Display preview"
@@ -74,6 +78,7 @@ class LGDisplayPreview(Camera):
         self._height = int(entry.options.get("preview_height", "720"))
         self._image = None
         self._captured_at = None
+        self._captured_monotonic = None
         self._error = None
         self._next_capture = 0.0
         self._last_started = 0.0
@@ -148,19 +153,41 @@ class LGDisplayPreview(Camera):
         generation = self._generation
         self._last_started = time.monotonic()
         try:
-            power = await self._display.async_get_power_status(use_cache=False)
+            # The controller already confirms power on its regular poll. Do
+            # not put each video frame behind the serial control queue after
+            # the general-purpose two-second cache expires. A confirmed off
+            # state still wins immediately; old/unknown states are rechecked.
+            confirmed = getattr(self._display, "_last_power_status", None)
+            checked_at = getattr(self._display, "_last_power_status_at", None)
+            if getattr(self._display, "is_intentionally_unpowered", False) is True:
+                power = False
+            elif (
+                confirmed is True
+                and isinstance(checked_at, (int, float))
+                and 0 <= time.monotonic() - checked_at < _CONFIRMED_POWER_MAX_AGE
+            ):
+                power = True
+            else:
+                power = await self._display.async_get_power_status(use_cache=True)
             if self._removed or not self._attr_is_on or generation != self._generation:
                 return
-            if power is not True:
+            if power is False:
                 self._image = None
                 self._captured_at = None
-                self._error = "display_off" if power is False else "power_unknown"
-                self._attr_available = power is False
+                self._captured_monotonic = None
+                self._error = "display_off"
+                self._attr_available = True
                 return
-            image = await self._app.async_capture(self._height) if self._app else None
-            self._backend = "app" if image is not None else "web"
-            if image is None:
-                image = await self._web.async_capture(self._height)
+            if power is None:
+                self._capture_failed("power_unknown")
+                return
+            # Fetch JPEGs directly from the LG control service. Repeated base64
+            # captureScreen calls inside the older signage browser grow native
+            # memory even with reused bridges/XHRs and a bounded upload buffer.
+            # Do not silently resume that path when the web service fails: use
+            # the existing bounded retry/backoff, shared by every viewer.
+            self._backend = "web"
+            image = await self._web.async_capture(self._height)
             if (
                 not self._removed
                 and self._attr_is_on
@@ -168,18 +195,19 @@ class LGDisplayPreview(Camera):
             ):
                 self._image = image
                 self._captured_at = dt_util.utcnow()
+                self._captured_monotonic = time.monotonic()
                 self._error = None
                 self._failures = 0
                 self._retry_at = 0.0
                 self._attr_available = True
-        except LGWebError:
+        except LGWebError as error:
             if generation == self._generation and self._attr_is_on:
-                self._image = None
-                self._captured_at = None
-                self._error = "capture_failed"
-                self._attr_available = False
-                self._failures += 1
-                self._retry_at = time.monotonic() + min(30, 2 ** min(self._failures, 5))
+                reason = error.reason if error.reason in {
+                    "capture_queue_timeout", "capture_command_timeout", "capture_download_timeout",
+                    "capture_http_failed", "capture_download_failed",
+                    "control_closed", "control_auth_failed", "control_transport_failed",
+                } else "capture_failed"
+                self._capture_failed(reason)
         finally:
             self._last_finished = time.monotonic()
             self._next_capture = (
@@ -196,8 +224,52 @@ class LGDisplayPreview(Camera):
             if not self._removed:
                 self.async_write_ha_state()
 
+    def _capture_failed(self, reason):
+        # A transient timeout must not inject a tiny black JPEG into FFmpeg:
+        # that changes decoder geometry and interrupts the ESP stream as well.
+        # Keep the last frame for a bounded grace period, retaining its actual
+        # timestamp. Confirmed power-off and collection-off still erase at once.
+        now = time.monotonic()
+        _LOGGER.debug("LG preview capture deferred: %s (attempt %d)", reason, self._failures + 1)
+        recent = (
+            self._image is not None
+            and self._captured_monotonic is not None
+            and now - self._captured_monotonic < _TRANSIENT_FRAME_GRACE
+        )
+        if not recent:
+            self._image = None
+            self._captured_at = None
+            self._captured_monotonic = None
+        self._error = reason
+        self._attr_available = recent
+        self._failures += 1
+        self._retry_at = now + min(30, 2 ** min(self._failures, 5))
+
     async def async_camera_image(self, width=None, height=None):
+        if self._active_interval and not self._refresh_task:
+            # A requested still must not wait for the idle screenshot timer.
+            # Bound demand-driven captures by the same rate as live viewers,
+            # retaining the post-capture gap and failure backoff. The regular
+            # timer returns to the idle cadence once this capture completes.
+            requested_capture = max(
+                self._last_started + min(self._interval, self._active_interval),
+                self._last_finished + 0.1,
+                self._retry_at,
+            )
+            if time.monotonic() >= requested_capture:
+                self._next_capture = min(self._next_capture, requested_capture)
         await self.async_update()
+        if (
+            self._error
+            and self._captured_monotonic is not None
+            and time.monotonic() - self._captured_monotonic >= _TRANSIENT_FRAME_GRACE
+        ):
+            self._image = None
+            self._captured_at = None
+            self._captured_monotonic = None
+            self._attr_available = False
+            if not self._removed:
+                self.async_write_ha_state()
         return self._image if self._attr_is_on else None
 
     async def handle_async_mjpeg_stream(self, request):
@@ -229,6 +301,11 @@ class LGDisplayPreview(Camera):
                 if request.transport is None or request.transport.is_closing():
                     break
                 image = await self.async_camera_image()
+                if image is not None and self._error:
+                    # Withhold stale frames rather than marking them as newly
+                    # received. The ESP can show their true age while retrying.
+                    await asyncio.sleep(0.25)
+                    continue
                 # Keep the stream alive through temporary failures and actively erase stale pixels.
                 part = _mjpeg_part(image or _EMPTY_FRAME)
                 async with asyncio.timeout(5):
@@ -275,6 +352,7 @@ class LGDisplayPreview(Camera):
         self._cancel_timer()
         self._image = None
         self._captured_at = None
+        self._captured_monotonic = None
         self.async_write_ha_state()
 
     async def async_turn_on(self):

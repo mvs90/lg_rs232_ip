@@ -2,6 +2,7 @@
 
 import asyncio
 import math
+import re
 import secrets
 
 from homeassistant.exceptions import HomeAssistantError
@@ -95,6 +96,35 @@ class PlatformDiagnostics:
             )
             return
         data = {"sampled_at": dt_util.utcnow().isoformat()}
+        browser = result.get("browser")
+        if isinstance(browser, dict):
+            clean = {}
+            page_id = browser.get("page_id")
+            if isinstance(page_id, str) and re.fullmatch(r"[a-z0-9]{1,32}", page_id):
+                clean["page_id"] = page_id
+            for key, maximum in (
+                ("uptime_ms", 365 * 86400 * 1000),
+                ("font_faces", 1000000),
+                ("capture_bridges", 2**53 - 1),
+                ("capture_frames", 2**53 - 1),
+                ("capture_errors", 2**53 - 1),
+                ("capture_buffer_bytes", 5 * 1024**2),
+                ("usedJSHeapSize", 8 * 1024**3),
+                ("totalJSHeapSize", 8 * 1024**3),
+                ("jsHeapSizeLimit", 8 * 1024**3),
+            ):
+                if (value := number(browser.get(key), 0, maximum)) is not None:
+                    clean[key] = int(value)
+            if browser.get("reload_reason") in ("unknown", "bundle_update"):
+                clean["reload_reason"] = browser["reload_reason"]
+            if isinstance(browser.get("font_failures"), list):
+                clean["font_failures"] = [
+                    key for key in browser["font_failures"][:10]
+                    if isinstance(key, str) and re.fullmatch(
+                        r"Studio(Native|Serif|Mono|Condensed|Rounded)\|(400|600)", key
+                    )
+                ]
+            data["browser"] = clean
         usage = result.get("usage", {})
         sensors = result.get("sensors", {})
         tile = result.get("tile", {})

@@ -8,7 +8,7 @@ permissions:
 jobs:
   frontend:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
     steps:
@@ -16,14 +16,14 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: mvs90/display_studio
-          ref: v1.2.2
+          ref: v1.5.0
           path: .test-dependencies/studio
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npm test
+      - run: npm test -- --workers=4
         env:
           STUDIO_REPO: .test-dependencies/studio
   tests:
@@ -41,12 +41,14 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
-      - run: pip install "homeassistant==${{ matrix.homeassistant }}" "pytest>=8,<10" "pytest-asyncio>=0.25,<2" "ruff>=0.9,<1" "numpy>=2.2,<3" "PyTurboJPEG>=1.7.5,<2" "coverage>=7,<8"
+      - run: pip install "homeassistant==${{ matrix.homeassistant }}" "pytest>=8,<10" "pytest-asyncio>=0.25,<2" "ruff>=0.9,<1" "numpy>=2.2,<3" "PyTurboJPEG>=1.7.5,<2" "coverage>=7,<8" "pillow-heif==1.8.0" "pillow-avif-plugin==1.6.0"
       - uses: actions/checkout@v7
         with:
           repository: mvs90/display_studio
-          ref: v1.2.2
+          ref: v1.5.0
           path: .test-dependencies/studio
+      - name: Install Apple TV test dependency matching Home Assistant
+        run: python -c "import json, pathlib, subprocess, sys, homeassistant; p=pathlib.Path(homeassistant.__file__).parent/'components/apple_tv/manifest.json'; subprocess.check_call([sys.executable, '-m', 'pip', 'install', *json.loads(p.read_text())['requirements']])"
       - run: python -m coverage run -m pytest -q
         env:
           PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/.test-dependencies/studio
