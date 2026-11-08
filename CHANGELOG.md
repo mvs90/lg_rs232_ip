@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.34.1
+
+- Make the browser test timezone explicit and allow coverage-enabled CI enough wall-clock time for asynchronous startup fixture preparation. Runtime behavior is unchanged from 2.34.0.
+
 ## 2.34.0
 
 - Consolidate the installed display app 1.22.5, bounded capture transports, direct web previews and diagnostic counters with the published integration.

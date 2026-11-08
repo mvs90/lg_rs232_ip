@@ -1,4 +1,4 @@
-# 2.34.0
+# 2.34.1
 
 Consolidates the installed LG display implementation with the published integration. Preserves existing configuration entries, views and entity identifiers. Includes native bridge reuse, capture recovery and on-demand camera selection, improved web transport timing and platform diagnostics. Retains published startup, source-switching, HDMI fallback and offline lifecycle regressions. Display app 1.22.5 uses Display Studio 1.5.0.
 

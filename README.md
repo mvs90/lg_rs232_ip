@@ -1,6 +1,6 @@
 # LG Professional Display
 
-Current consolidated release: **2.34.0**. See [release notes](docs/CONSOLIDATED-RELEASE.md). Existing configuration is retained.
+Current consolidated release: **2.34.1**. See [release notes](docs/CONSOLIDATED-RELEASE.md). Existing configuration is retained.
 
 Local Home Assistant integration for LG professional signage displays using RS232 over TCP, with optional native LG web access. **Version 2.33.2 is the independent LG device integration.** Apple TV, Sonos, socket coordination and combined HomeKit control are provided by the separate [AV Companion](https://github.com/mvs90/av_companion) integration.
 

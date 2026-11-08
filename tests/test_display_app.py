@@ -1059,7 +1059,9 @@ async def configure_dashboard(app):
 
 async def acknowledge_selection(app, operation):
     task = asyncio.create_task(operation)
-    async with asyncio.timeout(1):
+    # Configuration/store work can exceed one second on coverage-enabled CI.
+    # The simulated device deadlines are asserted separately by each test.
+    async with asyncio.timeout(10):
         while not app._input_request:
             await asyncio.sleep(0)
     app.event({"type": "input_applied", "id": app._input_request})
