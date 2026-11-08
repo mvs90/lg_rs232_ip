@@ -2,6 +2,8 @@
 
 ## 2.34.1
 
+- Validate the combined renderer against the immutable Display Studio 1.5.1 source revision.
+
 - Make the browser test timezone explicit and allow coverage-enabled CI enough wall-clock time for asynchronous startup fixture preparation. Runtime behavior is unchanged from 2.34.0.
 
 ## 2.34.0
